@@ -7,7 +7,7 @@ Unified Free Energy Dynamics with OpenMM
 
 from ._version import get_versions
 from .ufedmm import CollectiveVariable, UnifiedFreeEnergyDynamics  # noqa: F401, F403
-from .integrators import CustomIntegrator  # noqa: F401, F403
+from .integrators import CustomIntegrator, GeodesicBAOABIntegrator  # noqa: F401, F403
 from .testmodels import AlanineDipeptideModel  # noqa: F401, F403
 
 # Handle versioneer:
