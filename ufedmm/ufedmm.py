@@ -184,6 +184,7 @@ class UnifiedFreeEnergyDynamics(object):
         if not (Vx.y == Vx.z == Vy.x == Vy.z == Vz.x == Vz.y == 0.0):
             raise ValueError('Only orthorhombic boxes are allowed')
         self._Lx = Vx.x
+        self._nparticles = self.system.getNumParticles()
         nbforce = [f for f in self.system.getForces() if isinstance(f, openmm.NonbondedForce)][0]
         energy_terms = []
         definitions = []
@@ -202,13 +203,12 @@ class UnifiedFreeEnergyDynamics(object):
         for cv in self.variables:
             force.addGlobalParameter(f'K_{cv.id}', cv.force_constant)
             force.addCollectiveVariable(cv.id, cv.force)
-        n = self.system.getNumParticles() - len(self.variables)
         self._widths = []
         self._bounds = []
         for i, cv in enumerate(self.variables):
             expression = f'{cv.min_value}+{cv._range}*(x-floor(x)); x=x1/{self._Lx}'
             parameter = openmm.CustomCompoundBondForce(1, expression)
-            parameter.addBond([n+i], [])
+            parameter.addBond([self._nparticles+i], [])
             force.addCollectiveVariable(f's_{cv.id}', parameter)
             cv._expanded = cv.periodic and len(self.variables) > 1
             cv._extra_points = min(grid_expansion, cv.grid_size) if cv._expanded else 0
@@ -286,12 +286,19 @@ class UnifiedFreeEnergyDynamics(object):
             simulation.context.setVelocitiesToTemperature(self._temperature)
         else:
             simulation.context.setVelocitiesToTemperature(self._temperature, seed)
-        n = self.system.getNumParticles() - len(self.variables)
-        kB = _standardize(unit.MOLAR_GAS_CONSTANT_R)
-        kT = [kB*self._temperature*openmm.Vec3(1, 1, 1) for i in range(n)]
-        for cv in self.variables:
-            kT.append(kB*cv.temperature*openmm.Vec3(1, 0, 0))
-        integrator.setPerDofVariableByName('kT', kT)
+
+        if any(cv.temperature != self._temperature for cv in self.variables):
+            try:
+                kT = integrator.getPerDofVariableByName('kT')
+            except Exception:
+                raise ValueError('Multiple temperatures require CustomIntegrator with per-dof variable `kT`')
+            kB = _standardize(unit.MOLAR_GAS_CONSTANT_R)
+            for i in range(self._nparticles):
+                kT[i] = kB*self._temperature*openmm.Vec3(1, 1, 1)
+            for i, cv in enumerate(self.variables):
+                kT[self._nparticles+i] = openmm.Vec3(kB*cv.temperature, 0, 0)
+            integrator.setPerDofVariableByName('kT', kT)
+
         simulation.reporters.append(self)
         return simulation
 
