@@ -103,7 +103,37 @@ class GeodesicBAOABIntegrator(CustomIntegrator):
         rattles : int, default=1
             The number of RATTLE computations. If `rattles=0`, then no constraints are considered.
 
+    Example
+    -------
+        >>> dt = 2*unit.femtoseconds
+        >>> temp = 300*unit.kelvin
+        >>> gamma = 10/unit.picoseconds
+        >>> GeodesicBAOABIntegrator(dt, temp, gamma, rattles=1)
+        Per-dof variables:
+          kT, x0
+        Global variables:
+          friction = 10.0
+        Computation steps:
+           0: allow forces to update the context state
+           1: v <- v + 0.5*dt*f/m
+           2: constrain velocities
+           3: x <- x + 0.5*dt*v
+           4: x0 <- x
+           5: constrain positions
+           6: v <- v + (x - x0)/(0.5*dt)
+           7: constrain velocities
+           8: v <- z*v + sqrt((1 - z*z)*kT/m)*gaussian; z = exp(-friction*dt)
+           9: constrain velocities
+          10: x <- x + 0.5*dt*v
+          11: x0 <- x
+          12: constrain positions
+          13: v <- v + (x - x0)/(0.5*dt)
+          14: constrain velocities
+          15: v <- v + 0.5*dt*f/m
+          16: constrain velocities
+
     """
+
     def __init__(self, timestep, temperature, friction_coefficient, rattles=1):
         super().__init__(timestep, temperature)
         self._rattles = rattles

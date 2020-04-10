@@ -46,6 +46,7 @@ class AlanineDipeptideModel(object):
             The Ramachandran dihedral angle :math:`\\psi` of the alanine dipeptide molecule.
 
     """
+
     def __init__(self, force_field='amber03', water=None, box_length=25*unit.angstroms):
         pdb = app.PDBFile(os.path.join(ufedmm.__path__[0], 'data', 'alanine-dipeptide.pdb'))
         if water is None:

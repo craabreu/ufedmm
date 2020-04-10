@@ -179,19 +179,19 @@ class UnifiedFreeEnergyDynamics(object):
         frequency : int, default=None
             The frequency.
 
-        Example
-        -------
-            >>> import ufedmm
-            >>> from simtk import unit
-            >>> model = ufedmm.AlanineDipeptideModel(water='tip3p')
-            >>> mass = 50*unit.dalton*(unit.nanometer/unit.radians)**2
-            >>> K = 1000*unit.kilojoules_per_mole/unit.radians**2
-            >>> T = 300*unit.kelvin
-            >>> Ts = 1500*unit.kelvin
-            >>> bound = 180*unit.degrees
-            >>> phi = ufedmm.CollectiveVariable('phi', model.phi, -bound, bound, mass, K, Ts)
-            >>> psi = ufedmm.CollectiveVariable('psi', model.psi, -bound, bound, mass, K, Ts)
-            >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([phi, psi], model.system, model.topology, model.positions, T)
+    Example
+    -------
+        >>> import ufedmm
+        >>> from simtk import unit
+        >>> model = ufedmm.AlanineDipeptideModel(water='tip3p')
+        >>> mass = 50*unit.dalton*(unit.nanometer/unit.radians)**2
+        >>> K = 1000*unit.kilojoules_per_mole/unit.radians**2
+        >>> T = 300*unit.kelvin
+        >>> Ts = 1500*unit.kelvin
+        >>> bound = 180*unit.degrees
+        >>> phi = ufedmm.CollectiveVariable('phi', model.phi, -bound, bound, mass, K, Ts)
+        >>> psi = ufedmm.CollectiveVariable('psi', model.psi, -bound, bound, mass, K, Ts)
+        >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([phi, psi], model.system, model.topology, model.positions, T)
 
     """
 
@@ -305,6 +305,24 @@ class UnifiedFreeEnergyDynamics(object):
                 The platform properties.
             seed : int, default=None
                 The random number generator seed.
+
+        Example
+        -------
+            >>> import ufedmm
+            >>> from simtk import unit
+            >>> model = ufedmm.AlanineDipeptideModel(water='tip3p')
+            >>> mass = 50*unit.dalton*(unit.nanometer/unit.radians)**2
+            >>> K = 1000*unit.kilojoules_per_mole/unit.radians**2
+            >>> T = 300*unit.kelvin
+            >>> Ts = 1500*unit.kelvin
+            >>> dt = 2*unit.femtoseconds
+            >>> gamma = 10/unit.picoseconds
+            >>> bound = 180*unit.degrees
+            >>> phi = ufedmm.CollectiveVariable('phi', model.phi, -bound, bound, mass, K, Ts)
+            >>> psi = ufedmm.CollectiveVariable('psi', model.psi, -bound, bound, mass, K, Ts)
+            >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([phi, psi], model.system, model.topology, model.positions, T)
+            >>> integrator = ufedmm.GeodesicBAOABIntegrator(dt, T, gamma)
+            >>> simulation = ufed.simulation(integrator)
 
         """
 
