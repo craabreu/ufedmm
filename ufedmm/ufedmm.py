@@ -14,57 +14,92 @@
 """
 
 import copy
+import functools
+import io
+
+import numpy as np
 
 from simtk import openmm, unit
+from simtk.openmm import app
 
 
-class DrivenCollectiveVariable(object):
+def _standardize(quantity):
+    if unit.is_quantity(quantity):
+        return quantity.value_in_unit_system(unit.md_unit_system)
+    else:
+        return quantity
+
+
+class CollectiveVariable(object):
     """
     A collective variable whose dynamics is meant to be driven by an extended-space variable.
 
     Parameters
     ----------
-        name : str
-            The name of the collective variable.
-        variable : openmm.Force
+        id : str
+            A valid identifier string for this collective variable.
+        force : openmm.Force
             An OpenMM Force_ object whose energy function is used to evaluate the collective
             variable for a given Context_.
-        dimension : unit.Unit
-            The unit of measurement with which the collective variable is returned by the Force_
-            object specified as ``variable``. If the variable is a dimensionless quantity, then one
-            must explicitly state it by entering ``unit.dimensionless``. Otherwise, the dimension
-            is supposed to be one of the base units employed by OpenMM (see `here
-            <http://docs.openmm.org/latest/userguide/theory.html#units>`_) or a combination thereof.
+        min_value : float or unit.Quantity
+            The minimum value.
+        max_value : float or unit.Quantity
+            The maximum value.
+        mass : float or unit.Quantity
+            The minimum value.
+        force_constant : float or unit.Quantity
+            The force constant.
+        temperature : float or unit.Quantity
+            The temperature.
 
     Keyword Args
     ------------
-        period : unit.Quantity, default=None
-            The period of the collective variable if it is periodic. This argument must bear a unit
-            of measurement compatible with the specified ``dimension``. If the argument is ``None``,
-            then the collective variable is considered to be aperiodic.
+        sigma : float or unit.Quantity, default=0
+            The standard deviation. If this is `0`, then no gaussians will be deposited.
+        grid_size : int, default=None
+            The grid size. If this is `None` and `sigma` is finite, then a convenient value will be
+            automatically chosen.
+        periodic : bool, default=True
+            In the current version, only periodic variables are permitted.
 
     Example
     -------
         >>> import ufedmm
         >>> from simtk import openmm, unit
         >>> cv = openmm.CustomTorsionForce('theta')
-        >>> cv_index = cv.addTorsion(0, 1, 2, 3, [])
-        >>> psi = ufedmm.DrivenCollectiveVariable('psi', cv, unit.radians, period=360*unit.degrees)
+        >>> cv.addTorsion(0, 1, 2, 3, [])
+        0
+        >>> mass = 50*unit.dalton*(unit.nanometer/unit.radians)**2
+        >>> K = 1000*unit.kilojoules_per_mole/unit.radians**2
+        >>> Ts = 1500*unit.kelvin
+        >>> psi = ufedmm.CollectiveVariable('psi', cv, -180*unit.degrees, 180*unit.degrees, mass, K, Ts)
         >>> print(psi)
-        psi, dimension=radian, period=360 deg
+        <psi in [-3.141592653589793, 3.141592653589793], m=50, K=1000, T=1500>
 
     """
-
-    def __init__(self, name, variable, dimension=unit.dimensionless, period=None):
-        self._name = name
-        self._variable = variable
-        self._dimension = dimension
-        self._period = period
+    def __init__(self, id, force, min_value, max_value, mass, force_constant, temperature, sigma=0, grid_size=None, periodic=True):
+        if not id.isidentifier():
+            raise ValueError('Parameter id must be a valid variable identifier')
+        if not periodic:
+            raise ValueError('UFED currently requires periodic variables')
+        self.id = id
+        self.force = force
+        self.min_value = _standardize(min_value)
+        self.max_value = _standardize(max_value)
+        self.mass = _standardize(mass)
+        self.force_constant = _standardize(force_constant)
+        self.temperature = _standardize(temperature)
+        self.sigma = _standardize(sigma)
+        self.grid_size = grid_size
+        self.periodic = periodic
+        self._range = self.max_value - self.min_value
+        self._scaled_variance = (self.sigma/self._range)**2
 
     def __repr__(self):
-        return f'{self._name}, dimension={self._dimension}, period={self._period}'
+        properties = f'm={self.mass}, K={self.force_constant}, T={self.temperature}'
+        return f'<{self.id} in [{self.min_value}, {self.max_value}], {properties}>'
 
-    def evaluate(self, positions, boxVectors=None):
+    def evaluate(self, positions, box_vectors=None):
         """
         Computes the value of the collective variable for a given set of particle coordinates
         and box vectors. Whether periodic boundary conditions will be used or not depends on
@@ -72,240 +107,206 @@ class DrivenCollectiveVariable(object):
 
         Parameters
         ----------
-            positions : list(openmm.Vec3)
+            positions : list of openmm.Vec3
                 A list whose length equals the number of particles in the system and which contains
                 the coordinates of these particles.
-            boxVectors : list(openmm.Vec3), optional, default=None
+
+        Keyword Args
+        ------------
+            box_vectors : list of openmm.Vec3, default=None
                 A list with three vectors which describe the edges of the simulation box.
 
         Returns
         -------
-            unit.Quantity
+            float
 
         Example
         -------
             >>> import ufedmm
             >>> from simtk import unit
             >>> model = ufedmm.AlanineDipeptideModel()
-            >>> psi_angle, _ = model.getDihedralAngles()
-            >>> psi = ufedmm.DrivenCollectiveVariable('psi', psi_angle, unit.radians, period=360*unit.degrees)
-            >>> psi.evaluate(model.getPositions())
-            Quantity(value=3.141592653589793, unit=radian)
+            >>> mass = 50*unit.dalton*(unit.nanometer/unit.radians)**2
+            >>> K = 1000*unit.kilojoules_per_mole/unit.radians**2
+            >>> Ts = 1500*unit.kelvin
+            >>> psi = ufedmm.CollectiveVariable('psi', model.psi, -180*unit.degrees, 180*unit.degrees, mass, K, Ts)
+            >>> psi.evaluate(model.positions)
+            3.141592653589793
 
         """
-
         system = openmm.System()
-        for i in range(len(positions)):
+        for position in positions:
             system.addParticle(0)
-        if boxVectors is not None:
-            system.setDefaultPeriodicBoxVectors(*boxVectors)
-        system.addForce(copy.deepcopy(self._variable))
+        if box_vectors is not None:
+            system.setDefaultPeriodicBoxVectors(*box_vectors)
+        system.addForce(copy.deepcopy(self.force))
         platform = openmm.Platform.getPlatformByName('Reference')
         context = openmm.Context(system, openmm.CustomIntegrator(0), platform)
         context.setPositions(positions)
         energy = context.getState(getEnergy=True).getPotentialEnergy()
-        return energy.value_in_unit(unit.kilojoules_per_mole)*self._dimension
-
-    def getDimension(self):
-        """
-        Returns the dimension (unit of measurement) of the collective variable.
-
-        """
-        return self._dimension
-
-    def getPeriod(self):
-        """
-        Returns the period of the collective variable if it is periodic. Otherwise, returns `None`.
-
-        """
-        return self._period
+        return energy.value_in_unit(unit.kilojoules_per_mole)
 
 
-class DriverParameter(object):
+class UnifiedFreeEnergyDynamics(object):
     """
-    An extended-space variable aimed at driving the dynamics of a collective variable. In the
-    terminology of OpenMM, this variable is a Context_ parameter.
+    A Unified Free-Energy Dynamics (UFED) setup.
 
     Parameters
     ----------
-        name : str
-            The name of the driver parameter.
-        dimension : unit.Unit
-            The unit of measurement of this driver parameter. If it is a dimensionless quantity,
-            then one must explicitly state it by entering ``unit.dimensionless``.
-        initialValue : unit.Quantity
-            The initial value which the driver parameter must assume. It must bear a unit of
-            measurement compatible with the specified ``dimension``.
-        temperature : unit.Quantity
-            The temperature of the heat bath which the driver parameter will be attached to.
-        velocityScale : unit.Quantity
-            The characteristic velocity scale (:math:`\\nu`) of the driver parameter. It must bear
-            a unit of measurement compatible with ``dimension``/time. The inertial mass of the
-            driver parameter will be computed as :math:`k_B T/\\nu^2`, where :math:`k_B` is the
-            Boltzmann contant and :math:`T` is ``temperature``.
+        variables : list of CollectiveVariable
+            The variables.
+        system : openmm.System
+            The system.
+        topology : openmm.app.Topology
+            The topology.
+        positions : list of openmm.Vec3
+            The positions.
+        temperature : float or unit.Quantity
+            The temperature.
+        height : float or unit.Quantity
+            The height.
+        frequency : int
+            The frequency.
 
     Keyword Args
     ------------
-        lowerBound : unit.Quantity, default=None
-            The lower limit imposed to the driver parameter by means of a hard wall or periodic
-            boundary conditions. If this is ``None``, then the parameter will not be intentionally
-            bounded from below. If specified, the argument must bear a unit of measurement compatible
-            with ``dimension``.
-        upperBound : unit.Quantity, default=None
-            The upper limit imposed to the driver parameter by means of a hard wall or periodic
-            boundary conditions. If this is ``None``, then the parameter will not be intentionally
-            bounded from above. If specified, the argument must bear a unit of measurement compatible
-            with ``dimension``.
-        period : unit.Quantity, default=None
-            The period :math:`L` of the driver parameter value if it is periodic. If this is `None`,
-            then the parameter will be considered as being non-periodic. If specified, the argument
-            must bear a unit of measurement compatible with ``dimension``. In this case, it will
-            supersede the `lowerBound` and `upperBound` arguments (see above) and constrain the
-            reported parameter values between :math:`-L/2` and :math:`L/2`.
-
-    Example
-    -------
-        >>> import ufedmm
-        >>> from simtk import unit
-        >>> model = ufedmm.AlanineDipeptideModel()
-        >>> psi_angle, _ = model.getDihedralAngles()
-        >>> psi = ufedmm.DrivenCollectiveVariable('psi', psi_angle, unit.radians, period=360*unit.degrees)
-        >>> psi_value = psi.evaluate(model.getPositions())
-        >>> ufedmm.DriverParameter('psi_s', unit.radians, psi_value, 1500*unit.kelvin,
-        ...                      0.003*unit.radians/unit.femtosecond, period=360*unit.degrees)
-        psi_s, T = 1500 K, mass = 1.3857454118700363 nm**2 Da/(rad**2), initial value=3.141592653589793 rad
+        grid_expansion : int, default=20
+            The grid expansion.
 
     """
-
-    def __init__(self, name, dimension, initialValue, temperature, velocityScale,
-                 lowerBound=None, upperBound=None, period=None):
-        self._name = name
-        self._initial_value = initialValue
-        self._dimension = dimension
-        self._mass_units = unit.dalton*unit.nanometers**2/dimension**2
-        kB = unit.BOLTZMANN_CONSTANT_kB*unit.AVOGADRO_CONSTANT_NA
-        self._temperature = temperature
-        self._kT = kB*temperature
-        self._mass = (self._kT/velocityScale**2).in_units_of(self._mass_units)
-        self._lower_bound = lowerBound
-        self._upper_bound = upperBound
-        self._period = period
-
-    def __repr__(self):
-        return f'{self._name}, T = {self._temperature}, mass = {self._mass}, initial value={self._initial_value}'
-
-    def getMass(self):
-        """
-        Gets the mass associated to the driver parameter.
-
-        Returns
-        -------
-            mass : unit.Quantity
-
-        Example
-        -------
-            >>> import ufedmm
-            >>> from simtk import unit
-            >>> model = ufedmm.AlanineDipeptideModel()
-            >>> psi_driver, _ = model.getDriverParameters()
-            >>> psi_driver.getMass()
-            Quantity(value=1.68, unit=nanometer**2*dalton/(radian**2))
-
-        """
-
-        return self._mass
-
-
-class DrivingForce(openmm.CustomCVForce):
-    """
-    A extension of OpenMM's CustomCVForce_ class with special treatment for pairs of AFED-related
-    pairs of :class:`DrivenCollectiveVariable` and :class:`DriverParameter`.
-
-    Parameters
-    ----------
-        energy : str
-            An algebraic expression giving a contribution to the system energy as a function of the
-            driven collective variables and driver parameters, as well as other standard collective
-            variables and global parameters.
-
-    """
-
-    def __init__(self, energy):
-        super().__init__(energy)
-        self._driven_variables = []
-        self._driver_parameters = []
-
-    def __repr__(self):
-        return self.getEnergyFunction()
-
-    def addPair(self, variable, parameter):
-        """
-        Adds a pair of driven collective variable and driver parameter.
-
-        Parameters
-        ----------
-            variable : :class:`DrivenCollectiveVariable`
-                The driven collective variable.
-            parameter : :class:`DriverParameter`
-                The driver parameter.
-
-        """
-
-        self._driven_variables.append(variable)
-        self._driver_parameters.append(parameter)
-        self.addCollectiveVariable(variable._name, variable._variable)
-        self.addGlobalParameter(parameter._name, parameter._initial_value)
-        self.addEnergyParameterDerivative(parameter._name)
-
-
-class HarmonicDrivingForce(DrivingForce):
-    """
-    A special case of :class:`DrivingForce` to handle the typical harmonic driving potential used
-    in the driven Unified Free Energy Dynamics (dAFED) method.
-
-    """
-
-    def __init__(self):
-        super().__init__('')
-        self._energy_terms = []
-
-    def addPair(self, variable, parameter, forceConstant):
-        """
-        Adds a pair of driven collective variable and driver parameter and specifies the force
-        constant of their harmonic coupling.
-
-        Parameters
-        ----------
-            variable : :class:`DrivenCollectiveVariable`
-                The driven collective variable.
-            parameter : :class:`DriverParameter`
-                The driver parameter.
-            forceConstant : unit.Quantity
-                The strength of the coupling harmonic force in units of energy per squared dimension
-                of the collective variable.
-
-        Example
-        -------
-            >>> import ufedmm
-            >>> from copy import deepcopy
-            >>> from simtk import unit
-            >>> model = ufedmm.AlanineDipeptideModel()
-            >>> psi, phi = model.getCollectiveVariables(copy=True)
-            >>> psi_driver, phi_driver = model.getDriverParameters()
-            >>> K = 2.78E3*unit.kilocalories_per_mole/unit.radians**2
-            >>> force = ufedmm.HarmonicDrivingForce()
-            >>> force.addPair(psi, psi_driver, K)
-            >>> print(force)
-            5815.76*min(abs(psi-psi_s),6.283185307179586-abs(psi-psi_s))^2
-
-        """
-
-        K = forceConstant.value_in_unit(unit.kilojoules_per_mole/variable._dimension**2)
-        if variable._period is not None:
-            delta = f'abs({variable._name}-{parameter._name})'
-            period = variable._period/variable._dimension
-            self._energy_terms.append(f'{0.5*K}*min({delta},{period}-{delta})^2')
+    def __init__(self, variables, system, topology, positions, temperature, height, frequency, grid_expansion=20):
+        self.system = copy.deepcopy(system)
+        self.variables = variables
+        self._modeller = app.Modeller(topology, positions)
+        self._temperature = _standardize(temperature)
+        self._height = _standardize(height)
+        self._frequency = frequency
+        Vx, _, _ = self._modeller.topology.getPeriodicBoxVectors()
+        self._Lx = Vx[0].value_in_unit(unit.nanometer)
+        nbforce = [f for f in self.system.getForces() if isinstance(f, openmm.NonbondedForce)][0]
+        energy_terms = []
+        definitions = []
+        for i, cv in enumerate(self.variables):
+            value = cv.evaluate(self.positions)
+            new_atom = self._new_atom(x=self._Lx*(value - cv.min_value)/cv._range, y=i)
+            self._modeller.add(*new_atom)
+            self.system.addParticle(cv.mass*(cv._range/self._Lx)**2)
+            nbforce.addParticle(0.0, 1.0, 0.0)
+            energy_terms.append(f'0.5*K_{cv.id}*min(d{cv.id},{cv._range}-d{cv.id})^2')
+            definitions.append(f'd{cv.id}=abs({cv.id}-s_{cv.id})')
+        parameter_list = ', '.join(f's_{v.id}' for v in self.variables)
+        energy_terms.append(f'bias({parameter_list})')
+        expression = '; '.join([' + '.join(energy_terms)] + definitions)
+        force = self.force = openmm.CustomCVForce(expression)
+        for cv in self.variables:
+            force.addGlobalParameter(f'K_{cv.id}', cv.force_constant)
+            force.addCollectiveVariable(cv.id, cv.force)
+        n = self.system.getNumParticles() - len(self.variables)
+        self._widths = []
+        self._bounds = []
+        for i, cv in enumerate(self.variables):
+            expression = f'{cv.min_value}+{cv._range}*(x-floor(x)); x=x1/{self._Lx}'
+            parameter = openmm.CustomCompoundBondForce(1, expression)
+            parameter.addBond([n+i], [])
+            force.addCollectiveVariable(f's_{cv.id}', parameter)
+            cv._expanded = cv.periodic and len(self.variables) > 1
+            cv._extra_points = min(grid_expansion, cv.grid_size) if cv._expanded else 0
+            extra_range = cv._extra_points*cv._range/(cv.grid_size - 1)
+            self._widths += [cv.grid_size + 2*cv._extra_points]
+            self._bounds += [cv.min_value - extra_range, cv.max_value + extra_range]
+        self._bias = np.zeros(tuple(reversed(self._widths)))
+        if len(variables) == 1:
+            periodic = self.variables[0].periodic
+            self._table = openmm.Continuous1DFunction(self._bias.flatten(), *self._bounds, periodic)
+        elif len(variables) == 2:
+            self._table = openmm.Continuous2DFunction(*self._widths, self._bias.flatten(), *self._bounds)
+        elif len(variables) == 3:
+            self._table = openmm.Continuous3DFunction(*self._widths, self._bias.flatten(), *self._bounds)
         else:
-            self._energy_terms.append(f'{0.5*K}*({variable._name}-{parameter._name})^2')
-        self.setEnergyFunction('+'.join(self._energy_terms))
-        super().addPair(variable, parameter)
+            raise ValueError('UFED requires 1, 2, or 3 collective variables')
+        force.addTabulatedFunction('bias', self._table)
+        self.system.addForce(force)
+
+    def _new_atom(self, x=0, y=0, z=0):
+        xa, ya, za = 10*x, 10*y, 10*z
+        pdb = app.PDBFile(io.StringIO(
+            f'ATOM      1  Cl   Cl A   1     {xa:7.3f} {ya:7.3f} {za:7.3f}  1.00  0.00'
+        ))
+        return pdb.topology, pdb.positions
+
+    def _add_gaussian(self, position):
+        gaussians = []
+        for i, cv in enumerate(self.variables):
+            x = (position[i] - cv.min_value)/cv._range
+            if cv.periodic:
+                x = x % 1.0
+            dist = np.abs(np.linspace(0, 1, num=cv.grid_size) - x)
+            if cv.periodic:
+                dist = np.min(np.array([dist, np.abs(dist-1)]), axis=0)
+            values = np.exp(-0.5*dist*dist/cv._scaled_variance)
+            if cv._expanded:
+                n = cv._extra_points + 1
+                values = np.hstack((values[-n:-1], values, values[1:n]))
+            gaussians.append(values)
+
+        if len(self.variables) == 1:
+            self._bias += self._height*gaussians[0]
+            periodic = self.variables[0].periodic
+            self._table.setFunctionParameters(self._bias.flatten(), *self._bounds, periodic)
+        else:
+            self._bias += self._height*functools.reduce(np.multiply.outer, reversed(gaussians))
+            self._table.setFunctionParameters(*self._widths, self._bias.flatten(), *self._bounds)
+
+    def simulation(self, integrator, platform=None, properties=None, seed=None):
+        """
+        Returns a Simulation.
+
+        Parameters
+        ----------
+            integrator :
+                The integrator. If the temperature of any collective variable is different from
+                the system temperature, then this must be a CustomIntegrator with a per-dof variable
+                called `kT`.
+
+        Keyword Args
+        ------------
+            platform : openmm.Platform, default=None
+                The platform.
+            properties : dict, default=None
+                The platform properties.
+            seed : int, default=None
+                The random number generator seed.
+
+        """
+
+        simulation = openmm.app.Simulation(self.topology, self.system, integrator, platform, properties)
+        simulation.context.setPositions(self.positions)
+        if seed is None:
+            simulation.context.setVelocitiesToTemperature(self._temperature)
+        else:
+            simulation.context.setVelocitiesToTemperature(self._temperature, seed)
+        n = self.system.getNumParticles() - len(self.variables)
+        kB = _standardize(unit.MOLAR_GAS_CONSTANT_R)
+        kT = [kB*self._temperature*openmm.Vec3(1, 1, 1) for i in range(n)]
+        for cv in self.variables:
+            kT.append(kB*cv.temperature*openmm.Vec3(1, 0, 0))
+        integrator.setPerDofVariableByName('kT', kT)
+        simulation.reporters.append(self)
+        return simulation
+
+    @property
+    def topology(self):
+        return self._modeller.topology
+
+    @property
+    def positions(self):
+        return self._modeller.positions
+
+    def describeNextReport(self, simulation):
+        steps = self._frequency - simulation.currentStep%self._frequency
+        return (steps, False, False, False, False, False)
+
+    def report(self, simulation, state):
+        cv_values = self.force.getCollectiveVariableValues(simulation.context)
+        position = cv_values[len(self.variables):]
+        self._add_gaussian(position)
+        self.force.updateParametersInContext(simulation.context)
