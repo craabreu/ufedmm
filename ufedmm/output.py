@@ -12,11 +12,6 @@
 
 import sys
 
-from simtk import unit
-from simtk.openmm import app
-
-from ufedmm import CustomIntegrator
-
 
 class MultipleFiles:
     """

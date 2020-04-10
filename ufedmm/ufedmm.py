@@ -18,7 +18,6 @@ import functools
 import io
 
 import numpy as np
-
 from simtk import openmm, unit
 from simtk.openmm import app
 
@@ -77,7 +76,8 @@ class CollectiveVariable(object):
         <psi in [-3.141592653589793, 3.141592653589793], m=50, K=1000, T=1500>
 
     """
-    def __init__(self, id, force, min_value, max_value, mass, force_constant, temperature, sigma=0, grid_size=None, periodic=True):
+    def __init__(self, id, force, min_value, max_value, mass, force_constant, temperature,
+                 sigma=0, grid_size=None, periodic=True):
         if not id.isidentifier():
             raise ValueError('Parameter id must be a valid variable identifier')
         if not periodic:
@@ -302,7 +302,7 @@ class UnifiedFreeEnergyDynamics(object):
         return self._modeller.positions
 
     def describeNextReport(self, simulation):
-        steps = self._frequency - simulation.currentStep%self._frequency
+        steps = self._frequency - simulation.currentStep % self._frequency
         return (steps, False, False, False, False, False)
 
     def report(self, simulation, state):

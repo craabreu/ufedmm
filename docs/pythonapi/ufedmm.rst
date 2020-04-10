@@ -1,5 +1,5 @@
 ufedmm
-====
+======
 
 .. automodule:: ufedmm.ufedmm
     :members:

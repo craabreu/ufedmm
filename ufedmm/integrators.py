@@ -13,23 +13,13 @@
 
 """
 
-import re
-
-import numpy as np
-
 from simtk import openmm, unit
 
 
 class CustomIntegrator(openmm.CustomIntegrator):
     """
-    An extension of OpenMM's CustomIntegrator_ class. This extension facilitates the specification
-    of variables and computation steps in a per-driver-parameter fashion. These computations are
-    defined in the same manner as per-dof computations in the original class.
-
-    .. note::
-        For every driver parameter in `drivingForce`, per-driver-parameters `v` (velocity), `m`
-        (mass), and `kT` (Boltzmann constant times temperature) are automatically created, as well
-        as read-only force variables `f`, `f0`, `f1`, and so on (see CustomIntegrator_).
+    An extension of OpenMM's CustomIntegrator_ class with an extra per-dof variable `kT` whose
+    content is the Boltzmann constant multiplied by the system temperature.
 
     Parameters
     ----------
