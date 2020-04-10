@@ -1,7 +1,7 @@
 """
 .. module:: testmodels
    :platform: Unix, Windows
-   :synopsis: Adiabatic Free Energy Dynamics Test Model Systems
+   :synopsis: Unified Free Energy Dynamics Test Model Systems
 
 .. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
 

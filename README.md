@@ -1,5 +1,5 @@
-Adiabatic Free Energy Dynamics with OpenMM
-==========================================
+Unified Free Energy Dynamics with OpenMM
+========================================
 [//]: # (Badges)
 [![License](https://img.shields.io/github/license/mashape/apistatus.svg)]()
 [![Travis Build Status](https://travis-ci.org/craabreu/ufedmm.png)](https://travis-ci.org/craabreu/ufedmm)
@@ -7,11 +7,11 @@ Adiabatic Free Energy Dynamics with OpenMM
 [![codecov](https://codecov.io/gh/craabreu/ufedmm/branch/master/graph/badge.svg)](https://codecov.io/gh/craabreu/ufedmm/branch/master)
 [![Documentation Status](https://readthedocs.org/projects/ufedmm/badge/?style=flat)](https://readthedocs.org/projects/ufedmm)
 
-Adiabatic Free Energy Dynamics with OpenMM
+Unified Free Energy Dynamics with OpenMM
 
 ### Copyright
 
-Copyright (c) 2019, Charlles Abreu
+Copyright (c) 2020, Charlles Abreu
 
 
 ### Documentation

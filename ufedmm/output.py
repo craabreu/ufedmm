@@ -1,7 +1,7 @@
 """
 .. module:: output
    :platform: Unix, Windows
-   :synopsis: Adiabatic Free Energy Dynamics Outputs
+   :synopsis: Unified Free Energy Dynamics Outputs
 
 .. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
 

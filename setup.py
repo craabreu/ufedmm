@@ -1,6 +1,6 @@
 """
 AFED for OpenMM
-Adiabatic Free Energy Dynamics with OpenMM
+Unified Free Energy Dynamics with OpenMM
 """
 import sys
 from setuptools import setup, find_packages

@@ -5,7 +5,7 @@ Glossary
 .. glossary::
 
     AFED
-        Adiabatic Free Energy Dynamics
+        Unified Free Energy Dynamics
 
     NHC
         Nosé-Hoover Chain

@@ -1,7 +1,7 @@
 """
 .. module:: integrators
    :platform: Unix, Windows
-   :synopsis: Adiabatic Free Energy Dynamics Integrators
+   :synopsis: Unified Free Energy Dynamics Integrators
 
 .. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
 

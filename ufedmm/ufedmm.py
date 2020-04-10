@@ -1,7 +1,7 @@
 """
 .. module:: ufedmm
    :platform: Unix, Windows
-   :synopsis: Adiabatic Free Energy Dynamics with OpenMM
+   :synopsis: Unified Free Energy Dynamics with OpenMM
 
 .. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
 
@@ -261,7 +261,7 @@ class DrivingForce(openmm.CustomCVForce):
 class HarmonicDrivingForce(DrivingForce):
     """
     A special case of :class:`DrivingForce` to handle the typical harmonic driving potential used
-    in the driven Adiabatic Free Energy Dynamics (dAFED) method.
+    in the driven Unified Free Energy Dynamics (dAFED) method.
 
     """
 
