@@ -180,8 +180,10 @@ class UnifiedFreeEnergyDynamics(object):
         self._temperature = _standardize(temperature)
         self._height = _standardize(height)
         self._frequency = frequency
-        Vx, _, _ = self._modeller.topology.getPeriodicBoxVectors()
-        self._Lx = Vx[0].value_in_unit(unit.nanometer)
+        Vx, Vy, Vz = self._modeller.topology.getPeriodicBoxVectors()
+        if not (Vx.y == Vx.z == Vy.x == Vy.z == Vz.x == Vz.y == 0.0):
+            raise ValueError('Only orthorhombic boxes are allowed')
+        self._Lx = Vx.x
         nbforce = [f for f in self.system.getForces() if isinstance(f, openmm.NonbondedForce)][0]
         energy_terms = []
         definitions = []
