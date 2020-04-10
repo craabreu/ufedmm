@@ -1,0 +1,21 @@
+name: test
+channels:
+  - conda-forge
+  - omnia
+dependencies:
+    # Base depends
+  - python
+  - pip
+  - sphinxcontrib-bibtex >=0.4
+
+  - openmm >=7.3.1
+
+    # Testing
+  - isort
+  - flake8
+  - pytest
+  - pytest-cov
+
+  # Pip-only installs
+  - pip:
+    - codecov

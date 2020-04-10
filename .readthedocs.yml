@@ -1,0 +1,5 @@
+conda:
+    file: devtools/conda-envs/test_env.yaml
+
+python:
+   setup_py_install: true
