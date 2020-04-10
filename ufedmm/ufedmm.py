@@ -77,7 +77,7 @@ class CollectiveVariable(object):
 
     """
     def __init__(self, id, force, min_value, max_value, mass, force_constant, temperature,
-                 sigma=0, grid_size=None, periodic=True):
+                 sigma=0.0, grid_size=None, periodic=True):
         if not id.isidentifier():
             raise ValueError('Parameter id must be a valid variable identifier')
         if not periodic:
@@ -90,10 +90,13 @@ class CollectiveVariable(object):
         self.force_constant = _standardize(force_constant)
         self.temperature = _standardize(temperature)
         self.sigma = _standardize(sigma)
-        self.grid_size = grid_size
+        if grid_size is None and sigma != 0.0:
+            self.grid_size = int(np.ceil(5*self._range/self.sigma))
+        else:
+            self.grid_size = grid_size
         self.periodic = periodic
         self._range = self.max_value - self.min_value
-        self._scaled_variance = (self.sigma/self._range)**2
+        self._scaled_variance = (self.sigma/self._range)**2            
 
     def __repr__(self):
         properties = f'm={self.mass}, K={self.force_constant}, T={self.temperature}'
@@ -162,22 +165,26 @@ class UnifiedFreeEnergyDynamics(object):
             The positions.
         temperature : float or unit.Quantity
             The temperature.
-        height : float or unit.Quantity
-            The height.
-        frequency : int
-            The frequency.
 
     Keyword Args
     ------------
         grid_expansion : int, default=20
             The grid expansion.
+        height : float or unit.Quantity, default=None
+            The height.
+        frequency : int, default=None
+            The frequency.
 
     """
-    def __init__(self, variables, system, topology, positions, temperature, height, frequency, grid_expansion=20):
+
+    def __init__(self, variables, system, topology, positions, temperature,
+                 height=None, frequency=None, grid_expansion=20):
         self.system = copy.deepcopy(system)
         self.variables = variables
         self._modeller = app.Modeller(topology, positions)
         self._temperature = _standardize(temperature)
+        self._metadynamics = (any(cv.sigma != 0.0 for cv in self.variables)
+                              and height is not None and frequency is not None)
         self._height = _standardize(height)
         self._frequency = frequency
         Vx, Vy, Vz = self._modeller.topology.getPeriodicBoxVectors()
@@ -196,8 +203,9 @@ class UnifiedFreeEnergyDynamics(object):
             nbforce.addParticle(0.0, 1.0, 0.0)
             energy_terms.append(f'0.5*K_{cv.id}*min(d{cv.id},{cv._range}-d{cv.id})^2')
             definitions.append(f'd{cv.id}=abs({cv.id}-s_{cv.id})')
-        parameter_list = ', '.join(f's_{v.id}' for v in self.variables)
-        energy_terms.append(f'bias({parameter_list})')
+        if self._metadynamics:
+            parameter_list = ', '.join(f's_{v.id}' for v in self.variables)
+            energy_terms.append(f'bias({parameter_list})')
         expression = '; '.join([' + '.join(energy_terms)] + definitions)
         force = self.force = openmm.CustomCVForce(expression)
         for cv in self.variables:
@@ -210,22 +218,24 @@ class UnifiedFreeEnergyDynamics(object):
             parameter = openmm.CustomCompoundBondForce(1, expression)
             parameter.addBond([self._nparticles+i], [])
             force.addCollectiveVariable(f's_{cv.id}', parameter)
-            cv._expanded = cv.periodic and len(self.variables) > 1
-            cv._extra_points = min(grid_expansion, cv.grid_size) if cv._expanded else 0
-            extra_range = cv._extra_points*cv._range/(cv.grid_size - 1)
-            self._widths += [cv.grid_size + 2*cv._extra_points]
-            self._bounds += [cv.min_value - extra_range, cv.max_value + extra_range]
-        self._bias = np.zeros(tuple(reversed(self._widths)))
-        if len(variables) == 1:
-            periodic = self.variables[0].periodic
-            self._table = openmm.Continuous1DFunction(self._bias.flatten(), *self._bounds, periodic)
-        elif len(variables) == 2:
-            self._table = openmm.Continuous2DFunction(*self._widths, self._bias.flatten(), *self._bounds)
-        elif len(variables) == 3:
-            self._table = openmm.Continuous3DFunction(*self._widths, self._bias.flatten(), *self._bounds)
-        else:
-            raise ValueError('UFED requires 1, 2, or 3 collective variables')
-        force.addTabulatedFunction('bias', self._table)
+        if self._metadynamics:
+            for cv in self.variables:
+                cv._expanded = cv.periodic and len(self.variables) > 1
+                cv._extra_points = min(grid_expansion, cv.grid_size) if cv._expanded else 0
+                extra_range = cv._extra_points*cv._range/(cv.grid_size - 1)
+                self._widths += [cv.grid_size + 2*cv._extra_points]
+                self._bounds += [cv.min_value - extra_range, cv.max_value + extra_range]
+            self._bias = np.zeros(tuple(reversed(self._widths)))
+            if len(variables) == 1:
+                periodic = self.variables[0].periodic
+                self._table = openmm.Continuous1DFunction(self._bias.flatten(), *self._bounds, periodic)
+            elif len(variables) == 2:
+                self._table = openmm.Continuous2DFunction(*self._widths, self._bias.flatten(), *self._bounds)
+            elif len(variables) == 3:
+                self._table = openmm.Continuous3DFunction(*self._widths, self._bias.flatten(), *self._bounds)
+            else:
+                raise ValueError('UFED requires 1, 2, or 3 collective variables')
+            force.addTabulatedFunction('bias', self._table)
         self.system.addForce(force)
 
     def _new_atom(self, x=0, y=0, z=0):
@@ -299,7 +309,8 @@ class UnifiedFreeEnergyDynamics(object):
                 kT[self._nparticles+i] = openmm.Vec3(kB*cv.temperature, 0, 0)
             integrator.setPerDofVariableByName('kT', kT)
 
-        simulation.reporters.append(self)
+        if self._metadynamics:
+            simulation.reporters.append(self)
         return simulation
 
     @property
