@@ -96,7 +96,7 @@ class CollectiveVariable(object):
             self.grid_size = grid_size
         self.periodic = periodic
         self._range = self.max_value - self.min_value
-        self._scaled_variance = (self.sigma/self._range)**2            
+        self._scaled_variance = (self.sigma/self._range)**2
 
     def __repr__(self):
         properties = f'm={self.mass}, K={self.force_constant}, T={self.temperature}'
@@ -131,7 +131,11 @@ class CollectiveVariable(object):
             >>> mass = 50*unit.dalton*(unit.nanometer/unit.radians)**2
             >>> K = 1000*unit.kilojoules_per_mole/unit.radians**2
             >>> Ts = 1500*unit.kelvin
-            >>> psi = ufedmm.CollectiveVariable('psi', model.psi, -180*unit.degrees, 180*unit.degrees, mass, K, Ts)
+            >>> bound = 180*unit.degrees
+            >>> phi = ufedmm.CollectiveVariable('phi', model.phi, -bound, bound, mass, K, Ts)
+            >>> psi = ufedmm.CollectiveVariable('psi', model.psi, -bound, bound, mass, K, Ts)
+            >>> phi.evaluate(model.positions)
+            3.141592653589793
             >>> psi.evaluate(model.positions)
             3.141592653589793
 
@@ -174,6 +178,20 @@ class UnifiedFreeEnergyDynamics(object):
             The height.
         frequency : int, default=None
             The frequency.
+
+        Example
+        -------
+            >>> import ufedmm
+            >>> from simtk import unit
+            >>> model = ufedmm.AlanineDipeptideModel(water='tip3p')
+            >>> mass = 50*unit.dalton*(unit.nanometer/unit.radians)**2
+            >>> K = 1000*unit.kilojoules_per_mole/unit.radians**2
+            >>> T = 300*unit.kelvin
+            >>> Ts = 1500*unit.kelvin
+            >>> bound = 180*unit.degrees
+            >>> phi = ufedmm.CollectiveVariable('phi', model.phi, -bound, bound, mass, K, Ts)
+            >>> psi = ufedmm.CollectiveVariable('psi', model.psi, -bound, bound, mass, K, Ts)
+            >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([phi, psi], model.system, model.topology, model.positions, T)
 
     """
 

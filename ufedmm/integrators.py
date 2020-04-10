@@ -97,7 +97,7 @@ class GeodesicBAOABIntegrator(CustomIntegrator):
             The temperature.
         friction_coefficient : float or unit.Quantity
             The friction coefficient.
-    
+
     Keyword Args
     ------------
         rattles : int, default=1
