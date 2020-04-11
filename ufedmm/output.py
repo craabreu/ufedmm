@@ -98,8 +98,8 @@ class StateDataReporter(app.StateDataReporter):
         ...     step=True,
         ... )
         >>> reporter.report(simulation, simulation.context.getState())
-        #"Step","phi","psi","s_phi","s_psi"
-        0,3.141592653589793,3.141592653589793,-3.141592653589793,-3.141592653589793
+        #"Step","phi","s_phi","psi","s_psi"
+        0,3.1415927410125732,-3.1415927410125732,3.1415927410125732,-3.1415927410125732
 
     """
     def __init__(self, file, report_interval, cv_force, **kwargs):
