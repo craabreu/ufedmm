@@ -344,10 +344,11 @@ class UnifiedFreeEnergyDynamics(object):
             except Exception:
                 raise ValueError('Multiple temperatures require CustomIntegrator with per-dof variable `kT`')
             kB = _standardize(unit.MOLAR_GAS_CONSTANT_R)
+            unit_vector = openmm.Vec3(1, 1, 1)
             for i in range(self._nparticles):
-                kT[i] = kB*self._temperature*openmm.Vec3(1, 1, 1)
+                kT[i] = kB*self._temperature*unit_vector
             for i, cv in enumerate(self.variables):
-                kT[self._nparticles+i] = openmm.Vec3(kB*cv.temperature, 0, 0)
+                kT[self._nparticles+i] = kB*cv.temperature*unit_vector
             integrator.setPerDofVariableByName('kT', kT)
 
         if self._metadynamics:
