@@ -226,17 +226,16 @@ class UnifiedFreeEnergyDynamics(object):
             energy_terms.append(f'bias({parameter_list})')
         expression = '; '.join([' + '.join(energy_terms)] + definitions)
         force = self.force = openmm.CustomCVForce(expression)
-        for cv in self.variables:
+        for i, cv in enumerate(self.variables):
             force.addGlobalParameter(f'K_{cv.id}', cv.force_constant)
             force.addCollectiveVariable(cv.id, cv.force)
-        self._widths = []
-        self._bounds = []
-        for i, cv in enumerate(self.variables):
             expression = f'{cv.min_value}+{cv._range}*(x-floor(x)); x=x1/{self._Lx}'
             parameter = openmm.CustomCompoundBondForce(1, expression)
             parameter.addBond([self._nparticles+i], [])
             force.addCollectiveVariable(f's_{cv.id}', parameter)
         if self._metadynamics:
+            self._widths = []
+            self._bounds = []
             for cv in self.variables:
                 cv._expanded = cv.periodic and len(self.variables) > 1
                 cv._extra_points = min(grid_expansion, cv.grid_size) if cv._expanded else 0
@@ -362,6 +361,5 @@ class UnifiedFreeEnergyDynamics(object):
 
     def report(self, simulation, state):
         cv_values = self.force.getCollectiveVariableValues(simulation.context)
-        position = cv_values[len(self.variables):]
-        self._add_gaussian(position)
+        self._add_gaussian(cv_values[1::2])
         self.force.updateParametersInContext(simulation.context)
