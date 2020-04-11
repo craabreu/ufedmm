@@ -23,15 +23,15 @@ class CustomIntegrator(openmm.CustomIntegrator):
 
     Parameters
     ----------
-        stepSize : float or unit.Quantity
-            The step size with which to integrate the equations of motion.
         temperature : float or unit.Quantity
             The temperature.
+        step_size : float or unit.Quantity
+            The step size with which to integrate the equations of motion.
 
     """
 
-    def __init__(self, stepSize, temperature):
-        super().__init__(stepSize)
+    def __init__(self, temperature, step_size):
+        super().__init__(step_size)
         self.addPerDofVariable('kT', unit.MOLAR_GAS_CONSTANT_R*temperature)
 
     def __repr__(self):
@@ -91,12 +91,12 @@ class GeodesicBAOABIntegrator(CustomIntegrator):
 
     Parameters
     ----------
-        timestep : float or unit.Quantity
-            The time-step size.
         temperature : float or unit.Quantity
             The temperature.
         friction_coefficient : float or unit.Quantity
             The friction coefficient.
+        step_size : float or unit.Quantity
+            The time-step size.
 
     Keyword Args
     ------------
@@ -105,10 +105,11 @@ class GeodesicBAOABIntegrator(CustomIntegrator):
 
     Example
     -------
+        >>> import ufedmm
         >>> dt = 2*unit.femtoseconds
         >>> temp = 300*unit.kelvin
         >>> gamma = 10/unit.picoseconds
-        >>> GeodesicBAOABIntegrator(dt, temp, gamma, rattles=1)
+        >>> ufedmm.GeodesicBAOABIntegrator(temp, gamma, dt, rattles=1)
         Per-dof variables:
           kT, x0
         Global variables:
@@ -134,8 +135,8 @@ class GeodesicBAOABIntegrator(CustomIntegrator):
 
     """
 
-    def __init__(self, timestep, temperature, friction_coefficient, rattles=1):
-        super().__init__(timestep, temperature)
+    def __init__(self, temperature, friction_coefficient, step_size, rattles=1):
+        super().__init__(temperature, step_size)
         self._rattles = rattles
         self.addGlobalVariable('friction', friction_coefficient)
         if rattles > 1:
