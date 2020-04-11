@@ -210,7 +210,8 @@ class UnifiedFreeEnergyDynamics(object):
             raise ValueError('Only orthorhombic boxes are allowed')
         self._Lx = Vx.x
         self._nparticles = self.system.getNumParticles()
-        nbforce = [f for f in self.system.getForces() if isinstance(f, openmm.NonbondedForce)][0]
+        nb_types = (openmm.NonbondedForce, openmm.CustomNonbondedForce)
+        nb_forces = [f for f in self.system.getForces() if isinstance(f, nb_types)]
         energy_terms = []
         definitions = []
         for i, cv in enumerate(self.variables):
@@ -218,7 +219,11 @@ class UnifiedFreeEnergyDynamics(object):
             new_atom = self._new_atom(x=self._Lx*(value - cv.min_value)/cv._range, y=i)
             self._modeller.add(*new_atom)
             self.system.addParticle(cv.mass*(cv._range/self._Lx)**2)
-            nbforce.addParticle(0.0, 1.0, 0.0)
+            for nb_force in nb_forces:
+                if isinstance(nb_force, openmm.NonbondedForce):
+                    nb_force.addParticle(0.0, 1.0, 0.0)
+                else:
+                    nb_force.addParticle([0.0]*nb_force.getNumPerParticleParameters())
             energy_terms.append(f'0.5*K_{cv.id}*min(d{cv.id},{cv._range}-d{cv.id})^2')
             definitions.append(f'd{cv.id}=abs({cv.id}-s_{cv.id})')
         if self._metadynamics:
