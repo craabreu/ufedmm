@@ -86,6 +86,7 @@ class CollectiveVariable(object):
         self.force = force
         self.min_value = _standardize(min_value)
         self.max_value = _standardize(max_value)
+        self.unit = min_value.in_unit_system(unit.md_unit_system).unit
         self.mass = _standardize(mass)
         self.force_constant = _standardize(force_constant)
         self.temperature = _standardize(temperature)
@@ -194,7 +195,6 @@ class UnifiedFreeEnergyDynamics(object):
         >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([phi, psi], model.system, model.topology, model.positions, T)
 
     """
-
     def __init__(self, variables, system, topology, positions, temperature,
                  height=None, frequency=None, grid_expansion=20):
         self.system = copy.deepcopy(system)
@@ -325,7 +325,6 @@ class UnifiedFreeEnergyDynamics(object):
             >>> simulation = ufed.simulation(integrator)
 
         """
-
         simulation = openmm.app.Simulation(self.topology, self.system, integrator, platform, properties)
         simulation.context.setPositions(self.positions)
         if seed is None:
