@@ -226,19 +226,22 @@ class UnifiedFreeEnergyDynamics(object):
                     nb_force.addParticle([0.0]*nb_force.getNumPerParticleParameters())
             energy_terms.append(f'0.5*K_{cv.id}*min(d{cv.id},{cv._range}-d{cv.id})^2')
             definitions.append(f'd{cv.id}=abs({cv.id}-s_{cv.id})')
-        if self._metadynamics:
-            parameter_list = ', '.join(f's_{v.id}' for v in self.variables)
-            energy_terms.append(f'bias({parameter_list})')
         expression = '; '.join([' + '.join(energy_terms)] + definitions)
-        force = self.force = openmm.CustomCVForce(expression)
+        self.force = openmm.CustomCVForce(expression)
+        parameters = {}
         for i, cv in enumerate(self.variables):
-            force.addGlobalParameter(f'K_{cv.id}', cv.force_constant)
-            force.addCollectiveVariable(cv.id, cv.force)
+            self.force.addGlobalParameter(f'K_{cv.id}', cv.force_constant)
+            self.force.addCollectiveVariable(cv.id, cv.force)
             expression = f'{cv.min_value}+{cv._range}*(x-floor(x)); x=x1/{self._Lx}'
             parameter = openmm.CustomCompoundBondForce(1, expression)
             parameter.addBond([self._nparticles+i], [])
-            force.addCollectiveVariable(f's_{cv.id}', parameter)
+            self.force.addCollectiveVariable(f's_{cv.id}', parameter)
+            parameters[f's_{cv.id}'] = parameter
+        self.system.addForce(self.force)
         if self._metadynamics:
+            self.bias_force = openmm.CustomCVForce('bias({})'.format(', '.join(parameters)))
+            for id, parameter in parameters.items():
+                self.bias_force.addCollectiveVariable(id, copy.deepcopy(parameter))
             self._widths = []
             self._bounds = []
             for cv in self.variables:
@@ -257,8 +260,8 @@ class UnifiedFreeEnergyDynamics(object):
                 self._table = openmm.Continuous3DFunction(*self._widths, self._bias.flatten(), *self._bounds)
             else:
                 raise ValueError('UFED requires 1, 2, or 3 collective variables')
-            force.addTabulatedFunction('bias', self._table)
-        self.system.addForce(force)
+            self.bias_force.addTabulatedFunction('bias', self._table)
+            self.system.addForce(self.bias_force)
 
     def _new_atom(self, x=0, y=0, z=0):
         xa, ya, za = 10*x, 10*y, 10*z
@@ -281,7 +284,6 @@ class UnifiedFreeEnergyDynamics(object):
                 n = cv._extra_points + 1
                 values = np.hstack((values[-n:-1], values, values[1:n]))
             gaussians.append(values)
-
         if len(self.variables) == 1:
             self._bias += self._height*gaussians[0]
             periodic = self.variables[0].periodic
@@ -365,6 +367,6 @@ class UnifiedFreeEnergyDynamics(object):
         return (steps, False, False, False, False, False)
 
     def report(self, simulation, state):
-        cv_values = self.force.getCollectiveVariableValues(simulation.context)
-        self._add_gaussian(cv_values[1::2])
-        self.force.updateParametersInContext(simulation.context)
+        cv_values = self.bias_force.getCollectiveVariableValues(simulation.context)
+        self._add_gaussian(cv_values)
+        self.bias_force.updateParametersInContext(simulation.context)
