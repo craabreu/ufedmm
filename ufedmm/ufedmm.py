@@ -86,7 +86,6 @@ class CollectiveVariable(object):
         self.force = force
         self.min_value = _standardize(min_value)
         self.max_value = _standardize(max_value)
-        self.unit = min_value.in_unit_system(unit.md_unit_system).unit
         self.mass = _standardize(mass)
         self.force_constant = _standardize(force_constant)
         self.temperature = _standardize(temperature)
@@ -244,12 +243,16 @@ class UnifiedFreeEnergyDynamics(object):
                 self.bias_force.addCollectiveVariable(id, copy.deepcopy(parameter))
             self._widths = []
             self._bounds = []
+            self._expanded = []
+            self._extra_points = []
             for cv in self.variables:
-                cv._expanded = cv.periodic and len(self.variables) > 1
-                cv._extra_points = min(grid_expansion, cv.grid_size) if cv._expanded else 0
-                extra_range = cv._extra_points*cv._range/(cv.grid_size - 1)
-                self._widths += [cv.grid_size + 2*cv._extra_points]
+                expanded = cv.periodic and len(self.variables) > 1
+                extra_points = min(grid_expansion, cv.grid_size) if expanded else 0
+                extra_range = extra_points*cv._range/(cv.grid_size - 1)
+                self._widths += [cv.grid_size + 2*extra_points]
                 self._bounds += [cv.min_value - extra_range, cv.max_value + extra_range]
+                self._expanded += [expanded]
+                self._extra_points += [extra_points]
             self._bias = np.zeros(tuple(reversed(self._widths)))
             if len(variables) == 1:
                 periodic = self.variables[0].periodic
@@ -280,8 +283,8 @@ class UnifiedFreeEnergyDynamics(object):
             if cv.periodic:
                 dist = np.min(np.array([dist, np.abs(dist-1)]), axis=0)
             values = np.exp(-0.5*dist*dist/cv._scaled_variance)
-            if cv._expanded:
-                n = cv._extra_points + 1
+            if self._expanded[i]:
+                n = self._extra_points[i] + 1
                 values = np.hstack((values[-n:-1], values, values[1:n]))
             gaussians.append(values)
         if len(self.variables) == 1:
