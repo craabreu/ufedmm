@@ -177,10 +177,6 @@ class UnifiedFreeEnergyDynamics(object):
     ----------
         variables : list of CollectiveVariable
             The variables.
-        topology : openmm.app.Topology
-            The topology.
-        positions : list of openmm.Vec3
-            The positions.
         temperature : float or unit.Quantity
             The temperature.
 
@@ -199,34 +195,26 @@ class UnifiedFreeEnergyDynamics(object):
         >>> from simtk import unit
         >>> model = ufedmm.AlanineDipeptideModel(water='tip3p')
         >>> mass = 50*unit.dalton*(unit.nanometer/unit.radians)**2
-        >>> K = 1000*unit.kilojoules_per_mole/unit.radians**2
-        >>> T = 300*unit.kelvin
+        >>> Ks = 1000*unit.kilojoules_per_mole/unit.radians**2
         >>> Ts = 1500*unit.kelvin
-        >>> bound = 180*unit.degrees
-        >>> phi = ufedmm.CollectiveVariable('phi', model.phi, -bound, bound, mass, K, Ts)
-        >>> psi = ufedmm.CollectiveVariable('psi', model.psi, -bound, bound, mass, K, Ts)
-        >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([phi, psi], model.topology, model.positions, T)
+        >>> limit = 180*unit.degrees
+        >>> phi = ufedmm.CollectiveVariable('phi', model.phi, -limit, limit, mass, Ks, Ts)
+        >>> psi = ufedmm.CollectiveVariable('psi', model.psi, -limit, limit, mass, Ks, Ts)
+        >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([phi, psi], 300*unit.kelvin)
 
     """
-    def __init__(self, variables, topology, positions, temperature,
+    def __init__(self, variables, temperature,
                  height=None, frequency=None, grid_expansion=20):
         self.variables = variables
-        self._modeller = app.Modeller(topology, positions)
         self._temperature = _standardize(temperature)
-        self._metadynamics = (any(cv.sigma != 0.0 for cv in self.variables)
-                              and height is not None and frequency is not None)
         self._height = _standardize(height)
         self._frequency = frequency
-        Vx, Vy, Vz = self._modeller.topology.getPeriodicBoxVectors()
-        if not (Vx.y == Vx.z == Vy.x == Vy.z == Vz.x == Vz.y == 0.0):
-            raise ValueError('Only orthorhombic boxes are allowed')
-        self._Lx = Vx.x
+        self._metadynamics = (any(cv.sigma != 0.0 for cv in self.variables)
+                              and height is not None and frequency is not None)
+
         energy_terms = []
         definitions = []
         for i, cv in enumerate(self.variables):
-            value = cv.evaluate(self.positions)
-            new_atom = self._new_atom(x=self._Lx*(value - cv.min_value)/cv._range, y=i)
-            self._modeller.add(*new_atom)
             energy_terms.append(f'0.5*K_{cv.id}*min(d{cv.id},{cv._range}-d{cv.id})^2')
             definitions.append(f'd{cv.id}=abs({cv.id}-s_{cv.id})')
         expression = '; '.join([' + '.join(energy_terms)] + definitions)
@@ -241,6 +229,7 @@ class UnifiedFreeEnergyDynamics(object):
             parameter.addBond([0], [])
             self.force.addCollectiveVariable(f's_{cv.id}', parameter)
             parameters[f's_{cv.id}'] = parameter
+
         if self._metadynamics:
             self.bias_force = openmm.CustomCVForce('bias({})'.format(', '.join(parameters)))
             for id, parameter in parameters.items():
@@ -269,13 +258,6 @@ class UnifiedFreeEnergyDynamics(object):
                 raise ValueError('UFED requires 1, 2, or 3 collective variables')
             self.bias_force.addTabulatedFunction('bias', self._table)
 
-    def _new_atom(self, x=0, y=0, z=0):
-        xa, ya, za = 10*x, 10*y, 10*z
-        pdb = app.PDBFile(io.StringIO(
-            f'ATOM      1  Cl   Cl A   1     {xa:7.3f} {ya:7.3f} {za:7.3f}  1.00  0.00'
-        ))
-        return pdb.topology, pdb.positions
-
     def _add_gaussian(self, position):
         gaussians = []
         for i, cv in enumerate(self.variables):
@@ -298,12 +280,23 @@ class UnifiedFreeEnergyDynamics(object):
             self._bias += self._height*functools.reduce(np.multiply.outer, reversed(gaussians))
             self._table.setFunctionParameters(*self._widths, self._bias.flatten(), *self._bounds)
 
-    def simulation(self, system, integrator, platform=None, properties=None, seed=None):
+    def set_positions(self, simulation, positions):
+        extended_positions = copy.deepcopy(positions)
+        Lx = simulation.context.getParameter('Lx')
+        for i, cv in enumerate(self.variables):
+            value = cv.evaluate(positions)
+            position = openmm.Vec3(Lx*(value - cv.min_value)/cv._range, i, 0)
+            extended_positions.append(position*unit.nanometers)
+        simulation.context.setPositions(extended_positions)
+
+    def simulation(self, topology, system, integrator, platform=None, platformProperties=None):
         """
         Returns a Simulation.
 
         Parameters
         ----------
+            topology : openmm.app.Topology
+                The topology.
             system : openmm.System
                 The system.
             integrator :
@@ -315,10 +308,8 @@ class UnifiedFreeEnergyDynamics(object):
         ------------
             platform : openmm.Platform, default=None
                 The platform.
-            properties : dict, default=None
+            platformProperties : dict, default=None
                 The platform properties.
-            seed : int, default=None
-                The random number generator seed.
 
         Example
         -------
@@ -326,26 +317,39 @@ class UnifiedFreeEnergyDynamics(object):
             >>> from simtk import unit
             >>> model = ufedmm.AlanineDipeptideModel(water='tip3p')
             >>> mass = 50*unit.dalton*(unit.nanometer/unit.radians)**2
-            >>> K = 1000*unit.kilojoules_per_mole/unit.radians**2
+            >>> Ks = 1000*unit.kilojoules_per_mole/unit.radians**2
             >>> T = 300*unit.kelvin
             >>> Ts = 1500*unit.kelvin
             >>> dt = 2*unit.femtoseconds
             >>> gamma = 10/unit.picoseconds
-            >>> bound = 180*unit.degrees
-            >>> phi = ufedmm.CollectiveVariable('phi', model.phi, -bound, bound, mass, K, Ts)
-            >>> psi = ufedmm.CollectiveVariable('psi', model.psi, -bound, bound, mass, K, Ts)
-            >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([phi, psi], model.topology, model.positions, T)
+            >>> limit = 180*unit.degrees
+            >>> phi = ufedmm.CollectiveVariable('phi', model.phi, -limit, limit, mass, Ks, Ts)
+            >>> psi = ufedmm.CollectiveVariable('psi', model.psi, -limit, limit, mass, Ks, Ts)
+            >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([phi, psi], T)
             >>> integrator = ufedmm.GeodesicBAOABIntegrator(dt, T, gamma)
-            >>> simulation = ufed.simulation(model.system, integrator)
+            >>> simulation = ufed.simulation(model.topology, model.system, integrator)
 
         """
+        Vx, Vy, Vz = topology.getPeriodicBoxVectors()
+        if not (Vx.y == Vx.z == Vy.x == Vy.z == Vz.x == Vz.y == 0.0):
+            raise ValueError('UFED: only orthorhombic boxes are allowed')
+        Lx = Vx.x
+
+        positions = [openmm.Vec3(0, 0, 0) for atom in topology.atoms()]
+        modeller = app.Modeller(topology, positions)
+        for y, cv in enumerate(self.variables):
+            new_atom = app.PDBFile(io.StringIO(
+                f'ATOM      1  Cl   Cl A   1       0.000 {y:3d}.000   0.000  1.00  0.00'
+            ))
+            modeller.add(new_atom.topology, new_atom.positions)
+
         internal_system = copy.deepcopy(system)
         nparticles = internal_system.getNumParticles()
         force = copy.deepcopy(self.force)
         nb_types = (openmm.NonbondedForce, openmm.CustomNonbondedForce)
         nb_forces = [f for f in internal_system.getForces() if isinstance(f, nb_types)]
         for i, cv in enumerate(self.variables):
-            internal_system.addParticle(cv.mass*(cv._range/self._Lx)**2)
+            internal_system.addParticle(cv.mass*(cv._range/Lx)**2)
             for nb_force in nb_forces:
                 if isinstance(nb_force, openmm.NonbondedForce):
                     nb_force.addParticle(0.0, 1.0, 0.0)
@@ -357,14 +361,13 @@ class UnifiedFreeEnergyDynamics(object):
         if self._metadynamics:
             internal_system.addForce(self.bias_force)
 
-        simulation = openmm.app.Simulation(self.topology, internal_system, integrator, platform, properties)
+        simulation = openmm.app.Simulation(
+            modeller.topology, internal_system, integrator, platform, platformProperties,
+        )
         simulation.force = force
-        simulation.context.setPositions(self.positions)
-        simulation.context.setParameter('Lx', self._Lx)
-        if seed is None:
-            simulation.context.setVelocitiesToTemperature(self._temperature)
-        else:
-            simulation.context.setVelocitiesToTemperature(self._temperature, seed)
+        simulation.context.setPositions(modeller.positions)
+        simulation.context.setParameter('Lx', Lx)
+        simulation.context.setVelocitiesToTemperature(self._temperature)
 
         if any(cv.temperature != self._temperature for cv in self.variables):
             try:
@@ -372,24 +375,16 @@ class UnifiedFreeEnergyDynamics(object):
             except Exception:
                 raise ValueError('Multiple temperatures require CustomIntegrator with per-dof variable `kT`')
             kB = _standardize(unit.MOLAR_GAS_CONSTANT_R)
-            unit_vector = openmm.Vec3(1, 1, 1)
+            vec3 = openmm.Vec3(1, 1, 1)
             for i in range(nparticles):
-                kT[i] = kB*self._temperature*unit_vector
+                kT[i] = kB*self._temperature*vec3
             for i, cv in enumerate(self.variables):
-                kT[nparticles+i] = kB*cv.temperature*unit_vector
+                kT[nparticles+i] = kB*cv.temperature*vec3
             integrator.setPerDofVariableByName('kT', kT)
 
         if self._metadynamics:
             simulation.reporters.append(self)
         return simulation
-
-    @property
-    def topology(self):
-        return self._modeller.topology
-
-    @property
-    def positions(self):
-        return self._modeller.positions
 
     def describeNextReport(self, simulation):
         steps = self._frequency - simulation.currentStep % self._frequency

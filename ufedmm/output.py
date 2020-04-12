@@ -80,17 +80,18 @@ class StateDataReporter(app.StateDataReporter):
         >>> from sys import stdout
         >>> model = ufedmm.AlanineDipeptideModel(water='tip3p')
         >>> mass = 50*unit.dalton*(unit.nanometer/unit.radians)**2
-        >>> K = 1000*unit.kilojoules_per_mole/unit.radians**2
+        >>> Ks = 1000*unit.kilojoules_per_mole/unit.radians**2
         >>> T = 300*unit.kelvin
         >>> Ts = 1500*unit.kelvin
         >>> dt = 2*unit.femtoseconds
         >>> gamma = 10/unit.picoseconds
-        >>> bound = 180*unit.degrees
-        >>> phi = ufedmm.CollectiveVariable('phi', model.phi, -bound, bound, mass, K, Ts)
-        >>> psi = ufedmm.CollectiveVariable('psi', model.psi, -bound, bound, mass, K, Ts)
-        >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([phi, psi], model.topology, model.positions, T)
+        >>> limit = 180*unit.degrees
+        >>> phi = ufedmm.CollectiveVariable('phi', model.phi, -limit, limit, mass, Ks, Ts)
+        >>> psi = ufedmm.CollectiveVariable('psi', model.psi, -limit, limit, mass, Ks, Ts)
+        >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([phi, psi], T)
         >>> integrator = ufedmm.GeodesicBAOABIntegrator(dt, T, gamma)
-        >>> simulation = ufed.simulation(model.system, integrator)
+        >>> simulation = ufed.simulation(model.topology, model.system, integrator)
+        >>> ufed.set_positions(simulation, model.positions)
         >>> reporter = ufedmm.StateDataReporter(stdout, 1, simulation.force, step=True)
         >>> reporter.report(simulation, simulation.context.getState())
         #"Step","phi","s_phi","psi","s_psi"
