@@ -170,6 +170,66 @@ class CollectiveVariable(object):
         return energy.value_in_unit(unit.kilojoules_per_mole)
 
 
+class _GaussianDepositer(object):
+    def __init__(self, ufed):
+        self.variables = ufed.variables
+        self.frequency = ufed.frequency
+        self.bias_force = ufed.bias_force
+        self.height = ufed.height
+        self._expanded = ufed._expanded
+        self._extra_points = ufed._extra_points
+        self._bias = ufed._bias
+        self._table = ufed._table
+        self._bounds = ufed._bounds
+        self._widths = ufed._widths
+
+    def _add_gaussian(self, position):
+        gaussians = []
+        for i, cv in enumerate(self.variables):
+            x = (position[i] - cv.min_value)/cv._range
+            if cv.periodic:
+                x = x % 1.0
+            dist = np.abs(np.linspace(0, 1, num=cv.grid_size) - x)
+            if cv.periodic:
+                dist = np.min(np.array([dist, np.abs(dist-1)]), axis=0)
+            values = np.exp(-0.5*dist*dist/cv._scaled_variance)
+            if self._expanded[i]:
+                n = self._extra_points[i] + 1
+                values = np.hstack((values[-n:-1], values, values[1:n]))
+            gaussians.append(values)
+        if len(self.variables) == 1:
+            self._bias += self.height*gaussians[0]
+            periodic = self.variables[0].periodic
+            self._table.setFunctionParameters(self._bias.flatten(), *self._bounds, periodic)
+        else:
+            self._bias += self.height*functools.reduce(np.multiply.outer, reversed(gaussians))
+            self._table.setFunctionParameters(*self._widths, self._bias.flatten(), *self._bounds)
+
+    def describeNextReport(self, simulation):
+        steps = self.frequency - simulation.currentStep % self.frequency
+        return (steps, False, False, False, False, False)
+
+    def report(self, simulation, state):
+        cv_values = self.bias_force.getCollectiveVariableValues(simulation.context)
+        self._add_gaussian(cv_values)
+        self.bias_force.updateParametersInContext(simulation.context)
+
+
+class _Simulation(app.Simulation):
+    def __init__(self, force, depositer, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.force = force
+        self.depositer = depositer
+
+    def step(self, steps):
+        if self.depositer is None:
+            self._simulate(endStep=self.currentStep+steps)
+        else:
+            self.reporters.append(self.depositer)
+            self._simulate(endStep=self.currentStep+steps)
+            self.reporters.pop()
+
+
 class UnifiedFreeEnergyDynamics(object):
     """
     A Unified Free-Energy Dynamics (UFED) setup.
@@ -275,28 +335,6 @@ class UnifiedFreeEnergyDynamics(object):
 
     def __setstate__(self, kw):
         self.__init__(**kw)
-
-    def _add_gaussian(self, position):
-        gaussians = []
-        for i, cv in enumerate(self.variables):
-            x = (position[i] - cv.min_value)/cv._range
-            if cv.periodic:
-                x = x % 1.0
-            dist = np.abs(np.linspace(0, 1, num=cv.grid_size) - x)
-            if cv.periodic:
-                dist = np.min(np.array([dist, np.abs(dist-1)]), axis=0)
-            values = np.exp(-0.5*dist*dist/cv._scaled_variance)
-            if self._expanded[i]:
-                n = self._extra_points[i] + 1
-                values = np.hstack((values[-n:-1], values, values[1:n]))
-            gaussians.append(values)
-        if len(self.variables) == 1:
-            self._bias += self.height*gaussians[0]
-            periodic = self.variables[0].periodic
-            self._table.setFunctionParameters(self._bias.flatten(), *self._bounds, periodic)
-        else:
-            self._bias += self.height*functools.reduce(np.multiply.outer, reversed(gaussians))
-            self._table.setFunctionParameters(*self._widths, self._bias.flatten(), *self._bounds)
 
     def set_positions(self, simulation, positions):
         """
@@ -415,11 +453,14 @@ class UnifiedFreeEnergyDynamics(object):
 
         if self._metadynamics:
             internal_system.addForce(self.bias_force)
+            gaussian_depositer = _GaussianDepositer(self)
+        else:
+            gaussian_depositer = None
 
-        simulation = openmm.app.Simulation(
+        simulation = _Simulation(
+            force, gaussian_depositer,
             modeller.topology, internal_system, integrator, platform, platformProperties,
         )
-        simulation.force = force
         simulation.context.setPositions(modeller.positions)
         simulation.context.setParameter('Lx', Lx)
 
@@ -436,15 +477,4 @@ class UnifiedFreeEnergyDynamics(object):
                 kT[nparticles+i] = kB*cv.temperature*vec3
             integrator.setPerDofVariableByName('kT', kT)
 
-        if self._metadynamics:
-            simulation.reporters.append(self)
         return simulation
-
-    def describeNextReport(self, simulation):
-        steps = self.frequency - simulation.currentStep % self.frequency
-        return (steps, False, False, False, False, False)
-
-    def report(self, simulation, state):
-        cv_values = self.bias_force.getCollectiveVariableValues(simulation.context)
-        self._add_gaussian(cv_values)
-        self.bias_force.updateParametersInContext(simulation.context)
