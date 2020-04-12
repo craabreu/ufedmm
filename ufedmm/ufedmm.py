@@ -318,6 +318,33 @@ class UnifiedFreeEnergyDynamics(object):
             extended_positions.append(position*unit.nanometers)
         simulation.context.setPositions(extended_positions)
 
+    def set_random_velocities(self, simulation, seed=None):
+        """
+        Sets the velocities of all particles in a simulation context.
+
+        Parameters
+        ----------
+            simulation : openmm.Simulation
+                The simulation.
+
+        Keyword Args
+        ------------
+            seed : int, default=None
+                A seed for the random number generator.
+
+        """
+        n = simulation.system.getNumParticles() - len(self.variables)
+        masses = []
+        for i, cv in enumerate(self.variables):
+            masses.append(simulation.system.getParticleMass(n+i))
+            simulation.system.setParticleMass(n+i, 0)
+        if seed is None:
+            simulation.context.setVelocitiesToTemperature(self.temperature)
+        else:
+            simulation.context.setVelocitiesToTemperature(self.temperature, seed)
+        for i, mass in enumerate(masses):
+            simulation.system.setParticleMass(n+i, mass)
+
     def simulation(self, topology, system, integrator, platform=None, platformProperties=None):
         """
         Returns a Simulation.
@@ -367,7 +394,7 @@ class UnifiedFreeEnergyDynamics(object):
         modeller = app.Modeller(topology, positions)
         for y, cv in enumerate(self.variables):
             new_atom = app.PDBFile(io.StringIO(
-                f'ATOM      1  Cl   Cl A   1       0.000 {y:3d}.000   0.000  1.00  0.00'
+                f'ATOM      1  Cs   Cs A   1       0.000 {y:3d}.000   0.000  1.00  0.00'
             ))
             modeller.add(new_atom.topology, new_atom.positions)
 
@@ -395,7 +422,6 @@ class UnifiedFreeEnergyDynamics(object):
         simulation.force = force
         simulation.context.setPositions(modeller.positions)
         simulation.context.setParameter('Lx', Lx)
-        simulation.context.setVelocitiesToTemperature(self.temperature)
 
         if any(cv.temperature != self.temperature for cv in self.variables):
             try:
