@@ -102,6 +102,22 @@ class CollectiveVariable(object):
         properties = f'm={self.mass}, K={self.force_constant}, T={self.temperature}'
         return f'<{self.id} in [{self.min_value}, {self.max_value}], {properties}>'
 
+    def __getstate__(self):
+        return dict(
+            id=self.id, force=self.force,
+            min_value=self.min_value,
+            max_value=self.max_value,
+            mass=self.mass,
+            force_constant=self.force_constant,
+            temperature=self.temperature,
+            sigma=self.sigma,
+            grid_size=self.grid_size,
+            periodic=self.periodic,
+        )
+
+    def __setstate__(self, kw):
+        self.__init__(**kw)
+
     def evaluate(self, positions, box_vectors=None):
         """
         Computes the value of the collective variable for a given set of particle coordinates
