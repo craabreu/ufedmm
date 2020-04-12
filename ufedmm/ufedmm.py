@@ -170,18 +170,47 @@ class CollectiveVariable(object):
         return energy.value_in_unit(unit.kilojoules_per_mole)
 
 
-class _GaussianDepositer(object):
-    def __init__(self, ufed):
-        self.variables = ufed.variables
-        self.frequency = ufed.frequency
-        self.bias_force = ufed.bias_force
-        self.height = ufed.height
-        self._expanded = ufed._expanded
-        self._extra_points = ufed._extra_points
-        self._bias = ufed._bias
-        self._table = ufed._table
-        self._bounds = ufed._bounds
-        self._widths = ufed._widths
+class Metadynamics(object):
+    """
+    Extended-space Metadynamics.
+
+    """
+    def __init__(self, variables, height, frequency, grid_expansion):
+        self.variables = variables
+        self.height = height
+        self.frequency = frequency
+        self.grid_expansion = grid_expansion
+        self._widths = []
+        self._bounds = []
+        self._expanded = []
+        self._extra_points = []
+        for cv in self.variables:
+            expanded = cv.periodic and len(self.variables) > 1
+            extra_points = min(grid_expansion, cv.grid_size) if expanded else 0
+            extra_range = extra_points*cv._range/(cv.grid_size - 1)
+            self._widths += [cv.grid_size + 2*extra_points]
+            self._bounds += [cv.min_value - extra_range, cv.max_value + extra_range]
+            self._expanded += [expanded]
+            self._extra_points += [extra_points]
+        self._bias = np.zeros(tuple(reversed(self._widths)))
+        if len(variables) == 1:
+            periodic = self.variables[0].periodic
+            self._table = openmm.Continuous1DFunction(self._bias.flatten(), *self._bounds, periodic)
+        elif len(variables) == 2:
+            self._table = openmm.Continuous2DFunction(*self._widths, self._bias.flatten(), *self._bounds)
+        elif len(variables) == 3:
+            self._table = openmm.Continuous3DFunction(*self._widths, self._bias.flatten(), *self._bounds)
+        else:
+            raise ValueError('UFED requires 1, 2, or 3 collective variables')
+        parameter_list = ', '.join(f's_{cv.id}' for cv in self.variables)
+        self.force = openmm.CustomCVForce(f'bias({parameter_list})')
+        for cv in self.variables:
+            expression = f'{cv.min_value}+{cv._range}*(x-floor(x)); x=x1/Lx'
+            parameter = openmm.CustomCompoundBondForce(1, expression)
+            parameter.addGlobalParameter('Lx', 0.0)
+            parameter.addBond([0], [])
+            self.force.addCollectiveVariable(f's_{cv.id}', parameter)
+        self.force.addTabulatedFunction('bias', self._table)
 
     def _add_gaussian(self, position):
         gaussians = []
@@ -210,22 +239,21 @@ class _GaussianDepositer(object):
         return (steps, False, False, False, False, False)
 
     def report(self, simulation, state):
-        cv_values = self.bias_force.getCollectiveVariableValues(simulation.context)
+        cv_values = self.force.getCollectiveVariableValues(simulation.context)
         self._add_gaussian(cv_values)
-        self.bias_force.updateParametersInContext(simulation.context)
+        self.force.updateParametersInContext(simulation.context)
 
 
-class _Simulation(app.Simulation):
-    def __init__(self, force, depositer, *args, **kwargs):
+class Simulation(app.Simulation):
+    def __init__(self, metadynamics, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.force = force
-        self.depositer = depositer
+        self._metadynamics = metadynamics
 
     def step(self, steps):
-        if self.depositer is None:
+        if self._metadynamics is None:
             self._simulate(endStep=self.currentStep+steps)
         else:
-            self.reporters.append(self.depositer)
+            self.reporters.append(self._metadynamics)
             self._simulate(endStep=self.currentStep+steps)
             self.reporters.pop()
 
@@ -271,8 +299,6 @@ class UnifiedFreeEnergyDynamics(object):
         self.height = _standardize(height)
         self.frequency = frequency
         self.grid_expansion = grid_expansion
-        self._metadynamics = (any(cv.sigma != 0.0 for cv in self.variables)
-                              and height is not None and frequency is not None)
 
         energy_terms = []
         definitions = []
@@ -280,45 +306,26 @@ class UnifiedFreeEnergyDynamics(object):
             energy_terms.append(f'0.5*K_{cv.id}*min(d{cv.id},{cv._range}-d{cv.id})^2')
             definitions.append(f'd{cv.id}=abs({cv.id}-s_{cv.id})')
         expression = '; '.join([' + '.join(energy_terms)] + definitions)
-        self.force = openmm.CustomCVForce(expression)
-        parameters = {}
+        self.driving_force = openmm.CustomCVForce(expression)
         for i, cv in enumerate(self.variables):
-            self.force.addGlobalParameter(f'K_{cv.id}', cv.force_constant)
-            self.force.addCollectiveVariable(cv.id, cv.force)
+            self.driving_force.addGlobalParameter(f'K_{cv.id}', cv.force_constant)
+            self.driving_force.addCollectiveVariable(cv.id, cv.force)
             expression = f'{cv.min_value}+{cv._range}*(x-floor(x)); x=x1/Lx'
             parameter = openmm.CustomCompoundBondForce(1, expression)
             parameter.addGlobalParameter('Lx', 0.0)
             parameter.addBond([0], [])
-            self.force.addCollectiveVariable(f's_{cv.id}', parameter)
-            parameters[f's_{cv.id}'] = parameter
+            self.driving_force.addCollectiveVariable(f's_{cv.id}', parameter)
 
-        if self._metadynamics:
-            self.bias_force = openmm.CustomCVForce('bias({})'.format(', '.join(parameters)))
-            for id, parameter in parameters.items():
-                self.bias_force.addCollectiveVariable(id, copy.deepcopy(parameter))
-            self._widths = []
-            self._bounds = []
-            self._expanded = []
-            self._extra_points = []
-            for cv in self.variables:
-                expanded = cv.periodic and len(self.variables) > 1
-                extra_points = min(grid_expansion, cv.grid_size) if expanded else 0
-                extra_range = extra_points*cv._range/(cv.grid_size - 1)
-                self._widths += [cv.grid_size + 2*extra_points]
-                self._bounds += [cv.min_value - extra_range, cv.max_value + extra_range]
-                self._expanded += [expanded]
-                self._extra_points += [extra_points]
-            self._bias = np.zeros(tuple(reversed(self._widths)))
-            if len(variables) == 1:
-                periodic = self.variables[0].periodic
-                self._table = openmm.Continuous1DFunction(self._bias.flatten(), *self._bounds, periodic)
-            elif len(variables) == 2:
-                self._table = openmm.Continuous2DFunction(*self._widths, self._bias.flatten(), *self._bounds)
-            elif len(variables) == 3:
-                self._table = openmm.Continuous3DFunction(*self._widths, self._bias.flatten(), *self._bounds)
-            else:
-                raise ValueError('UFED requires 1, 2, or 3 collective variables')
-            self.bias_force.addTabulatedFunction('bias', self._table)
+        if (all(cv.sigma == 0.0 for cv in self.variables) or height is None or frequency is None):
+            self.bias_force = self._metadynamics = None
+        else:
+            self._metadynamics = Metadynamics(
+                self.variables,
+                self.height,
+                frequency,
+                grid_expansion,
+            )
+            self.bias_force = self._metadynamics.force
 
     def __repr__(self):
         properties = f'temperature={self.temperature}, height={self.height}, frequency={self.frequency}'
@@ -436,30 +443,33 @@ class UnifiedFreeEnergyDynamics(object):
             ))
             modeller.add(new_atom.topology, new_atom.positions)
 
-        internal_system = copy.deepcopy(system)
-        nparticles = internal_system.getNumParticles()
-        force = copy.deepcopy(self.force)
+        nparticles = system.getNumParticles()
         nb_types = (openmm.NonbondedForce, openmm.CustomNonbondedForce)
-        nb_forces = [f for f in internal_system.getForces() if isinstance(f, nb_types)]
+        nb_forces = [f for f in system.getForces() if isinstance(f, nb_types)]
         for i, cv in enumerate(self.variables):
-            internal_system.addParticle(cv.mass*(cv._range/Lx)**2)
+            system.addParticle(cv.mass*(cv._range/Lx)**2)
             for nb_force in nb_forces:
                 if isinstance(nb_force, openmm.NonbondedForce):
                     nb_force.addParticle(0.0, 1.0, 0.0)
                 else:
                     nb_force.addParticle([0.0]*nb_force.getNumPerParticleParameters())
-            force.getCollectiveVariable(2*i+1).setBondParameters(0, [nparticles+i], [])
-        internal_system.addForce(force)
+            parameter = self.driving_force.getCollectiveVariable(2*i+1)
+            parameter.setBondParameters(0, [nparticles+i], [])
+        system.addForce(self.driving_force)
 
         if self._metadynamics:
-            internal_system.addForce(self.bias_force)
-            gaussian_depositer = _GaussianDepositer(self)
-        else:
-            gaussian_depositer = None
+            for i, cv in enumerate(self.variables):
+                parameter = self.bias_force.getCollectiveVariable(i)
+                parameter.setBondParameters(0, [nparticles+i], [])
+            system.addForce(self.bias_force)
 
-        simulation = _Simulation(
-            force, gaussian_depositer,
-            modeller.topology, internal_system, integrator, platform, platformProperties,
+        simulation = Simulation(
+            self._metadynamics,
+            modeller.topology,
+            system,
+            integrator,
+            platform,
+            platformProperties,
         )
         simulation.context.setPositions(modeller.positions)
         simulation.context.setParameter('Lx', Lx)
