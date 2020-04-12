@@ -104,7 +104,8 @@ class CollectiveVariable(object):
 
     def __getstate__(self):
         return dict(
-            id=self.id, force=self.force,
+            id=self.id,
+            force=self.force,
             min_value=self.min_value,
             max_value=self.max_value,
             mass=self.mass,
@@ -200,15 +201,16 @@ class UnifiedFreeEnergyDynamics(object):
         >>> limit = 180*unit.degrees
         >>> phi = ufedmm.CollectiveVariable('phi', model.phi, -limit, limit, mass, Ks, Ts)
         >>> psi = ufedmm.CollectiveVariable('psi', model.psi, -limit, limit, mass, Ks, Ts)
-        >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([phi, psi], 300*unit.kelvin)
+        >>> ufedmm.UnifiedFreeEnergyDynamics([phi, psi], 300*unit.kelvin)
+        <variables=[phi, psi], temperature=300, height=None, frequency=None>
 
     """
-    def __init__(self, variables, temperature,
-                 height=None, frequency=None, grid_expansion=20):
+    def __init__(self, variables, temperature, height=None, frequency=None, grid_expansion=20):
         self.variables = variables
-        self._temperature = _standardize(temperature)
-        self._height = _standardize(height)
-        self._frequency = frequency
+        self.temperature = _standardize(temperature)
+        self.height = _standardize(height)
+        self.frequency = frequency
+        self.grid_expansion = grid_expansion
         self._metadynamics = (any(cv.sigma != 0.0 for cv in self.variables)
                               and height is not None and frequency is not None)
 
@@ -258,6 +260,22 @@ class UnifiedFreeEnergyDynamics(object):
                 raise ValueError('UFED requires 1, 2, or 3 collective variables')
             self.bias_force.addTabulatedFunction('bias', self._table)
 
+    def __repr__(self):
+        properties = f'temperature={self.temperature}, height={self.height}, frequency={self.frequency}'
+        return f'<variables=[{", ".join(cv.id for cv in self.variables)}], {properties}>'
+
+    def __getstate__(self):
+        return dict(
+            variables=self.variables,
+            temperature=self.temperature,
+            height=self.height,
+            frequency=self.frequency,
+            grid_expansion=self.grid_expansion,
+        )
+
+    def __setstate__(self, kw):
+        self.__init__(**kw)
+
     def _add_gaussian(self, position):
         gaussians = []
         for i, cv in enumerate(self.variables):
@@ -273,14 +291,25 @@ class UnifiedFreeEnergyDynamics(object):
                 values = np.hstack((values[-n:-1], values, values[1:n]))
             gaussians.append(values)
         if len(self.variables) == 1:
-            self._bias += self._height*gaussians[0]
+            self._bias += self.height*gaussians[0]
             periodic = self.variables[0].periodic
             self._table.setFunctionParameters(self._bias.flatten(), *self._bounds, periodic)
         else:
-            self._bias += self._height*functools.reduce(np.multiply.outer, reversed(gaussians))
+            self._bias += self.height*functools.reduce(np.multiply.outer, reversed(gaussians))
             self._table.setFunctionParameters(*self._widths, self._bias.flatten(), *self._bounds)
 
     def set_positions(self, simulation, positions):
+        """
+        Sets the positions of all particles in a simulation context.
+
+        Parameters
+        ----------
+            simulation : openmm.Simulation
+                The simulation.
+            positions : list of openmm.Vec3
+                The positions.
+
+        """
         extended_positions = copy.deepcopy(positions)
         Lx = simulation.context.getParameter('Lx')
         for i, cv in enumerate(self.variables):
@@ -318,15 +347,14 @@ class UnifiedFreeEnergyDynamics(object):
             >>> model = ufedmm.AlanineDipeptideModel(water='tip3p')
             >>> mass = 50*unit.dalton*(unit.nanometer/unit.radians)**2
             >>> Ks = 1000*unit.kilojoules_per_mole/unit.radians**2
-            >>> T = 300*unit.kelvin
             >>> Ts = 1500*unit.kelvin
             >>> dt = 2*unit.femtoseconds
             >>> gamma = 10/unit.picoseconds
             >>> limit = 180*unit.degrees
             >>> phi = ufedmm.CollectiveVariable('phi', model.phi, -limit, limit, mass, Ks, Ts)
             >>> psi = ufedmm.CollectiveVariable('psi', model.psi, -limit, limit, mass, Ks, Ts)
-            >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([phi, psi], T)
-            >>> integrator = ufedmm.GeodesicBAOABIntegrator(dt, T, gamma)
+            >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([phi, psi], 300*unit.kelvin)
+            >>> integrator = ufedmm.GeodesicBAOABIntegrator(dt, 300*unit.kelvin, gamma)
             >>> simulation = ufed.simulation(model.topology, model.system, integrator)
 
         """
@@ -367,9 +395,9 @@ class UnifiedFreeEnergyDynamics(object):
         simulation.force = force
         simulation.context.setPositions(modeller.positions)
         simulation.context.setParameter('Lx', Lx)
-        simulation.context.setVelocitiesToTemperature(self._temperature)
+        simulation.context.setVelocitiesToTemperature(self.temperature)
 
-        if any(cv.temperature != self._temperature for cv in self.variables):
+        if any(cv.temperature != self.temperature for cv in self.variables):
             try:
                 kT = integrator.getPerDofVariableByName('kT')
             except Exception:
@@ -377,7 +405,7 @@ class UnifiedFreeEnergyDynamics(object):
             kB = _standardize(unit.MOLAR_GAS_CONSTANT_R)
             vec3 = openmm.Vec3(1, 1, 1)
             for i in range(nparticles):
-                kT[i] = kB*self._temperature*vec3
+                kT[i] = kB*self.temperature*vec3
             for i, cv in enumerate(self.variables):
                 kT[nparticles+i] = kB*cv.temperature*vec3
             integrator.setPerDofVariableByName('kT', kT)
@@ -387,7 +415,7 @@ class UnifiedFreeEnergyDynamics(object):
         return simulation
 
     def describeNextReport(self, simulation):
-        steps = self._frequency - simulation.currentStep % self._frequency
+        steps = self.frequency - simulation.currentStep % self.frequency
         return (steps, False, False, False, False, False)
 
     def report(self, simulation, state):
