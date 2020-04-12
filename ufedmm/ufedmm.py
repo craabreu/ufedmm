@@ -177,8 +177,6 @@ class UnifiedFreeEnergyDynamics(object):
     ----------
         variables : list of CollectiveVariable
             The variables.
-        system : openmm.System
-            The system.
         topology : openmm.app.Topology
             The topology.
         positions : list of openmm.Vec3
@@ -207,12 +205,11 @@ class UnifiedFreeEnergyDynamics(object):
         >>> bound = 180*unit.degrees
         >>> phi = ufedmm.CollectiveVariable('phi', model.phi, -bound, bound, mass, K, Ts)
         >>> psi = ufedmm.CollectiveVariable('psi', model.psi, -bound, bound, mass, K, Ts)
-        >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([phi, psi], model.system, model.topology, model.positions, T)
+        >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([phi, psi], model.topology, model.positions, T)
 
     """
-    def __init__(self, variables, system, topology, positions, temperature,
+    def __init__(self, variables, topology, positions, temperature,
                  height=None, frequency=None, grid_expansion=20):
-        self.system = copy.deepcopy(system)
         self.variables = variables
         self._modeller = app.Modeller(topology, positions)
         self._temperature = _standardize(temperature)
@@ -224,21 +221,12 @@ class UnifiedFreeEnergyDynamics(object):
         if not (Vx.y == Vx.z == Vy.x == Vy.z == Vz.x == Vz.y == 0.0):
             raise ValueError('Only orthorhombic boxes are allowed')
         self._Lx = Vx.x
-        self._nparticles = self.system.getNumParticles()
-        nb_types = (openmm.NonbondedForce, openmm.CustomNonbondedForce)
-        nb_forces = [f for f in self.system.getForces() if isinstance(f, nb_types)]
         energy_terms = []
         definitions = []
         for i, cv in enumerate(self.variables):
             value = cv.evaluate(self.positions)
             new_atom = self._new_atom(x=self._Lx*(value - cv.min_value)/cv._range, y=i)
             self._modeller.add(*new_atom)
-            self.system.addParticle(cv.mass*(cv._range/self._Lx)**2)
-            for nb_force in nb_forces:
-                if isinstance(nb_force, openmm.NonbondedForce):
-                    nb_force.addParticle(0.0, 1.0, 0.0)
-                else:
-                    nb_force.addParticle([0.0]*nb_force.getNumPerParticleParameters())
             energy_terms.append(f'0.5*K_{cv.id}*min(d{cv.id},{cv._range}-d{cv.id})^2')
             definitions.append(f'd{cv.id}=abs({cv.id}-s_{cv.id})')
         expression = '; '.join([' + '.join(energy_terms)] + definitions)
@@ -247,12 +235,12 @@ class UnifiedFreeEnergyDynamics(object):
         for i, cv in enumerate(self.variables):
             self.force.addGlobalParameter(f'K_{cv.id}', cv.force_constant)
             self.force.addCollectiveVariable(cv.id, cv.force)
-            expression = f'{cv.min_value}+{cv._range}*(x-floor(x)); x=x1/{self._Lx}'
+            expression = f'{cv.min_value}+{cv._range}*(x-floor(x)); x=x1/Lx'
             parameter = openmm.CustomCompoundBondForce(1, expression)
-            parameter.addBond([self._nparticles+i], [])
+            parameter.addGlobalParameter('Lx', 0.0)
+            parameter.addBond([0], [])
             self.force.addCollectiveVariable(f's_{cv.id}', parameter)
             parameters[f's_{cv.id}'] = parameter
-        self.system.addForce(self.force)
         if self._metadynamics:
             self.bias_force = openmm.CustomCVForce('bias({})'.format(', '.join(parameters)))
             for id, parameter in parameters.items():
@@ -280,7 +268,6 @@ class UnifiedFreeEnergyDynamics(object):
             else:
                 raise ValueError('UFED requires 1, 2, or 3 collective variables')
             self.bias_force.addTabulatedFunction('bias', self._table)
-            self.system.addForce(self.bias_force)
 
     def _new_atom(self, x=0, y=0, z=0):
         xa, ya, za = 10*x, 10*y, 10*z
@@ -311,12 +298,14 @@ class UnifiedFreeEnergyDynamics(object):
             self._bias += self._height*functools.reduce(np.multiply.outer, reversed(gaussians))
             self._table.setFunctionParameters(*self._widths, self._bias.flatten(), *self._bounds)
 
-    def simulation(self, integrator, platform=None, properties=None, seed=None):
+    def simulation(self, system, integrator, platform=None, properties=None, seed=None):
         """
         Returns a Simulation.
 
         Parameters
         ----------
+            system : openmm.System
+                The system.
             integrator :
                 The integrator. If the temperature of any collective variable is different from
                 the system temperature, then this must be a CustomIntegrator with a per-dof variable
@@ -345,13 +334,33 @@ class UnifiedFreeEnergyDynamics(object):
             >>> bound = 180*unit.degrees
             >>> phi = ufedmm.CollectiveVariable('phi', model.phi, -bound, bound, mass, K, Ts)
             >>> psi = ufedmm.CollectiveVariable('psi', model.psi, -bound, bound, mass, K, Ts)
-            >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([phi, psi], model.system, model.topology, model.positions, T)
+            >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([phi, psi], model.topology, model.positions, T)
             >>> integrator = ufedmm.GeodesicBAOABIntegrator(dt, T, gamma)
-            >>> simulation = ufed.simulation(integrator)
+            >>> simulation = ufed.simulation(model.system, integrator)
 
         """
-        simulation = openmm.app.Simulation(self.topology, self.system, integrator, platform, properties)
+        internal_system = copy.deepcopy(system)
+        nparticles = internal_system.getNumParticles()
+        force = copy.deepcopy(self.force)
+        nb_types = (openmm.NonbondedForce, openmm.CustomNonbondedForce)
+        nb_forces = [f for f in internal_system.getForces() if isinstance(f, nb_types)]
+        for i, cv in enumerate(self.variables):
+            internal_system.addParticle(cv.mass*(cv._range/self._Lx)**2)
+            for nb_force in nb_forces:
+                if isinstance(nb_force, openmm.NonbondedForce):
+                    nb_force.addParticle(0.0, 1.0, 0.0)
+                else:
+                    nb_force.addParticle([0.0]*nb_force.getNumPerParticleParameters())
+            force.getCollectiveVariable(2*i+1).setBondParameters(0, [nparticles+i], [])
+        internal_system.addForce(force)
+
+        if self._metadynamics:
+            internal_system.addForce(self.bias_force)
+
+        simulation = openmm.app.Simulation(self.topology, internal_system, integrator, platform, properties)
+        simulation.force = force
         simulation.context.setPositions(self.positions)
+        simulation.context.setParameter('Lx', self._Lx)
         if seed is None:
             simulation.context.setVelocitiesToTemperature(self._temperature)
         else:
@@ -364,10 +373,10 @@ class UnifiedFreeEnergyDynamics(object):
                 raise ValueError('Multiple temperatures require CustomIntegrator with per-dof variable `kT`')
             kB = _standardize(unit.MOLAR_GAS_CONSTANT_R)
             unit_vector = openmm.Vec3(1, 1, 1)
-            for i in range(self._nparticles):
+            for i in range(nparticles):
                 kT[i] = kB*self._temperature*unit_vector
             for i, cv in enumerate(self.variables):
-                kT[self._nparticles+i] = kB*cv.temperature*unit_vector
+                kT[nparticles+i] = kB*cv.temperature*unit_vector
             integrator.setPerDofVariableByName('kT', kT)
 
         if self._metadynamics:

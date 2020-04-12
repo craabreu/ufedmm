@@ -88,15 +88,10 @@ class StateDataReporter(app.StateDataReporter):
         >>> bound = 180*unit.degrees
         >>> phi = ufedmm.CollectiveVariable('phi', model.phi, -bound, bound, mass, K, Ts)
         >>> psi = ufedmm.CollectiveVariable('psi', model.psi, -bound, bound, mass, K, Ts)
-        >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([phi, psi], model.system, model.topology, model.positions, T)
+        >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([phi, psi], model.topology, model.positions, T)
         >>> integrator = ufedmm.GeodesicBAOABIntegrator(dt, T, gamma)
-        >>> simulation = ufed.simulation(integrator)
-        >>> reporter = ufedmm.StateDataReporter(
-        ...     stdout,
-        ...     1,
-        ...     ufed.force,
-        ...     step=True,
-        ... )
+        >>> simulation = ufed.simulation(model.system, integrator)
+        >>> reporter = ufedmm.StateDataReporter(stdout, 1, simulation.force, step=True)
         >>> reporter.report(simulation, simulation.context.getState())
         #"Step","phi","s_phi","psi","s_psi"
         0,3.1415927410125732,-3.1415927410125732,3.1415927410125732,-3.1415927410125732
