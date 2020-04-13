@@ -65,8 +65,8 @@ class AlanineDipeptideModel(object):
         self.system = force_field.createSystem(
             self.topology,
             nonbondedMethod=app.NoCutoff if water is None else app.PME,
-            constraints=None,
-            rigidWater=False,
+            constraints=app.HBonds,
+            rigidWater=True,
             removeCMMotion=False,
         )
         atoms = [(a.name, a.residue.name) for a in self.topology.atoms()]

@@ -460,6 +460,11 @@ class UnifiedFreeEnergyDynamics(object):
             >>> simulation = ufed.simulation(model.topology, model.system, integrator)
 
         """
+        for force in system.getForces():
+            cls = force.__class__.__name__
+            if cls == 'CMMotionRemover' or cls.endswith('Barostat'):
+                raise Exception('UFED: system cannot contain CMMotionRemover nor any Barostat')
+
         Vx, Vy, Vz = topology.getPeriodicBoxVectors()
         if not (Vx.y == Vx.z == Vy.x == Vy.z == Vz.x == Vz.y == 0.0):
             raise ValueError('UFED: only orthorhombic boxes are allowed')
