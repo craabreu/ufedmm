@@ -1,5 +1,5 @@
 """
-AFED for OpenMM
+UFED for OpenMM
 Unified Free Energy Dynamics with OpenMM
 
 """
