@@ -173,7 +173,7 @@ class CollectiveVariable(object):
         return energy.value_in_unit(unit.kilojoules_per_mole)
 
 
-class Metadynamics(object):
+class _Metadynamics(object):
     """
     Extended-space Metadynamics.
 
@@ -252,7 +252,7 @@ class Metadynamics(object):
             parameter.setBondParameters(0, [nparticles+i], [])
 
 
-class Simulation(app.Simulation):
+class _Simulation(app.Simulation):
     def __init__(self, metadynamics, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._metadynamics = metadynamics
@@ -333,7 +333,7 @@ class UnifiedFreeEnergyDynamics(object):
         if (all(cv.sigma is None for cv in self.variables) or height is None or frequency is None):
             self.bias_force = self._metadynamics = None
         else:
-            self._metadynamics = Metadynamics(
+            self._metadynamics = _Metadynamics(
                 self.variables,
                 self.height,
                 frequency,
@@ -408,6 +408,13 @@ class UnifiedFreeEnergyDynamics(object):
         """
         Returns a Simulation.
 
+        .. warning::
+            If the temperature of any driving parameter is different from the particle-system
+            temperature, then the passed integrator must be a CustomIntegrator object containing
+            a per-dof variable called `kT`. The content of this variable is the Boltzmann constant
+            times the temperature associated to each degree of freedom. One can employ, for
+            instance, a :class:`~ufedmm.integrators.GeodesicBAOABIntegrator`.
+
         Parameters
         ----------
             topology : openmm.app.Topology
@@ -415,9 +422,7 @@ class UnifiedFreeEnergyDynamics(object):
             system : openmm.System
                 The system.
             integrator :
-                The integrator. If the temperature of any collective variable is different from
-                the system temperature, then this must be a CustomIntegrator with a per-dof variable
-                called `kT`.
+                The integrator.
 
         Keyword Args
         ------------
@@ -475,7 +480,7 @@ class UnifiedFreeEnergyDynamics(object):
             self._metadynamics.update_bias_parameters(nparticles)
             system.addForce(self.bias_force)
 
-        simulation = Simulation(
+        simulation = _Simulation(
             self._metadynamics,
             modeller.topology,
             system,
