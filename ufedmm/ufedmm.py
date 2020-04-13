@@ -188,7 +188,7 @@ class _Metadynamics(object):
         self._expanded = []
         self._extra_points = []
         for cv in self.bias_variables:
-            expanded = cv.periodic and len(self.bias_variables) > 1
+            expanded = cv.periodic  # and len(self.bias_variables) > 1
             extra_points = min(grid_expansion, cv.grid_size) if expanded else 0
             extra_range = extra_points*cv._range/(cv.grid_size - 1)
             self._widths += [cv.grid_size + 2*extra_points]
@@ -197,12 +197,23 @@ class _Metadynamics(object):
             self._extra_points += [extra_points]
         self._bias = np.zeros(tuple(reversed(self._widths)))
         if len(variables) == 1:
-            periodic = self.bias_variables[0].periodic
-            self._table = openmm.Continuous1DFunction(self._bias.flatten(), *self._bounds, periodic)
+            self._table = openmm.Continuous1DFunction(
+                self._bias.flatten(),
+                *self._bounds,
+                # self.bias_variables[0].periodic,
+            )
         elif len(variables) == 2:
-            self._table = openmm.Continuous2DFunction(*self._widths, self._bias.flatten(), *self._bounds)
+            self._table = openmm.Continuous2DFunction(
+                *self._widths,
+                self._bias.flatten(),
+                *self._bounds,
+            )
         elif len(variables) == 3:
-            self._table = openmm.Continuous3DFunction(*self._widths, self._bias.flatten(), *self._bounds)
+            self._table = openmm.Continuous3DFunction(
+                *self._widths,
+                self._bias.flatten(),
+                *self._bounds,
+            )
         else:
             raise ValueError('UFED requires 1, 2, or 3 biased collective variables')
         parameter_list = ', '.join(f's_{cv.id}' for cv in self.bias_variables)
