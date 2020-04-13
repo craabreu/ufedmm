@@ -5,6 +5,7 @@ Python API
     :glob:
 
     ufedmm
+    analysis
     integrators
     io
     testmodels

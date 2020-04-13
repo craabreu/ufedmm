@@ -10,6 +10,7 @@
 import numpy as np
 
 from scipy import stats
+from ufedmm.ufedmm import _standardize
 
 
 class Analyzer(object):
@@ -57,13 +58,35 @@ class Analyzer(object):
         self.mean_forces = [means.statistic[n+i].flatten()[index] for i in range(n)]
 
     def free_energy_functions(self, sigma=None):
+        """
+        Returns Python functions for evaluating the potential of mean force and their originating
+        mean forces as a function of the collective variables.
+
+        Keyword Args
+        ------------
+            sigma : float or unit.Quantity, default=None
+                The standard deviation of kernels. If this is `None`, then values will be
+                determined from the distances between nodes.
+
+        Returns
+        -------
+            potential : function
+                A Python function whose arguments are collective variable values and whose result
+                is the potential of mean force at that values.
+            mean_force : function
+                A Python function whose arguments are collective variable values and whose result
+                is the mean force at that values regarding a given direction. Such direction must
+                be defined through a keyword argument `dir`, whose default value is `0` (meaning
+                the direction of the first collective variable).
+
+        """
         if sigma is None:
             variances = [(cv._range/self._bins[i])**2 for i, cv in enumerate(self._ufed.variables)]
         else:
             try:
-                variances = [value**2 for value in sigma]
+                variances = [_standardize(value)**2 for value in sigma]
             except TypeError:
-                variances = [sigma**2]*len(self._ufed.variables)
+                variances = [_standardize(sigma)**2]*len(self._ufed.variables)
 
         exponent = []
         derivative = []
