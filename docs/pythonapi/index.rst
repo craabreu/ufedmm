@@ -6,7 +6,7 @@ Python API
 
     ufedmm
     integrators
-    output
+    io
     testmodels
 
 

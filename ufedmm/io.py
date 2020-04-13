@@ -1,5 +1,5 @@
 """
-.. module:: output
+.. module:: io
    :platform: Unix, Windows
    :synopsis: Unified Free Energy Dynamics Outputs
 
@@ -11,6 +11,7 @@
 """
 
 import sys
+import yaml
 
 from simtk.openmm import app
 
@@ -121,3 +122,29 @@ class StateDataReporter(app.StateDataReporter):
         for cv in self._cv_force.getCollectiveVariableValues(simulation.context):
             self._add_item(values, cv)
         return values
+
+
+def serialize(object, file):
+    """
+    Serializes a ufedmm object.
+
+    """
+    dump = yaml.dump(object)
+    if isinstance(file, str):
+        with open(file, 'w') as f:
+            f.write(dump)
+    else:
+        file.write(dump)
+
+
+def deserialize(file):
+    """
+    Deserializes a ufedmm object.
+
+    """
+    if isinstance(file, str):
+        with open(file, 'r') as f:
+            object = yaml.load(f.read(), Loader=yaml.FullLoader)
+    else:
+        object = yaml.load(file.read(), Loader=yaml.FullLoader)
+    return object
