@@ -9,6 +9,7 @@ from ._version import get_versions
 from .ufedmm import CollectiveVariable, UnifiedFreeEnergyDynamics  # noqa: F401, F403
 from .integrators import CustomIntegrator, GeodesicBAOABIntegrator  # noqa: F401, F403
 from .output import MultipleFiles, StateDataReporter  # noqa: F401, F403
+from .analysis import Analyzer  # noqa: F401, F403
 from .testmodels import AlanineDipeptideModel  # noqa: F401, F403
 
 # Handle versioneer:
