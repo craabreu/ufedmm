@@ -51,12 +51,12 @@ class Analyzer(object):
         histogram = counts.statistic.flatten()
         index = np.where(histogram > 0)
 
-        self._histogram = histogram[index]
+        self.histogram = histogram[index]
         n = len(ufed.variables)
-        self._centers = [means.statistic[i].flatten()[index] for i in range(n)]
-        self._forces = [means.statistic[n+i].flatten()[index] for i in range(n)]
+        self.centers = [means.statistic[i].flatten()[index] for i in range(n)]
+        self.mean_forces = [means.statistic[n+i].flatten()[index] for i in range(n)]
 
-    def free_energy_surface(self, sigma=None):
+    def free_energy_functions(self, sigma=None):
         if sigma is None:
             variances = [(cv._range/self._bins[i])**2 for i, cv in enumerate(self._ufed.variables)]
         else:
@@ -84,13 +84,13 @@ class Analyzer(object):
         def gradient(x, i):
             return kernel(x)*derivative[i](x[i])
 
-        centers = [np.array(xc) for xc in zip(*self._centers)]
+        centers = [np.array(xc) for xc in zip(*self.centers)]
         coefficients = []
         for i in range(n):
             for x in centers:
                 coefficients.append(np.array([gradient(x-xc, i) for xc in centers]))
         M = np.vstack(coefficients)
-        F = -np.hstack(self._forces)
+        F = -np.hstack(self.mean_forces)
         A, _, _, _ = np.linalg.lstsq(M, F, rcond=None)
 
         kernels = np.empty((len(centers), len(centers)))
@@ -104,4 +104,9 @@ class Analyzer(object):
             kernels = np.array([kernel(xa-xc) for xc in centers])
             return np.sum(A*kernels) - minimum
 
-        return np.vectorize(potential)
+        def mean_force(*x, dir=0):
+            xa = np.array(x)
+            gradients = np.array([gradient(xa-xc, dir) for xc in centers])
+            return -np.sum(A*gradients)
+
+        return np.vectorize(potential), np.vectorize(mean_force)
