@@ -53,6 +53,9 @@ class AlanineDipeptideModel(object):
             force_field = app.ForceField(f'{force_field}.xml')
             self.topology = pdb.topology
             self.positions = pdb.positions
+            L = box_length.value_in_unit(unit.nanometers)
+            vectors = [openmm.Vec3(L, 0, 0), openmm.Vec3(0, L, 0), openmm.Vec3(0, 0, L)]
+            self.topology.setPeriodicBoxVectors(vectors)
         else:
             force_field = app.ForceField(f'{force_field}.xml', f'{water}.xml')
             modeller = app.Modeller(pdb.topology, pdb.positions)
