@@ -96,7 +96,7 @@ class CollectiveVariable(object):
         else:
             self._scaled_variance = (self.sigma/self._range)**2
             if grid_size is None:
-                self.grid_size = int(np.ceil(5*self._range/self.sigma))
+                self.grid_size = int(np.ceil(5*self._range/self.sigma)) + 1
             else:
                 self.grid_size = grid_size
         self.periodic = periodic
@@ -456,7 +456,7 @@ class UnifiedFreeEnergyDynamics(object):
             >>> phi = ufedmm.CollectiveVariable('phi', model.phi, -limit, limit, mass, Ks, Ts)
             >>> psi = ufedmm.CollectiveVariable('psi', model.psi, -limit, limit, mass, Ks, Ts)
             >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([phi, psi], 300*unit.kelvin)
-            >>> integrator = ufedmm.GeodesicBAOABIntegrator(dt, 300*unit.kelvin, gamma)
+            >>> integrator = ufedmm.GeodesicBAOABIntegrator(300*unit.kelvin, gamma, dt)
             >>> simulation = ufed.simulation(model.topology, model.system, integrator)
 
         """
