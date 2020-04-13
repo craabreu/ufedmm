@@ -86,6 +86,7 @@ class CollectiveVariable(object):
         self.openmm_force = openmm_force
         self.min_value = _standardize(min_value)
         self.max_value = _standardize(max_value)
+        self._range = self.max_value - self.min_value
         self.mass = _standardize(mass)
         self.force_constant = _standardize(force_constant)
         self.temperature = _standardize(temperature)
@@ -99,7 +100,6 @@ class CollectiveVariable(object):
             else:
                 self.grid_size = grid_size
         self.periodic = periodic
-        self._range = self.max_value - self.min_value
 
     def __repr__(self):
         properties = f'm={self.mass}, K={self.force_constant}, T={self.temperature}'
@@ -179,7 +179,7 @@ class Metadynamics(object):
 
     """
     def __init__(self, variables, height, frequency, grid_expansion):
-        self.bias_variables = [cv for cv in self.variables if cv.sigma is not None]
+        self.bias_variables = [cv for cv in variables if cv.sigma is not None]
         self.height = height
         self.frequency = frequency
         self.grid_expansion = grid_expansion
@@ -205,7 +205,7 @@ class Metadynamics(object):
             self._table = openmm.Continuous3DFunction(*self._widths, self._bias.flatten(), *self._bounds)
         else:
             raise ValueError('UFED requires 1, 2, or 3 biased collective variables')
-        parameter_list = ', '.join(f's_{cv.id}' for cv in self.variables)
+        parameter_list = ', '.join(f's_{cv.id}' for cv in self.bias_variables)
         self.force = openmm.CustomCVForce(f'bias({parameter_list})')
         for cv in self.bias_variables:
             expression = f'{cv.min_value}+{cv._range}*(x-floor(x)); x=x1/Lx'
