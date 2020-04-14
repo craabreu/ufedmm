@@ -8,7 +8,9 @@ dependencies:
   - pip
   - sphinxcontrib-bibtex >=0.4
 
+  - numpy
   - openmm >=7.3.1
+  - pyyaml
   - scipy
 
     # Testing
