@@ -219,10 +219,10 @@ class _Metadynamics(object):
         parameter_list = ', '.join(f's_{cv.id}' for cv in self.bias_variables)
         self.force = openmm.CustomCVForce(f'bias({parameter_list})')
         for cv in self.bias_variables:
-            expression = f'{cv.min_value}+{cv._range}*(x-floor(x)); x=x1/Lx'
-            parameter = openmm.CustomCompoundBondForce(1, expression)
+            expression = f'{cv.min_value}+{cv._range}*(x/Lx-floor(x/Lx))'
+            parameter = openmm.CustomExternalForce(expression)
             parameter.addGlobalParameter('Lx', 0.0)
-            parameter.addBond([0], [])
+            parameter.addParticle(0, [])
             self.force.addCollectiveVariable(f's_{cv.id}', parameter)
         self.force.addTabulatedFunction('bias', self._table)
 
@@ -259,7 +259,7 @@ class _Metadynamics(object):
     def update_bias_parameters(self, nparticles):
         for i, cv in enumerate(self.bias_variables):
             parameter = self.force.getCollectiveVariable(i)
-            parameter.setBondParameters(0, [nparticles+i], [])
+            parameter.setParticleParameters(0, nparticles+i, [])
 
 
 class _Simulation(app.Simulation):
@@ -334,10 +334,10 @@ class UnifiedFreeEnergyDynamics(object):
         for i, cv in enumerate(self.variables):
             self.driving_force.addGlobalParameter(f'K_{cv.id}', cv.force_constant)
             self.driving_force.addCollectiveVariable(cv.id, cv.openmm_force)
-            expression = f'{cv.min_value}+{cv._range}*(x-floor(x)); x=x1/Lx'
-            parameter = openmm.CustomCompoundBondForce(1, expression)
+            expression = f'{cv.min_value}+{cv._range}*(x/Lx-floor(x/Lx))'
+            parameter = openmm.CustomExternalForce(expression)
             parameter.addGlobalParameter('Lx', 0.0)
-            parameter.addBond([0], [])
+            parameter.addParticle(0, [])
             self.driving_force.addCollectiveVariable(f's_{cv.id}', parameter)
 
         if (all(cv.sigma is None for cv in self.variables) or height is None or frequency is None):
@@ -488,7 +488,7 @@ class UnifiedFreeEnergyDynamics(object):
                 else:
                     nb_force.addParticle([0.0]*nb_force.getNumPerParticleParameters())
             parameter = self.driving_force.getCollectiveVariable(2*i+1)
-            parameter.setBondParameters(0, [nparticles+i], [])
+            parameter.setParticleParameters(0, nparticles+i, [])
         system.addForce(self.driving_force)
 
         if self._metadynamics:
@@ -503,10 +503,10 @@ class UnifiedFreeEnergyDynamics(object):
             platform,
             platformProperties,
         )
-        simulation.context.setPositions(modeller.positions)
         simulation.context.setParameter('Lx', Lx)
 
         if any(cv.temperature != self.temperature for cv in self.variables):
+            simulation.context.setPositions(modeller.positions)
             try:
                 kT = integrator.getPerDofVariableByName('kT')
             except Exception:
