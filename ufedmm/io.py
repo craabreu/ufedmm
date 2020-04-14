@@ -77,7 +77,7 @@ class StateDataReporter(app.StateDataReporter):
     Example
     -------
         >>> import ufedmm
-        >>> from simtk import unit
+        >>> from simtk import openmm, unit
         >>> from sys import stdout
         >>> model = ufedmm.AlanineDipeptideModel(water='tip3p')
         >>> mass = 50*unit.dalton*(unit.nanometer/unit.radians)**2
@@ -91,12 +91,13 @@ class StateDataReporter(app.StateDataReporter):
         >>> psi = ufedmm.CollectiveVariable('psi', model.psi, -limit, limit, mass, Ks, Ts)
         >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([phi, psi], T)
         >>> integrator = ufedmm.GeodesicBAOABIntegrator(dt, T, gamma)
-        >>> simulation = ufed.simulation(model.topology, model.system, integrator)
+        >>> platform = openmm.Platform.getPlatformByName('Reference')
+        >>> simulation = ufed.simulation(model.topology, model.system, integrator, platform)
         >>> ufed.set_positions(simulation, model.positions)
         >>> reporter = ufedmm.StateDataReporter(stdout, 1, ufed.driving_force, step=True)
         >>> reporter.report(simulation, simulation.context.getState())
         #"Step","phi","s_phi","psi","s_psi"
-        0,3.1415927410125732,-3.1415927410125732,3.1415927410125732,-3.1415927410125732
+        0,3.141592653589793,-3.141592653589793,3.141592653589793,-3.141592653589793
 
     """
     def __init__(self, file, report_interval, cv_force, **kwargs):
