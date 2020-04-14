@@ -42,6 +42,8 @@ install:
 
 
 script:
+  - flake8 ufedmm/
+  - isort ufedmm/ufedmm.py
   - pytest -v --cov=ufedmm --doctest-modules ufedmm/
 
 notifications:

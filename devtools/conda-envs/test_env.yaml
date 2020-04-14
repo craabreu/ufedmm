@@ -9,6 +9,7 @@ dependencies:
   - sphinxcontrib-bibtex >=0.4
 
   - openmm >=7.3.1
+  - scipy
 
     # Testing
   - isort

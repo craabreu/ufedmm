@@ -35,6 +35,8 @@ install:
 build: false
 
 test_script:
+  - flake8 ufedmm/
+  - isort ufedmm/ufedmm.py
   - pytest -v --cov=ufedmm ufedmm\\tests
 
 on_success:
