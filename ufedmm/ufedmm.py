@@ -242,8 +242,7 @@ class _Metadynamics(object):
             gaussians.append(values)
         if len(self.bias_variables) == 1:
             self._bias += self.height*gaussians[0]
-            periodic = self.bias_variables[0].periodic
-            self._table.setFunctionParameters(self._bias.flatten(), *self._bounds, periodic)
+            self._table.setFunctionParameters(self._bias.flatten(), *self._bounds)
         else:
             self._bias += self.height*functools.reduce(np.multiply.outer, reversed(gaussians))
             self._table.setFunctionParameters(*self._widths, self._bias.flatten(), *self._bounds)

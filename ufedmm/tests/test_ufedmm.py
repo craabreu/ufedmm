@@ -17,9 +17,12 @@ def ufed_model():
     Ks = 1000*unit.kilojoules_per_mole/unit.radians**2
     Ts = 1500*unit.kelvin
     limit = 180*unit.degrees
-    phi = ufedmm.CollectiveVariable('phi', model.phi, -limit, limit, mass, Ks, Ts)
-    psi = ufedmm.CollectiveVariable('psi', model.psi, -limit, limit, mass, Ks, Ts)
-    return ufedmm.UnifiedFreeEnergyDynamics([phi, psi], 300*unit.kelvin)
+    sigma = 18*unit.degrees
+    height = 2.0*unit.kilojoules_per_mole
+    frequency = 10
+    phi = ufedmm.CollectiveVariable('phi', model.phi, -limit, limit, mass, Ks, Ts, sigma)
+    psi = ufedmm.CollectiveVariable('psi', model.psi, -limit, limit, mass, Ks, Ts, sigma)
+    return model, ufedmm.UnifiedFreeEnergyDynamics([phi, psi], 300*unit.kelvin, height, frequency)
 
 
 def test_ufedmm_imported():
@@ -28,7 +31,7 @@ def test_ufedmm_imported():
 
 
 def test_serialization():
-    old = ufed_model()
+    model, old = ufed_model()
     new = yaml.load(yaml.dump(old), Loader=yaml.FullLoader)
     assert new.__repr__() == old.__repr__()
     for var1, var2 in zip(old.variables, new.variables):
