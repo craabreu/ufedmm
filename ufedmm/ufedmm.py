@@ -58,8 +58,11 @@ class CollectiveVariable(object):
         grid_size : int, default=None
             The grid size. If this is `None` and `sigma` is finite, then a convenient value will be
             automatically chosen.
-        periodic : bool, default=True
-            In the current version, only periodic variables are permitted.
+        repulsion_length : float or unit.Quantity, default=0.0
+            Distance from each boundary (either `min_value` or `max_value`) at which the parameter
+            that drives this collective variable begins to be repelled by a Weeks-Chandler-Andersen
+            potential. If `repulsion_length=0` (default), then periodic boundary conditions will be
+            considered.
 
     Example
     -------
@@ -77,11 +80,9 @@ class CollectiveVariable(object):
 
     """
     def __init__(self, id, openmm_force, min_value, max_value, mass, force_constant, temperature,
-                 sigma=None, grid_size=None, periodic=True):
+                 sigma=None, grid_size=None, repulsion_length=0.0):
         if not id.isidentifier():
             raise ValueError('Parameter id must be a valid variable identifier')
-        if not periodic:
-            raise ValueError('UFED currently requires periodic variables')
         self.id = id
         self.openmm_force = openmm_force
         self.min_value = _standardize(min_value)
@@ -99,7 +100,8 @@ class CollectiveVariable(object):
                 self.grid_size = int(np.ceil(5*self._range/self.sigma)) + 1
             else:
                 self.grid_size = grid_size
-        self.periodic = periodic
+        self.repulsion_length = _standardize(repulsion_length)
+        self.periodic = self.repulsion_length == 0.0
 
     def __repr__(self):
         properties = f'm={self.mass}, K={self.force_constant}, T={self.temperature}'
@@ -116,7 +118,7 @@ class CollectiveVariable(object):
             temperature=self.temperature,
             sigma=self.sigma,
             grid_size=self.grid_size,
-            periodic=self.periodic,
+            repulsion_length=self.repulsion_length,
         )
 
     def __setstate__(self, kw):
@@ -327,8 +329,16 @@ class UnifiedFreeEnergyDynamics(object):
         energy_terms = []
         definitions = []
         for i, cv in enumerate(self.variables):
-            energy_terms.append(f'0.5*K_{cv.id}*min(d{cv.id},{cv._range}-d{cv.id})^2')
-            definitions.append(f'd{cv.id}=abs({cv.id}-s_{cv.id})')
+            if cv.periodic:
+                energy_terms.append(f'0.5*K_{cv.id}*min(d{cv.id},{cv._range}-d{cv.id})^2')
+                definitions.append(f'd{cv.id}=abs({cv.id}-s_{cv.id})')
+            else:
+                driving = f'0.5*K_{cv.id}*({cv.id}-s_{cv.id})^2'
+                repulsion_from_min = f'step(xmin-1)*(xmin^12-2*xmin^6+1)'
+                repulsion_from_max = f'step(xmax-1)*(xmax^12-2*xmax^6+1)'
+                energy_terms.append(f'{driving}+{repulsion_from_min}+{repulsion_from_max}')
+                definitions.append(f'xmin={cv.repulsion_length}/(s_{cv.id}-{cv.min_value})')
+                definitions.append(f'xmax={cv.repulsion_length}/({cv.max_value}-s_{cv.id})')
         expression = '; '.join([' + '.join(energy_terms)] + definitions)
         self.driving_force = openmm.CustomCVForce(expression)
         for i, cv in enumerate(self.variables):
