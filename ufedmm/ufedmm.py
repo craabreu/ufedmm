@@ -344,7 +344,10 @@ class UnifiedFreeEnergyDynamics(object):
         for i, cv in enumerate(self.variables):
             self.driving_force.addGlobalParameter(f'K_{cv.id}', cv.force_constant)
             self.driving_force.addCollectiveVariable(cv.id, cv.openmm_force)
-            expression = f'{cv.min_value}+{cv._range}*(x/Lx-floor(x/Lx))'
+            if cv.periodic:
+                expression = f'{cv.min_value}+{cv._range}*(x/Lx-floor(x/Lx))'
+            else:
+                expression = f'{cv.min_value}+{cv._range}*(2*x/Lx+1/2)'
             parameter = openmm.CustomExternalForce(expression)
             parameter.addGlobalParameter('Lx', 0.0)
             parameter.addParticle(0, [])
