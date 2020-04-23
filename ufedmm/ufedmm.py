@@ -395,7 +395,10 @@ class UnifiedFreeEnergyDynamics(object):
         Lx = simulation.context.getParameter('Lx')
         for i, cv in enumerate(self.variables):
             value = cv.evaluate(simulation.system, positions)
-            position = openmm.Vec3(Lx*(value - cv.min_value)/cv._range, i, 0)
+            if cv.periodic:
+                position = openmm.Vec3(Lx*(value - cv.min_value)/cv._range, i, 0)
+            else:
+                position = openmm.Vec3((Lx/2.0)*(((value - cv.min_value)/cv._range) - 0.5), i, 0)
             extended_positions.append(position*unit.nanometers)
         simulation.context.setPositions(extended_positions)
 
