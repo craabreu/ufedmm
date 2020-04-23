@@ -217,7 +217,10 @@ class _Metadynamics(object):
         parameter_list = ', '.join(f's_{cv.id}' for cv in self.bias_variables)
         self.force = openmm.CustomCVForce(f'bias({parameter_list})')
         for cv in self.bias_variables:
-            expression = f'{cv.min_value}+{cv._range}*(x/Lx-floor(x/Lx))'
+            if cv.periodic:
+                expression = f'{cv.min_value}+{cv._range}*(2*x/Lx-floor(2*x/Lx))'
+            else:
+                expression = f'{cv.min_value}+{cv._range}*(2*x/Lx+1/2)'
             parameter = openmm.CustomExternalForce(expression)
             parameter.addGlobalParameter('Lx', 0.0)
             parameter.addParticle(0, [])
@@ -341,7 +344,7 @@ class UnifiedFreeEnergyDynamics(object):
             self.driving_force.addGlobalParameter(f'K_{cv.id}', cv.force_constant)
             self.driving_force.addCollectiveVariable(cv.id, cv.openmm_force)
             if cv.periodic:
-                expression = f'{cv.min_value}+{cv._range}*(x/Lx-floor(x/Lx))'
+                expression = f'{cv.min_value}+{cv._range}*(2*x/Lx-floor(2*x/Lx))'
             else:
                 expression = f'{cv.min_value}+{cv._range}*(2*x/Lx+1/2)'
             parameter = openmm.CustomExternalForce(expression)
@@ -490,7 +493,7 @@ class UnifiedFreeEnergyDynamics(object):
         nb_types = (openmm.NonbondedForce, openmm.CustomNonbondedForce)
         nb_forces = [f for f in system.getForces() if isinstance(f, nb_types)]
         for i, cv in enumerate(self.variables):
-            system.addParticle(cv.mass*(cv._range/Lx)**2)
+            system.addParticle(cv.mass*(2*cv._range/Lx)**2)
             for nb_force in nb_forces:
                 if isinstance(nb_force, openmm.NonbondedForce):
                     nb_force.addParticle(0.0, 1.0, 0.0)
