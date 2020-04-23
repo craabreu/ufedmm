@@ -124,7 +124,7 @@ class CollectiveVariable(object):
     def __setstate__(self, kw):
         self.__init__(**kw)
 
-    def evaluate(self, positions, box_vectors=None):
+    def evaluate(self, system, positions):
         """
         Computes the value of the collective variable for a given set of particle coordinates
         and box vectors. Whether periodic boundary conditions will be used or not depends on
@@ -132,14 +132,11 @@ class CollectiveVariable(object):
 
         Parameters
         ----------
+            system : openmm.System
+                The system.
             positions : list of openmm.Vec3
                 A list whose length equals the number of particles in the system and which contains
                 the coordinates of these particles.
-
-        Keyword Args
-        ------------
-            box_vectors : list of openmm.Vec3, default=None
-                A list with three vectors which describe the edges of the simulation box.
 
         Returns
         -------
@@ -156,20 +153,19 @@ class CollectiveVariable(object):
             >>> bound = 180*unit.degrees
             >>> phi = ufedmm.CollectiveVariable('phi', model.phi, -bound, bound, mass, K, Ts)
             >>> psi = ufedmm.CollectiveVariable('psi', model.psi, -bound, bound, mass, K, Ts)
-            >>> phi.evaluate(model.positions)
+            >>> phi.evaluate(model.system, model.positions)
             3.141592653589793
-            >>> psi.evaluate(model.positions)
+            >>> psi.evaluate(model.system, model.positions)
             3.141592653589793
 
         """
-        system = openmm.System()
-        for position in positions:
-            system.addParticle(0)
-        if box_vectors is not None:
-            system.setDefaultPeriodicBoxVectors(*box_vectors)
-        system.addForce(copy.deepcopy(self.openmm_force))
+        new_system = openmm.System()
+        new_system.setDefaultPeriodicBoxVectors(*system.getDefaultPeriodicBoxVectors())
+        for index in range(len(positions)):
+            new_system.addParticle(system.getParticleMass(index))
+        new_system.addForce(copy.deepcopy(self.openmm_force))
         platform = openmm.Platform.getPlatformByName('Reference')
-        context = openmm.Context(system, openmm.CustomIntegrator(0), platform)
+        context = openmm.Context(new_system, openmm.CustomIntegrator(0), platform)
         context.setPositions(positions)
         energy = context.getState(getEnergy=True).getPotentialEnergy()
         return energy.value_in_unit(unit.kilojoules_per_mole)
@@ -221,7 +217,10 @@ class _Metadynamics(object):
         parameter_list = ', '.join(f's_{cv.id}' for cv in self.bias_variables)
         self.force = openmm.CustomCVForce(f'bias({parameter_list})')
         for cv in self.bias_variables:
-            expression = f'{cv.min_value}+{cv._range}*(x/Lx-floor(x/Lx))'
+            if cv.periodic:
+                expression = f'{cv.min_value}+{cv._range}*(x/Lx-floor(x/Lx))'
+            else:
+                expression = f'{cv.min_value}+{cv._range}*(2*x/Lx+1/2)'
             parameter = openmm.CustomExternalForce(expression)
             parameter.addGlobalParameter('Lx', 0.0)
             parameter.addParticle(0, [])
@@ -344,7 +343,10 @@ class UnifiedFreeEnergyDynamics(object):
         for i, cv in enumerate(self.variables):
             self.driving_force.addGlobalParameter(f'K_{cv.id}', cv.force_constant)
             self.driving_force.addCollectiveVariable(cv.id, cv.openmm_force)
-            expression = f'{cv.min_value}+{cv._range}*(x/Lx-floor(x/Lx))'
+            if cv.periodic:
+                expression = f'{cv.min_value}+{cv._range}*(x/Lx-floor(x/Lx))'
+            else:
+                expression = f'{cv.min_value}+{cv._range}*(2*x/Lx+1/2)'
             parameter = openmm.CustomExternalForce(expression)
             parameter.addGlobalParameter('Lx', 0.0)
             parameter.addParticle(0, [])
@@ -392,7 +394,7 @@ class UnifiedFreeEnergyDynamics(object):
         extended_positions = copy.deepcopy(positions)
         Lx = simulation.context.getParameter('Lx')
         for i, cv in enumerate(self.variables):
-            value = cv.evaluate(positions)
+            value = cv.evaluate(simulation.system, positions)
             position = openmm.Vec3(Lx*(value - cv.min_value)/cv._range, i, 0)
             extended_positions.append(position*unit.nanometers)
         simulation.context.setPositions(extended_positions)
@@ -491,7 +493,10 @@ class UnifiedFreeEnergyDynamics(object):
         nb_types = (openmm.NonbondedForce, openmm.CustomNonbondedForce)
         nb_forces = [f for f in system.getForces() if isinstance(f, nb_types)]
         for i, cv in enumerate(self.variables):
-            system.addParticle(cv.mass*(cv._range/Lx)**2)
+            if cv.periodic:
+                system.addParticle(cv.mass*(cv._range/Lx)**2)
+            else:
+                system.addParticle(cv.mass*(2*cv._range/Lx)**2)
             for nb_force in nb_forces:
                 if isinstance(nb_force, openmm.NonbondedForce):
                     nb_force.addParticle(0.0, 1.0, 0.0)
