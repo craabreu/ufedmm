@@ -220,7 +220,7 @@ class _Metadynamics(object):
             if cv.periodic:
                 expression = f'{cv.min_value}+{cv._range}*(x/Lx-floor(x/Lx))'
             else:
-                expression = f'{cv.min_value}+{cv._range}*(2*x/Lx+1/2)'
+                expression = f'{cv.min_value}+{cv._range}*(2*x/Lx-1/2)'
             parameter = openmm.CustomExternalForce(expression)
             parameter.addGlobalParameter('Lx', 0.0)
             parameter.addParticle(0, [])
@@ -346,7 +346,7 @@ class UnifiedFreeEnergyDynamics(object):
             if cv.periodic:
                 expression = f'{cv.min_value}+{cv._range}*(x/Lx-floor(x/Lx))'
             else:
-                expression = f'{cv.min_value}+{cv._range}*(2*x/Lx+1/2)'
+                expression = f'{cv.min_value}+{cv._range}*(2*x/Lx-1/2)'
             parameter = openmm.CustomExternalForce(expression)
             parameter.addGlobalParameter('Lx', 0.0)
             parameter.addParticle(0, [])
@@ -398,7 +398,7 @@ class UnifiedFreeEnergyDynamics(object):
             if cv.periodic:
                 position = openmm.Vec3(Lx*(value - cv.min_value)/cv._range, i, 0)
             else:
-                position = openmm.Vec3((Lx/2.0)*(((value - cv.min_value)/cv._range) - 0.5), i, 0)
+                position = openmm.Vec3((Lx/2.0)*(((value - cv.min_value)/cv._range) + 0.5), i, 0)
             extended_positions.append(position*unit.nanometers)
         simulation.context.setPositions(extended_positions)
 
