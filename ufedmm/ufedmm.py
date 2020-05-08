@@ -81,7 +81,7 @@ class CollectiveVariable(object):
         if not id.isidentifier():
             raise ValueError('Parameter id must be a valid variable identifier')
         self.id = id
-        self._xid = f's_{id}'
+        self._s_id = f's_{id}'
         self.openmm_force = openmm_force
         self.min_value = _standardize(min_value)
         self.max_value = _standardize(max_value)
@@ -121,7 +121,11 @@ class CollectiveVariable(object):
     def __setstate__(self, kw):
         self.__init__(**kw)
 
-    def _add_extended_variable(self, force):
+    def _push_collective_variable(self, force):
+        force.addCollectiveVariable(self.id, self.openmm_force)
+        force.addGlobalParameter(f'K_{self.id}', self.force_constant)
+
+    def _push_extended_variable(self, force):
         if self.periodic:
             expression = f'{self.min_value}+{self._range}*(x/Lx-floor(x/Lx))'
         else:
@@ -132,7 +136,7 @@ class CollectiveVariable(object):
         parameter = openmm.CustomExternalForce(expression)
         parameter.addGlobalParameter('Lx', 0.0)
         parameter.addParticle(0, [])
-        force.addCollectiveVariable(f'{self._xid}', parameter)
+        force.addCollectiveVariable(f'{self._s_id}', parameter)
 
     def _particle_mass(self, Lx):
         if self.periodic:
@@ -145,6 +149,14 @@ class CollectiveVariable(object):
             return openmm.Vec3(Lx*(value - self.min_value)/self._range, y, 0)
         else:
             return openmm.Vec3(0.5*Lx*(value - self.min_value)/self._range, y, 0)
+
+    def _energy_expression(self):
+        if self.periodic:
+            expression = f'0.5*K_{self.id}*min(d{self.id},{self._range}-d{self.id})^2'
+            expression += f'; d{self.id}=abs({self.id}-{self._s_id})'
+        else:
+            expression = f'0.5*K_{self.id}*({self.id}-{self._s_id})^2'
+        return expression
 
     def evaluate(self, system, positions):
         """
@@ -230,10 +242,10 @@ class _Metadynamics(object):
             )
         else:
             raise ValueError('UFED requires 1, 2, or 3 biased collective variables')
-        parameter_list = ', '.join(f'{cv._xid}' for cv in self.bias_variables)
+        parameter_list = ', '.join(f'{cv._s_id}' for cv in self.bias_variables)
         self.force = openmm.CustomCVForce(f'bias({parameter_list})')
         for cv in self.bias_variables:
-            cv._add_extended_variable(self.force)
+            cv._push_extended_variable(self.force)
         self.force.addTabulatedFunction('bias', self._table)
 
     def _add_bias(self, bias):
@@ -342,19 +354,15 @@ class UnifiedFreeEnergyDynamics(object):
 
         energy_terms = []
         definitions = []
-        for i, cv in enumerate(self.variables):
-            if cv.periodic:
-                energy_terms.append(f'0.5*K_{cv.id}*min(d{cv.id},{cv._range}-d{cv.id})^2')
-                definitions.append(f'd{cv.id}=abs({cv.id}-{cv._xid})')
-            else:
-                energy_terms.append(f'0.5*K_{cv.id}*({cv.id}-{cv._xid})^2')
-                definitions.append(' ')
+        for cv in self.variables:
+            energy_term, definition = cv._energy_expression().split(';', 1)
+            energy_terms.append(energy_term)
+            definitions.append(definition)
         expression = '; '.join([' + '.join(energy_terms)] + definitions)
         self.driving_force = openmm.CustomCVForce(expression)
-        for i, cv in enumerate(self.variables):
-            self.driving_force.addGlobalParameter(f'K_{cv.id}', cv.force_constant)
-            self.driving_force.addCollectiveVariable(cv.id, cv.openmm_force)
-            cv._add_extended_variable(self.driving_force)
+        for cv in self.variables:
+            cv._push_collective_variable(self.driving_force)
+            cv._push_extended_variable(self.driving_force)
 
         if (all(cv.sigma is None for cv in self.variables) or height is None or frequency is None):
             self.bias_force = self._metadynamics = None
