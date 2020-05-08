@@ -395,15 +395,16 @@ class UnifiedFreeEnergyDynamics(object):
                 The positions.
 
         """
-        extended_positions = copy.deepcopy(positions)
-        if not extended:
-            Lx = simulation.context.getParameter('Lx')
+        if extended:
+            simulation.context.setPositions(positions)
+        else:
+            extended_positions = copy.deepcopy(positions)
+            Vx, Vy, _ = simulation.context.getState().getPeriodicBoxVectors()
             for i, cv in enumerate(self.variables):
                 value = cv.evaluate(simulation.system, positions)
-                position = cv._particle_position(value, Lx, y=i)
+                position = cv._particle_position(value, Vx.x, y=Vy.y*(i+1)/(len(self.variables)+2))
                 extended_positions.append(position*unit.nanometers)
-
-        simulation.context.setPositions(extended_positions)
+            simulation.context.setPositions(extended_positions)
 
     def set_random_velocities(self, simulation, seed=None):
         """
@@ -494,11 +495,10 @@ class UnifiedFreeEnergyDynamics(object):
 
         positions = [openmm.Vec3(0, 0, 0) for atom in topology.atoms()]
         modeller = app.Modeller(topology, positions)
-        for y, cv in enumerate(self.variables):
-            new_atom = app.PDBFile(io.StringIO(
-                f'ATOM      1  Cs   Cs A   1       0.000 {y:3d}.000   0.000  1.00  0.00'
-            ))
-            modeller.add(new_atom.topology, new_atom.positions)
+        extra_atom = f'ATOM      1  Cs   Cs A   1       0.000   0.000   0.000  1.00  0.00'
+        pdb = app.PDBFile(io.StringIO(extra_atom))
+        for i in range(len(self.variables)):
+            modeller.add(pdb.topology, pdb.positions)
         nparticles = system.getNumParticles()
         nb_types = (openmm.NonbondedForce, openmm.CustomNonbondedForce)
         nb_forces = [f for f in system.getForces() if isinstance(f, nb_types)]
