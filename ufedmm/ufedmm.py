@@ -81,6 +81,7 @@ class CollectiveVariable(object):
         if not id.isidentifier():
             raise ValueError('Parameter id must be a valid variable identifier')
         self.id = id
+        self._xid = f's_{id}'
         self.openmm_force = openmm_force
         self.min_value = _standardize(min_value)
         self.max_value = _standardize(max_value)
@@ -210,7 +211,7 @@ class _Metadynamics(object):
             )
         else:
             raise ValueError('UFED requires 1, 2, or 3 biased collective variables')
-        parameter_list = ', '.join(f's_{cv.id}' for cv in self.bias_variables)
+        parameter_list = ', '.join(f'{cv._xid}' for cv in self.bias_variables)
         self.force = openmm.CustomCVForce(f'bias({parameter_list})')
         for cv in self.bias_variables:
             if cv.periodic:
@@ -220,7 +221,7 @@ class _Metadynamics(object):
             parameter = openmm.CustomExternalForce(expression)
             parameter.addGlobalParameter('Lx', 0.0)
             parameter.addParticle(0, [])
-            self.force.addCollectiveVariable(f's_{cv.id}', parameter)
+            self.force.addCollectiveVariable(f'{cv._xid}', parameter)
         self.force.addTabulatedFunction('bias', self._table)
 
     def _add_gaussian(self, position):
@@ -326,9 +327,9 @@ class UnifiedFreeEnergyDynamics(object):
         for i, cv in enumerate(self.variables):
             if cv.periodic:
                 energy_terms.append(f'0.5*K_{cv.id}*min(d{cv.id},{cv._range}-d{cv.id})^2')
-                definitions.append(f'd{cv.id}=abs({cv.id}-s_{cv.id})')
+                definitions.append(f'd{cv.id}=abs({cv.id}-{cv._xid})')
             else:
-                energy_terms.append(f'0.5*K_{cv.id}*({cv.id}-s_{cv.id})^2')
+                energy_terms.append(f'0.5*K_{cv.id}*({cv.id}-{cv._xid})^2')
                 definitions.append(' ')
         expression = '; '.join([' + '.join(energy_terms)] + definitions)
         self.driving_force = openmm.CustomCVForce(expression)
@@ -342,7 +343,7 @@ class UnifiedFreeEnergyDynamics(object):
             parameter = openmm.CustomExternalForce(expression)
             parameter.addGlobalParameter('Lx', 0.0)
             parameter.addParticle(0, [])
-            self.driving_force.addCollectiveVariable(f's_{cv.id}', parameter)
+            self.driving_force.addCollectiveVariable(f'{cv._xid}', parameter)
 
         if (all(cv.sigma is None for cv in self.variables) or height is None or frequency is None):
             self.bias_force = self._metadynamics = None
