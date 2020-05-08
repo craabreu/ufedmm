@@ -220,7 +220,7 @@ class _Metadynamics(object):
             if cv.periodic:
                 expression = f'{cv.min_value}+{cv._range}*(x/Lx-floor(x/Lx))'
             else:
-                expression = f'{cv.min_value}+{cv._range}*(2*x/Lx-1/2)'
+                expression = f'select(step(0.5 - pos), {cv.min_value}+{2*cv._range}*pos, {cv.max_value}-{2*cv._range}*(pos-0.5)); pos = x/Lx-floor(x/Lx)'
             parameter = openmm.CustomExternalForce(expression)
             parameter.addGlobalParameter('Lx', 0.0)
             parameter.addParticle(0, [])
@@ -332,12 +332,8 @@ class UnifiedFreeEnergyDynamics(object):
                 energy_terms.append(f'0.5*K_{cv.id}*min(d{cv.id},{cv._range}-d{cv.id})^2')
                 definitions.append(f'd{cv.id}=abs({cv.id}-s_{cv.id})')
             else:
-                driving = f'0.5*K_{cv.id}*({cv.id}-s_{cv.id})^2'
-                repulsion_from_min = f'step(xmin-1)*(xmin^12-2*xmin^6+1)'
-                repulsion_from_max = f'step(xmax-1)*(xmax^12-2*xmax^6+1)'
-                energy_terms.append(f'{driving}+{repulsion_from_min}+{repulsion_from_max}')
-                definitions.append(f'xmin={cv.repulsion_length}/(s_{cv.id}-{cv.min_value})')
-                definitions.append(f'xmax={cv.repulsion_length}/({cv.max_value}-s_{cv.id})')
+                energy_terms.append(f'0.5*K_{cv.id}*({cv.id}-s_{cv.id})^2')
+                definitions.append(' ')
         expression = '; '.join([' + '.join(energy_terms)] + definitions)
         self.driving_force = openmm.CustomCVForce(expression)
         for i, cv in enumerate(self.variables):
@@ -346,7 +342,7 @@ class UnifiedFreeEnergyDynamics(object):
             if cv.periodic:
                 expression = f'{cv.min_value}+{cv._range}*(x/Lx-floor(x/Lx))'
             else:
-                expression = f'{cv.min_value}+{cv._range}*(2*x/Lx-1/2)'
+                expression = f'select(step(0.5 - pos), {cv.min_value}+{2*cv._range}*pos, {cv.max_value}-{2*cv._range}*(pos-0.5)); pos = x/Lx-floor(x/Lx)'
             parameter = openmm.CustomExternalForce(expression)
             parameter.addGlobalParameter('Lx', 0.0)
             parameter.addParticle(0, [])
@@ -379,7 +375,7 @@ class UnifiedFreeEnergyDynamics(object):
     def __setstate__(self, kw):
         self.__init__(**kw)
 
-    def set_positions(self, simulation, positions):
+    def set_positions(self, simulation, positions, extended=False):
         """
         Sets the positions of all particles in a simulation context.
 
@@ -392,14 +388,16 @@ class UnifiedFreeEnergyDynamics(object):
 
         """
         extended_positions = copy.deepcopy(positions)
-        Lx = simulation.context.getParameter('Lx')
-        for i, cv in enumerate(self.variables):
-            value = cv.evaluate(simulation.system, positions)
-            if cv.periodic:
-                position = openmm.Vec3(Lx*(value - cv.min_value)/cv._range, i, 0)
-            else:
-                position = openmm.Vec3((Lx/2.0)*(((value - cv.min_value)/cv._range) + 0.5), i, 0)
-            extended_positions.append(position*unit.nanometers)
+        if not extended:
+            Lx = simulation.context.getParameter('Lx')
+            for i, cv in enumerate(self.variables):
+                value = cv.evaluate(simulation.system, positions)
+                if cv.periodic:
+                    position = openmm.Vec3(Lx*(value - cv.min_value)/cv._range, i, 0)
+                else:
+                    position = openmm.Vec3(0.5*Lx*(value - cv.min_value)/cv._range, i, 0)
+                extended_positions.append(position*unit.nanometers)
+
         simulation.context.setPositions(extended_positions)
 
     def set_random_velocities(self, simulation, seed=None):
@@ -428,6 +426,16 @@ class UnifiedFreeEnergyDynamics(object):
             simulation.context.setVelocitiesToTemperature(self.temperature, seed)
         for i, mass in enumerate(masses):
             simulation.system.setParticleMass(n+i, mass)
+
+    def set_bias(self, simulation, bias):
+
+        if self._metadynamics is not None:
+            self._metadynamics._bias += bias
+            if len(self._metadynamics.bias_variables) == 1:
+                self._metadynamics._table.setFunctionParameters(self._metadynamics._bias.flatten(), *self._metadynamics._bounds)
+            else:
+                self._metadynamics._table.setFunctionParameters(*self._metadynamics._widths, self._metadynamics._bias.flatten(), *self._metadynamics._bounds)
+            self._metadynamics.force.updateParametersInContext(simulation.context)
 
     def simulation(self, topology, system, integrator, platform=None, platformProperties=None):
         """
@@ -491,7 +499,6 @@ class UnifiedFreeEnergyDynamics(object):
                 f'ATOM      1  Cs   Cs A   1       0.000 {y:3d}.000   0.000  1.00  0.00'
             ))
             modeller.add(new_atom.topology, new_atom.positions)
-
         nparticles = system.getNumParticles()
         nb_types = (openmm.NonbondedForce, openmm.CustomNonbondedForce)
         nb_forces = [f for f in system.getForces() if isinstance(f, nb_types)]
