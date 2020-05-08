@@ -58,11 +58,8 @@ class CollectiveVariable(object):
         grid_size : int, default=None
             The grid size. If this is `None` and `sigma` is finite, then a convenient value will be
             automatically chosen.
-        repulsion_length : float or unit.Quantity, default=0.0
-            Distance from each boundary (either `min_value` or `max_value`) at which the parameter
-            that drives this collective variable begins to be repelled by a Weeks-Chandler-Andersen
-            potential. If `repulsion_length=0` (default), then periodic boundary conditions will be
-            considered.
+        periodic : bool, default=True
+            Whether the collective variable is periodic with period `L=max_value-min_value`.
 
     Example
     -------
@@ -80,7 +77,7 @@ class CollectiveVariable(object):
 
     """
     def __init__(self, id, openmm_force, min_value, max_value, mass, force_constant, temperature,
-                 sigma=None, grid_size=None, repulsion_length=0.0):
+                 sigma=None, grid_size=None, periodic=True):
         if not id.isidentifier():
             raise ValueError('Parameter id must be a valid variable identifier')
         self.id = id
@@ -100,8 +97,7 @@ class CollectiveVariable(object):
                 self.grid_size = int(np.ceil(5*self._range/self.sigma)) + 1
             else:
                 self.grid_size = grid_size
-        self.repulsion_length = _standardize(repulsion_length)
-        self.periodic = self.repulsion_length == 0.0
+        self.periodic = periodic
 
     def __repr__(self):
         properties = f'm={self.mass}, K={self.force_constant}, T={self.temperature}'
@@ -118,7 +114,7 @@ class CollectiveVariable(object):
             temperature=self.temperature,
             sigma=self.sigma,
             grid_size=self.grid_size,
-            repulsion_length=self.repulsion_length,
+            periodic=self.periodic,
         )
 
     def __setstate__(self, kw):
