@@ -121,6 +121,19 @@ class CollectiveVariable(object):
     def __setstate__(self, kw):
         self.__init__(**kw)
 
+    def _add_extended_variable(self, force):
+        if self.periodic:
+            expression = f'{self.min_value}+{self._range}*(x/Lx-floor(x/Lx))'
+        else:
+            ramp_up = f'{self.min_value}+{2*self._range}*pos'
+            ramp_down = f'{self.max_value+self._range}-{2*self._range}*pos'
+            expression = f'select(step(0.5-pos),{ramp_up},{ramp_down})'
+            expression += '; pos=x/Lx-floor(x/Lx)'
+        parameter = openmm.CustomExternalForce(expression)
+        parameter.addGlobalParameter('Lx', 0.0)
+        parameter.addParticle(0, [])
+        force.addCollectiveVariable(f'{self._xid}', parameter)
+
     def _particle_mass(self, Lx):
         if self.periodic:
             return self.mass*(self._range/Lx)**2
@@ -226,14 +239,7 @@ class _Metadynamics(object):
         parameter_list = ', '.join(f'{cv._xid}' for cv in self.bias_variables)
         self.force = openmm.CustomCVForce(f'bias({parameter_list})')
         for cv in self.bias_variables:
-            if cv.periodic:
-                expression = f'{cv.min_value}+{cv._range}*(x/Lx-floor(x/Lx))'
-            else:
-                expression = f'select(step(0.5 - pos), {cv.min_value}+{2*cv._range}*pos, {cv.max_value}-{2*cv._range}*(pos-0.5)); pos = x/Lx-floor(x/Lx)'
-            parameter = openmm.CustomExternalForce(expression)
-            parameter.addGlobalParameter('Lx', 0.0)
-            parameter.addParticle(0, [])
-            self.force.addCollectiveVariable(f'{cv._xid}', parameter)
+            cv._add_extended_variable(self.force)
         self.force.addTabulatedFunction('bias', self._table)
 
     def _add_gaussian(self, position):
@@ -348,14 +354,7 @@ class UnifiedFreeEnergyDynamics(object):
         for i, cv in enumerate(self.variables):
             self.driving_force.addGlobalParameter(f'K_{cv.id}', cv.force_constant)
             self.driving_force.addCollectiveVariable(cv.id, cv.openmm_force)
-            if cv.periodic:
-                expression = f'{cv.min_value}+{cv._range}*(x/Lx-floor(x/Lx))'
-            else:
-                expression = f'select(step(0.5 - pos), {cv.min_value}+{2*cv._range}*pos, {cv.max_value}-{2*cv._range}*(pos-0.5)); pos = x/Lx-floor(x/Lx)'
-            parameter = openmm.CustomExternalForce(expression)
-            parameter.addGlobalParameter('Lx', 0.0)
-            parameter.addParticle(0, [])
-            self.driving_force.addCollectiveVariable(f'{cv._xid}', parameter)
+            cv._add_extended_variable(self.driving_force)
 
         if (all(cv.sigma is None for cv in self.variables) or height is None or frequency is None):
             self.bias_force = self._metadynamics = None
