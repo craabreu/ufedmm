@@ -218,21 +218,15 @@ class _Metadynamics(object):
         self._bias = np.zeros(tuple(reversed(self._widths)))
         if len(variables) == 1:
             self._table = openmm.Continuous1DFunction(
-                self._bias.flatten(),
-                *self._bounds,
-                # self.bias_variables[0].periodic,
+                self._bias.flatten(), *self._bounds,  # self.bias_variables[0].periodic,
             )
         elif len(variables) == 2:
             self._table = openmm.Continuous2DFunction(
-                *self._widths,
-                self._bias.flatten(),
-                *self._bounds,
+                *self._widths, self._bias.flatten(), *self._bounds,
             )
         elif len(variables) == 3:
             self._table = openmm.Continuous3DFunction(
-                *self._widths,
-                self._bias.flatten(),
-                *self._bounds,
+                *self._widths, self._bias.flatten(), *self._bounds,
             )
         else:
             raise ValueError('UFED requires 1, 2, or 3 biased collective variables')
@@ -241,6 +235,13 @@ class _Metadynamics(object):
         for cv in self.bias_variables:
             cv._add_extended_variable(self.force)
         self.force.addTabulatedFunction('bias', self._table)
+
+    def _add_bias(self, bias):
+        self._bias += bias
+        if len(self.bias_variables) == 1:
+            self._table.setFunctionParameters(self._bias.flatten(), *self._bounds)
+        else:
+            self._table.setFunctionParameters(*self._widths, self._bias.flatten(), *self._bounds)
 
     def _add_gaussian(self, position):
         gaussians = []
@@ -257,11 +258,10 @@ class _Metadynamics(object):
                 values = np.hstack((values[-n:-1], values, values[1:n]))
             gaussians.append(values)
         if len(self.bias_variables) == 1:
-            self._bias += self.height*gaussians[0]
-            self._table.setFunctionParameters(self._bias.flatten(), *self._bounds)
+            bias = self.height*gaussians[0]
         else:
-            self._bias += self.height*functools.reduce(np.multiply.outer, reversed(gaussians))
-            self._table.setFunctionParameters(*self._widths, self._bias.flatten(), *self._bounds)
+            bias = self.height*functools.reduce(np.multiply.outer, reversed(gaussians))
+        self._add_bias(bias)
 
     def describeNextReport(self, simulation):
         steps = self.frequency - simulation.currentStep % self.frequency
@@ -281,13 +281,13 @@ class _Metadynamics(object):
 class _Simulation(app.Simulation):
     def __init__(self, metadynamics, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._metadynamics = metadynamics
+        self.metadynamics = metadynamics
 
     def step(self, steps):
-        if self._metadynamics is None:
+        if self.metadynamics is None:
             self._simulate(endStep=self.currentStep+steps)
         else:
-            self.reporters.append(self._metadynamics)
+            self.reporters.append(self.metadynamics)
             self._simulate(endStep=self.currentStep+steps)
             self.reporters.pop()
 
@@ -433,14 +433,9 @@ class UnifiedFreeEnergyDynamics(object):
             simulation.system.setParticleMass(n+i, mass)
 
     def set_bias(self, simulation, bias):
-
-        if self._metadynamics is not None:
-            self._metadynamics._bias += bias
-            if len(self._metadynamics.bias_variables) == 1:
-                self._metadynamics._table.setFunctionParameters(self._metadynamics._bias.flatten(), *self._metadynamics._bounds)
-            else:
-                self._metadynamics._table.setFunctionParameters(*self._metadynamics._widths, self._metadynamics._bias.flatten(), *self._metadynamics._bounds)
-            self._metadynamics.force.updateParametersInContext(simulation.context)
+        if simulation.metadynamics is not None:
+            simulation.metadynamics.add_bias(bias)
+            simulation.metadynamics.force.updateParametersInContext(simulation.context)
 
     def simulation(self, topology, system, integrator, platform=None, platformProperties=None):
         """
