@@ -121,6 +121,18 @@ class CollectiveVariable(object):
     def __setstate__(self, kw):
         self.__init__(**kw)
 
+    def _particle_mass(self, Lx):
+        if self.periodic:
+            return self.mass*(self._range/Lx)**2
+        else:
+            return self.mass*(2*self._range/Lx)**2
+
+    def _particle_position(self, value, Lx, y=0):
+        if self.periodic:
+            return openmm.Vec3(Lx*(value - self.min_value)/self._range, y, 0)
+        else:
+            return openmm.Vec3(0.5*Lx*(value - self.min_value)/self._range, y, 0)
+
     def evaluate(self, system, positions):
         """
         Computes the value of the collective variable for a given set of particle coordinates
@@ -389,10 +401,7 @@ class UnifiedFreeEnergyDynamics(object):
             Lx = simulation.context.getParameter('Lx')
             for i, cv in enumerate(self.variables):
                 value = cv.evaluate(simulation.system, positions)
-                if cv.periodic:
-                    position = openmm.Vec3(Lx*(value - cv.min_value)/cv._range, i, 0)
-                else:
-                    position = openmm.Vec3(0.5*Lx*(value - cv.min_value)/cv._range, i, 0)
+                position = cv._particle_position(value, Lx, y=i)
                 extended_positions.append(position*unit.nanometers)
 
         simulation.context.setPositions(extended_positions)
@@ -500,10 +509,7 @@ class UnifiedFreeEnergyDynamics(object):
         nb_types = (openmm.NonbondedForce, openmm.CustomNonbondedForce)
         nb_forces = [f for f in system.getForces() if isinstance(f, nb_types)]
         for i, cv in enumerate(self.variables):
-            if cv.periodic:
-                system.addParticle(cv.mass*(cv._range/Lx)**2)
-            else:
-                system.addParticle(cv.mass*(2*cv._range/Lx)**2)
+            system.addParticle(cv._particle_mass(Lx))
             for nb_force in nb_forces:
                 if isinstance(nb_force, openmm.NonbondedForce):
                     nb_force.addParticle(0.0, 1.0, 0.0)
