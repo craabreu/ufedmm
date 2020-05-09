@@ -139,16 +139,12 @@ class CollectiveVariable(object):
         force.addCollectiveVariable(f'{self._s_id}', parameter)
 
     def _particle_mass(self, Lx):
-        if self.periodic:
-            return self.mass*(self._range/Lx)**2
-        else:
-            return self.mass*(2*self._range/Lx)**2
+        length = Lx if self.periodic else Lx/2
+        return self.mass*(self._range/length)**2
 
     def _particle_position(self, value, Lx, y=0):
-        if self.periodic:
-            return openmm.Vec3(Lx*(value - self.min_value)/self._range, y, 0)
-        else:
-            return openmm.Vec3(0.5*Lx*(value - self.min_value)/self._range, y, 0)
+        length = Lx if self.periodic else Lx/2
+        return openmm.Vec3(length*(value - self.min_value)/self._range, y, 0)
 
     def _energy_expression(self):
         if self.periodic:
@@ -227,19 +223,15 @@ class _Metadynamics(object):
             self._bounds += [cv.min_value - extra_range, cv.max_value + extra_range]
             self._expanded += [expanded]
             self._extra_points += [extra_points]
-        self._bias = np.zeros(tuple(reversed(self._widths)))
+        self._bias = np.zeros(np.prod(self._widths))
         if len(variables) == 1:
             self._table = openmm.Continuous1DFunction(
-                self._bias.flatten(), *self._bounds,  # self.bias_variables[0].periodic,
+                self._bias, *self._bounds,  # self.bias_variables[0].periodic,
             )
         elif len(variables) == 2:
-            self._table = openmm.Continuous2DFunction(
-                *self._widths, self._bias.flatten(), *self._bounds,
-            )
+            self._table = openmm.Continuous2DFunction(*self._widths, self._bias, *self._bounds)
         elif len(variables) == 3:
-            self._table = openmm.Continuous3DFunction(
-                *self._widths, self._bias.flatten(), *self._bounds,
-            )
+            self._table = openmm.Continuous3DFunction(*self._widths, self._bias, *self._bounds)
         else:
             raise ValueError('UFED requires 1, 2, or 3 biased collective variables')
         parameter_list = ', '.join(f'{cv._s_id}' for cv in self.bias_variables)
@@ -249,11 +241,11 @@ class _Metadynamics(object):
         self.force.addTabulatedFunction('bias', self._table)
 
     def _add_bias(self, bias):
-        self._bias += bias
+        self._bias += bias.flatten()
         if len(self.bias_variables) == 1:
-            self._table.setFunctionParameters(self._bias.flatten(), *self._bounds)
+            self._table.setFunctionParameters(self._bias, *self._bounds)
         else:
-            self._table.setFunctionParameters(*self._widths, self._bias.flatten(), *self._bounds)
+            self._table.setFunctionParameters(*self._widths, self._bias, *self._bounds)
 
     def _add_gaussian(self, position):
         gaussians = []
@@ -358,7 +350,7 @@ class UnifiedFreeEnergyDynamics(object):
             energy_term, definition = cv._energy_expression().split(';', 1)
             energy_terms.append(energy_term)
             definitions.append(definition)
-        expression = '; '.join([' + '.join(energy_terms)] + definitions)
+        expression = ';'.join(['+'.join(energy_terms)] + definitions)
         self.driving_force = openmm.CustomCVForce(expression)
         for cv in self.variables:
             cv._push_collective_variable(self.driving_force)
@@ -367,12 +359,7 @@ class UnifiedFreeEnergyDynamics(object):
         if (all(cv.sigma is None for cv in self.variables) or height is None or frequency is None):
             self.bias_force = self._metadynamics = None
         else:
-            self._metadynamics = _Metadynamics(
-                self.variables,
-                self.height,
-                frequency,
-                grid_expansion,
-            )
+            self._metadynamics = _Metadynamics(self.variables, self.height, frequency, grid_expansion)
             self.bias_force = self._metadynamics.force
 
     def __repr__(self):
@@ -499,7 +486,6 @@ class UnifiedFreeEnergyDynamics(object):
         Vx, Vy, Vz = topology.getPeriodicBoxVectors()
         if not (Vx.y == Vx.z == Vy.x == Vy.z == Vz.x == Vz.y == 0.0):
             raise ValueError('UFED: only orthorhombic boxes are allowed')
-        Lx = Vx.x
 
         positions = [openmm.Vec3(0, 0, 0) for atom in topology.atoms()]
         modeller = app.Modeller(topology, positions)
@@ -511,7 +497,7 @@ class UnifiedFreeEnergyDynamics(object):
         nb_types = (openmm.NonbondedForce, openmm.CustomNonbondedForce)
         nb_forces = [f for f in system.getForces() if isinstance(f, nb_types)]
         for i, cv in enumerate(self.variables):
-            system.addParticle(cv._particle_mass(Lx))
+            system.addParticle(cv._particle_mass(Vx.x))
             for nb_force in nb_forces:
                 if isinstance(nb_force, openmm.NonbondedForce):
                     nb_force.addParticle(0.0, 1.0, 0.0)
@@ -533,7 +519,7 @@ class UnifiedFreeEnergyDynamics(object):
             platform,
             platformProperties,
         )
-        simulation.context.setParameter('Lx', Lx)
+        simulation.context.setParameter('Lx', Vx.x)
 
         if any(cv.temperature != self.temperature for cv in self.variables):
             simulation.context.setPositions(modeller.positions)
