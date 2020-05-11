@@ -29,6 +29,18 @@ def _standardize(quantity):
         return quantity
 
 
+class DrivingForce(object):
+    def __init__(self, energy, **parameters):
+        self.energy = energy
+        self.parameters = {}
+        for key, value in parameters.items():
+            self.parameters[key] = _standardize(value)
+
+    def _push_parameters(self, force):
+        for key, value in self.parameters.items():
+            force.addGlobalParameter(key, value)
+
+
 class CollectiveVariable(object):
     """
     A collective variable whose dynamics is meant to be driven by an extended-space variable.
@@ -87,7 +99,6 @@ class CollectiveVariable(object):
         self.max_value = _standardize(max_value)
         self._range = self.max_value - self.min_value
         self.mass = _standardize(mass)
-        self.force_constant = _standardize(force_constant)
         self.temperature = _standardize(temperature)
         self.sigma = _standardize(sigma)
         if sigma is None:
@@ -99,9 +110,15 @@ class CollectiveVariable(object):
             else:
                 self.grid_size = grid_size
         self.periodic = periodic
+        if periodic:
+            energy = f'0.5*K_{self.id}*min(d{self.id},{self._range}-d{self.id})^2'
+            energy += f'; d{self.id}=abs({self.id}-{self._s_id})'
+        else:
+            energy = f'0.5*K_{self.id}*({self.id}-{self._s_id})^2'
+        self.driving_force = DrivingForce(energy, **{f'K_{self.id}': force_constant})
 
     def __repr__(self):
-        properties = f'm={self.mass}, K={self.force_constant}, T={self.temperature}'
+        properties = f'm={self.mass}, K={self.driving_force.parameters[f"K_{self.id}"]}, T={self.temperature}'
         return f'<{self.id} in [{self.min_value}, {self.max_value}], {properties}>'
 
     def __getstate__(self):
@@ -111,7 +128,7 @@ class CollectiveVariable(object):
             min_value=self.min_value,
             max_value=self.max_value,
             mass=self.mass,
-            force_constant=self.force_constant,
+            force_constant=self.driving_force.parameters[f'K_{self.id}'],
             temperature=self.temperature,
             sigma=self.sigma,
             grid_size=self.grid_size,
@@ -123,7 +140,7 @@ class CollectiveVariable(object):
 
     def _push_collective_variable(self, force):
         force.addCollectiveVariable(self.id, self.openmm_force)
-        force.addGlobalParameter(f'K_{self.id}', self.force_constant)
+        self.driving_force._push_parameters(force)
 
     def _push_extended_variable(self, force):
         if self.periodic:
@@ -145,14 +162,6 @@ class CollectiveVariable(object):
     def _particle_position(self, value, Lx, y=0):
         length = Lx if self.periodic else Lx/2
         return openmm.Vec3(length*(value - self.min_value)/self._range, y, 0)
-
-    def _energy_expression(self):
-        if self.periodic:
-            expression = f'0.5*K_{self.id}*min(d{self.id},{self._range}-d{self.id})^2'
-            expression += f'; d{self.id}=abs({self.id}-{self._s_id})'
-        else:
-            expression = f'0.5*K_{self.id}*({self.id}-{self._s_id})^2'
-        return expression
 
     def evaluate(self, system, positions):
         """
@@ -347,7 +356,7 @@ class UnifiedFreeEnergyDynamics(object):
         energy_terms = []
         definitions = []
         for cv in self.variables:
-            energy_term, definition = cv._energy_expression().split(';', 1)
+            energy_term, definition = cv.driving_force.energy.split(';', 1)
             energy_terms.append(energy_term)
             definitions.append(definition)
         expression = ';'.join(['+'.join(energy_terms)] + definitions)
