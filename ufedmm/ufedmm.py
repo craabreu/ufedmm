@@ -30,6 +30,21 @@ def _standardize(quantity):
 
 
 class DrivingForce(object):
+    """
+    A force for driving the value of a collective varible by means of the dynamics of an associated
+    extended-space variable.
+
+    Parameters
+    ----------
+        energy : str
+            An algebraic expression giving the energy of the system as a function of the collective
+            variable, the associated extended variables, as well as a set of global parameters.
+
+    Keyword Args
+    ------------
+        All global parameters and their values.
+
+    """
     def __init__(self, energy, **parameters):
         self.energy = energy
         self.parameters = {}
@@ -58,8 +73,9 @@ class CollectiveVariable(object):
             The maximum value.
         mass : float or unit.Quantity
             The minimum value.
-        force_constant : float or unit.Quantity
-            The force constant.
+        driving_force : float or unit.Quantity or DrivingForce
+            Either the force constant of a harmonic driving force or a :class:`~ufedmm.ufedmm.DrivingForce`
+            object.
         temperature : float or unit.Quantity
             The temperature.
 
@@ -85,10 +101,10 @@ class CollectiveVariable(object):
         >>> Ts = 1500*unit.kelvin
         >>> psi = ufedmm.CollectiveVariable('psi', cv, -180*unit.degrees, 180*unit.degrees, mass, K, Ts)
         >>> print(psi)
-        <psi in [-3.141592653589793, 3.141592653589793], m=50, K=1000, T=1500>
+        <psi in [-3.141592653589793, 3.141592653589793], periodic, m=50, T=1500>
 
     """
-    def __init__(self, id, openmm_force, min_value, max_value, mass, force_constant, temperature,
+    def __init__(self, id, openmm_force, min_value, max_value, mass, driving_force, temperature,
                  sigma=None, grid_size=None, periodic=True):
         if not id.isidentifier():
             raise ValueError('Parameter id must be a valid variable identifier')
@@ -110,16 +126,20 @@ class CollectiveVariable(object):
             else:
                 self.grid_size = grid_size
         self.periodic = periodic
-        if periodic:
-            energy = f'0.5*K_{self.id}*min(d{self.id},{self._range}-d{self.id})^2'
-            energy += f'; d{self.id}=abs({self.id}-{self._s_id})'
+        if isinstance(driving_force, DrivingForce):
+            self.driving_force = driving_force
         else:
-            energy = f'0.5*K_{self.id}*({self.id}-{self._s_id})^2'
-        self.driving_force = DrivingForce(energy, **{f'K_{self.id}': force_constant})
+            if periodic:
+                energy = f'0.5*K_{self.id}*min(d{self.id},{self._range}-d{self.id})^2'
+                energy += f'; d{self.id}=abs({self.id}-{self._s_id})'
+            else:
+                energy = f'0.5*K_{self.id}*({self.id}-{self._s_id})^2'
+            self.driving_force = DrivingForce(energy, **{f'K_{self.id}': driving_force})
 
     def __repr__(self):
-        properties = f'm={self.mass}, K={self.driving_force.parameters[f"K_{self.id}"]}, T={self.temperature}'
-        return f'<{self.id} in [{self.min_value}, {self.max_value}], {properties}>'
+        properties = f'm={self.mass}, T={self.temperature}'
+        status = 'periodic' if self.periodic else 'non-periodic'
+        return f'<{self.id} in [{self.min_value}, {self.max_value}], {status}, {properties}>'
 
     def __getstate__(self):
         return dict(
@@ -128,7 +148,7 @@ class CollectiveVariable(object):
             min_value=self.min_value,
             max_value=self.max_value,
             mass=self.mass,
-            force_constant=self.driving_force.parameters[f'K_{self.id}'],
+            driving_force=self.driving_force,
             temperature=self.temperature,
             sigma=self.sigma,
             grid_size=self.grid_size,
