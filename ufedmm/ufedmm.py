@@ -152,7 +152,7 @@ class CollectiveVariable(object):
         for key, value in self.parameters.items():
             force.addGlobalParameter(key, value)
 
-    def _push_extended_variable(self, force):
+    def _push_extended_space_variable(self, force):
         if self.periodic:
             expression = f'{self.min_value}+{self._range}*(x/Lx-floor(x/Lx))'
         else:
@@ -256,7 +256,7 @@ class _Metadynamics(object):
         parameter_list = ', '.join(f'{cv.xvid}' for cv in self.bias_variables)
         self.force = openmm.CustomCVForce(f'bias({parameter_list})')
         for cv in self.bias_variables:
-            cv._push_extended_variable(self.force)
+            cv._push_extended_space_variable(self.force)
         self.force.addTabulatedFunction('bias', self._table)
 
     def _add_bias(self, bias):
@@ -369,7 +369,7 @@ class UnifiedFreeEnergyDynamics(object):
         self.driving_force = openmm.CustomCVForce(expression)
         for cv in self.variables:
             cv._push_collective_variable(self.driving_force)
-            cv._push_extended_variable(self.driving_force)
+            cv._push_extended_space_variable(self.driving_force)
 
         if (all(cv.sigma is None for cv in self.variables) or height is None or frequency is None):
             self.bias_force = self._metadynamics = None
