@@ -29,33 +29,6 @@ def _standardize(quantity):
         return quantity
 
 
-class DrivingForce(object):
-    """
-    A force for driving the value of a collective varible by means of the dynamics of an associated
-    extended-space variable.
-
-    Parameters
-    ----------
-        energy : str
-            An algebraic expression giving the energy of the system as a function of the collective
-            variable, the associated extended variables, as well as a set of global parameters.
-
-    Keyword Args
-    ------------
-        All global parameters and their values.
-
-    """
-    def __init__(self, energy, **parameters):
-        self.energy = energy
-        self.parameters = {}
-        for key, value in parameters.items():
-            self.parameters[key] = _standardize(value)
-
-    def _push_parameters(self, force):
-        for key, value in self.parameters.items():
-            force.addGlobalParameter(key, value)
-
-
 class CollectiveVariable(object):
     """
     A collective variable whose dynamics is meant to be driven by an extended-space variable.
@@ -73,9 +46,11 @@ class CollectiveVariable(object):
             The maximum value.
         mass : float or unit.Quantity
             The minimum value.
-        driving_force : float or unit.Quantity or DrivingForce
-            Either the force constant of a harmonic driving force or a :class:`~ufedmm.ufedmm.DrivingForce`
-            object.
+        drive : float or unit.Quantity or str
+            Either the value of the force constant of a harmonic driving force or an algebraic
+            expression giving the energy of the system as a function of the collective variable and
+            its associated extended variable. It can also contain a set of global parameters, whose
+            values must be passed as keyword arguments (see below).
         temperature : float or unit.Quantity
             The temperature.
 
@@ -88,6 +63,13 @@ class CollectiveVariable(object):
             automatically chosen.
         periodic : bool, default=True
             Whether the collective variable is periodic with period `L=max_value-min_value`.
+        xvid : str, default=None
+            A valid identifier string for the extended-space variable associated this collective
+            variable. If this is `None`, then the extended-space variable will be named as `s_` +
+            `id` (see above).
+        **parameters
+            Names and values of global parameters present in the algebraic expression defined as
+            `drive` (see above).
 
     Example
     -------
@@ -104,12 +86,12 @@ class CollectiveVariable(object):
         <psi in [-3.141592653589793, 3.141592653589793], periodic, m=50, T=1500>
 
     """
-    def __init__(self, id, openmm_force, min_value, max_value, mass, driving_force, temperature,
-                 sigma=None, grid_size=None, periodic=True):
+    def __init__(self, id, openmm_force, min_value, max_value, mass, drive, temperature,
+                 sigma=None, grid_size=None, periodic=True, xvid=None, **parameters):
         if not id.isidentifier():
             raise ValueError('Parameter id must be a valid variable identifier')
         self.id = id
-        self._s_id = f's_{id}'
+        self.xvid = f's_{id}' if xvid is None else xvid
         self.openmm_force = openmm_force
         self.min_value = _standardize(min_value)
         self.max_value = _standardize(max_value)
@@ -117,6 +99,7 @@ class CollectiveVariable(object):
         self.mass = _standardize(mass)
         self.temperature = _standardize(temperature)
         self.sigma = _standardize(sigma)
+
         if sigma is None:
             self.grid_size = None
         else:
@@ -126,15 +109,19 @@ class CollectiveVariable(object):
             else:
                 self.grid_size = grid_size
         self.periodic = periodic
-        if isinstance(driving_force, DrivingForce):
-            self.driving_force = driving_force
+
+        self.parameters = {}
+        if isinstance(drive, str):
+            self.drive = drive
+            for key, value in parameters.items():
+                self.parameters[key] = _standardize(value)
         else:
             if periodic:
-                energy = f'0.5*K_{self.id}*min(d{self.id},{self._range}-d{self.id})^2'
-                energy += f'; d{self.id}=abs({self.id}-{self._s_id})'
+                self.drive = f'0.5*K_{self.id}*min(d{self.id},{self._range}-d{self.id})^2'
+                self.drive += f'; d{self.id}=abs({self.id}-{self.xvid})'
             else:
-                energy = f'0.5*K_{self.id}*({self.id}-{self._s_id})^2'
-            self.driving_force = DrivingForce(energy, **{f'K_{self.id}': driving_force})
+                self.drive = f'0.5*K_{self.id}*({self.id}-{self.xvid})^2'
+            self.parameters[f'K_{self.id}'] = _standardize(drive)
 
     def __repr__(self):
         properties = f'm={self.mass}, T={self.temperature}'
@@ -148,19 +135,22 @@ class CollectiveVariable(object):
             min_value=self.min_value,
             max_value=self.max_value,
             mass=self.mass,
-            driving_force=self.driving_force,
+            drive=self.drive,
             temperature=self.temperature,
             sigma=self.sigma,
             grid_size=self.grid_size,
             periodic=self.periodic,
+            xvid=self.xvid,
+            **self.parameters,
         )
 
     def __setstate__(self, kw):
         self.__init__(**kw)
 
     def _push_collective_variable(self, force):
-        force.addCollectiveVariable(self.id, self.openmm_force)
-        self.driving_force._push_parameters(force)
+        force.addCollectiveVariable(self.id, copy.deepcopy(self.openmm_force))
+        for key, value in self.parameters.items():
+            force.addGlobalParameter(key, value)
 
     def _push_extended_variable(self, force):
         if self.periodic:
@@ -173,7 +163,7 @@ class CollectiveVariable(object):
         parameter = openmm.CustomExternalForce(expression)
         parameter.addGlobalParameter('Lx', 0.0)
         parameter.addParticle(0, [])
-        force.addCollectiveVariable(f'{self._s_id}', parameter)
+        force.addCollectiveVariable(f'{self.xvid}', parameter)
 
     def _particle_mass(self, Lx):
         length = Lx if self.periodic else Lx/2
@@ -263,7 +253,7 @@ class _Metadynamics(object):
             self._table = openmm.Continuous3DFunction(*self._widths, self._bias, *self._bounds)
         else:
             raise ValueError('UFED requires 1, 2, or 3 biased collective variables')
-        parameter_list = ', '.join(f'{cv._s_id}' for cv in self.bias_variables)
+        parameter_list = ', '.join(f'{cv.xvid}' for cv in self.bias_variables)
         self.force = openmm.CustomCVForce(f'bias({parameter_list})')
         for cv in self.bias_variables:
             cv._push_extended_variable(self.force)
@@ -373,13 +363,9 @@ class UnifiedFreeEnergyDynamics(object):
         self.frequency = frequency
         self.grid_expansion = grid_expansion
 
-        energy_terms = []
-        definitions = []
-        for cv in self.variables:
-            energy_term, definition = cv.driving_force.energy.split(';', 1)
-            energy_terms.append(energy_term)
-            definitions.append(definition)
-        expression = ';'.join(['+'.join(energy_terms)] + definitions)
+        energies = [cv.drive.split(';', 1) for cv in self.variables]
+        energy_terms, definitions = zip(*energies)
+        expression = ';'.join(['+'.join(energy_terms)] + list(definitions))
         self.driving_force = openmm.CustomCVForce(expression)
         for cv in self.variables:
             cv._push_collective_variable(self.driving_force)
