@@ -123,13 +123,13 @@ class DynamicalVariable(object):
 
     Keyword Args
     ------------
+        periodic : bool, default=True
+            Whether the collective variable is periodic with period `L=max_value-min_value`.
         sigma : float or unit.Quantity, default=None
             The standard deviation. If this is `None`, then no bias will be considered.
         grid_size : int, default=None
             The grid size. If this is `None` and `sigma` is finite, then a convenient value will be
             automatically chosen.
-        periodic : bool, default=True
-            Whether the collective variable is periodic with period `L=max_value-min_value`.
         **parameters
             Names and values of global parameters present in the algebraic expression defined as
             `potential` (see above).
@@ -409,16 +409,28 @@ class UnifiedFreeEnergyDynamics(object):
             parameters.update(v.parameters)
         return parameters
 
-    def set_positions(self, simulation, positions, extended=False):
+    def set_positions(self, simulation, positions, extended=False, **kwargs):
         """
         Sets the positions of all particles in a simulation context.
 
         Parameters
         ----------
             simulation : openmm.Simulation
-                The simulation.
+                The simulation object.
             positions : list of openmm.Vec3
-                The positions.
+                The positions of all particles, which may include the extra particles that represent
+                the extended-space variables (see below).
+
+        Keyword Args
+        ------------
+            extended : bool, default=False
+                Whether `positions` include those of the extra particles that represent the
+                extended-space variables.
+            **kwargs
+                Identifiers and values to be assigned to the dynamical variables. For those which
+                are not specified, the value will be made equal to that of the associated collective
+                variables. Note that these keyword arguments will have no effect whatsoever if
+                `extended=False`.
 
         """
         if extended:
@@ -427,8 +439,9 @@ class UnifiedFreeEnergyDynamics(object):
             extended_positions = deepcopy(positions)
             Vx, Vy, _ = simulation.context.getState().getPeriodicBoxVectors()
             for i, v in enumerate(self.variables):
-                value = v.colvar.evaluate(simulation.system, positions)
-                position = v._particle_position(value, Vx.x, y=Vy.y*(i+1)/(len(self.variables)+2))
+                y = Vy.y*(i + 1)/(len(self.variables) + 2)
+                value = kwargs.get(v.id, v.colvar.evaluate(simulation.system, positions))
+                position = v._particle_position(value, Vx.x, y)
                 extended_positions.append(position*unit.nanometers)
             simulation.context.setPositions(extended_positions)
 
