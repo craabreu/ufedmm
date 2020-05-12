@@ -369,11 +369,11 @@ class UnifiedFreeEnergyDynamics(object):
         self.grid_expansion = grid_expansion
 
         self.driving_force = openmm.CustomCVForce(self.get_energy_function())
+        for name, value in self.get_parameters().items():
+            self.driving_force.addGlobalParameter(name, value)
         for v in self.variables:
             self.driving_force.addCollectiveVariable(v.id, deepcopy(v.force))
             self.driving_force.addCollectiveVariable(v.colvar.id, deepcopy(v.colvar.force))
-            for name, value in v.parameters.items():
-                self.driving_force.addGlobalParameter(name, value)
 
         if (all(v.sigma is None for v in self.variables) or height is None or frequency is None):
             self.bias_force = self._metadynamics = None
