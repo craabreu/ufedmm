@@ -10,6 +10,7 @@
 import numpy as np
 
 from scipy import stats
+from simtk import openmm
 from ufedmm.ufedmm import _standardize
 
 
@@ -32,20 +33,9 @@ class Analyzer(object):
         except TypeError:
             self._bins = [bins]*len(ufed.variables)
 
-        sample = []
-        forces = []
-        ranges = []
-        for cv in ufed.variables:
-
-            def function(dx):
-                if cv.periodic:
-                    return cv.force_constant*(dx - cv._range*np.rint(dx/cv._range))
-                else:
-                    return cv.force_constant*dx
-
-            sample.append(dataframe[f's_{cv.id}'])
-            forces.append(function(dataframe[cv.id] - dataframe[f's_{cv.id}']))
-            ranges.append((cv.min_value, cv.max_value))
+        sample = [dataframe[f's_{cv.id}'] for cv in ufed.variables]
+        ranges = [(cv.min_value, cv.max_value) for cv in ufed.variables]
+        forces = self._compute_forces(ufed, dataframe)
 
         counts = stats.binned_statistic_dd(sample, [], statistic='count', bins=self._bins, range=ranges)
         means = stats.binned_statistic_dd(sample, sample + forces, bins=self._bins, range=ranges)
@@ -56,6 +46,37 @@ class Analyzer(object):
         n = len(ufed.variables)
         self.centers = [means.statistic[i].flatten()[index] for i in range(n)]
         self.mean_forces = [means.statistic[n+i].flatten()[index] for i in range(n)]
+
+    def _compute_forces(self, ufed, dataframe):
+        collective_variables = [cv.id for cv in ufed.variables]
+        extended_variables = [cv.xvid for cv in ufed.variables]
+        all_variables = collective_variables + extended_variables
+
+        force = openmm.CustomCVForce(ufed.get_energy_function())
+        for key, value in ufed.get_parameters().items():
+            force.addGlobalParameter(key, value)
+        for variable in all_variables:
+            force.addGlobalParameter(variable, 0)
+        for xv in extended_variables:
+            force.addEnergyParameterDerivative(xv)
+
+        system = openmm.System()
+        system.addForce(force)
+        system.addParticle(0)
+        platform = openmm.Platform.getPlatformByName('Reference')
+        context = openmm.Context(system, openmm.CustomIntegrator(0), platform)
+        context.setPositions([openmm.Vec3(0, 0, 0)])
+
+        n = len(dataframe.index)
+        forces = [np.empty(n) for xv in extended_variables]
+        for j, row in dataframe.iterrows():
+            for variable in all_variables:
+                context.setParameter(variable, row[variable])
+            state = context.getState(getParameterDerivatives=True)
+            derivatives = state.getEnergyParameterDerivatives()
+            for i, xv in enumerate(extended_variables):
+                forces[i][j] = -derivatives[xv]
+        return forces
 
     def free_energy_functions(self, sigma=None):
         """

@@ -363,10 +363,7 @@ class UnifiedFreeEnergyDynamics(object):
         self.frequency = frequency
         self.grid_expansion = grid_expansion
 
-        energies = [cv.drive.split(';', 1) for cv in self.variables]
-        energy_terms, definitions = zip(*energies)
-        expression = ';'.join(['+'.join(energy_terms)] + list(definitions))
-        self.driving_force = openmm.CustomCVForce(expression)
+        self.driving_force = openmm.CustomCVForce(self.get_energy_function())
         for cv in self.variables:
             cv._push_collective_variable(self.driving_force)
             cv._push_extended_space_variable(self.driving_force)
@@ -392,6 +389,18 @@ class UnifiedFreeEnergyDynamics(object):
 
     def __setstate__(self, kw):
         self.__init__(**kw)
+
+    def get_energy_function(self):
+        energies = [cv.drive.split(';', 1) for cv in self.variables]
+        energy_terms, definitions = zip(*energies)
+        expression = ';'.join(['+'.join(energy_terms)] + list(definitions))
+        return expression
+
+    def get_parameters(self):
+        parameters = {}
+        for cv in self.variables:
+            parameters.update(cv.parameters)
+        return parameters
 
     def set_positions(self, simulation, positions, extended=False):
         """
