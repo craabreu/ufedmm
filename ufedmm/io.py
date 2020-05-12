@@ -96,8 +96,8 @@ class StateDataReporter(app.StateDataReporter):
         >>> ufed.set_positions(simulation, model.positions)
         >>> reporter = ufedmm.StateDataReporter(stdout, 1, ufed.driving_force, step=True)
         >>> reporter.report(simulation, simulation.context.getState())
-        #"Step","phi","s_phi","psi","s_psi"
-        0,3.141592653589793,-3.141592653589793,3.141592653589793,-3.141592653589793
+        #"Step","s_phi","phi","s_psi","psi"
+        0,-3.141592653589793,3.141592653589793,-3.141592653589793,3.141592653589793
 
     """
     def __init__(self, file, report_interval, cv_force, **kwargs):

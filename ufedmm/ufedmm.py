@@ -13,9 +13,9 @@
 
 """
 
-import copy
 import functools
 import io
+from copy import deepcopy
 
 import numpy as np
 from simtk import openmm, unit
@@ -41,52 +41,6 @@ class CollectiveVariable(object):
             An OpenMM Force_ object whose energy function is used to evaluate this collective
             variable.
 
-    """
-    def __init__(self, id, force):
-        if not id.isidentifier():
-            raise ValueError('Parameter id must be a valid variable identifier')
-        self.id = id
-        self.force = force
-
-
-class DynamicalVariable(object):
-    """
-    An extended-space variable whose dynamics is coupled to that of one of more collective variables
-    of a system.
-
-    Parameters
-    ----------
-        id : str
-            A valid identifier string.
-        min_value : float or unit.Quantity
-            The minimum allowable value.
-        max_value : float or unit.Quantity
-            The maximum allowable value.
-        mass : float or unit.Quantity
-            The mass of this dynamical variable.
-        temperature : float or unit.Quantity
-            The temperature of this .
-        colvar : :class:`~ufedmm.ufedmm.CollectiveVariable`
-            A colective variable.
-        drive : float or unit.Quantity or str
-            Either the value of the force constant of a harmonic driving force or an algebraic
-            expression giving the energy of the system as a function of this dynamical variable and
-            its associated collective variable. Such expression can also contain a set of global
-            parameters, whose values must be passed as keyword arguments (see below).
-
-    Keyword Args
-    ------------
-        sigma : float or unit.Quantity, default=None
-            The standard deviation. If this is `None`, then no bias will be considered.
-        grid_size : int, default=None
-            The grid size. If this is `None` and `sigma` is finite, then a convenient value will be
-            automatically chosen.
-        periodic : bool, default=True
-            Whether the collective variable is periodic with period `L=max_value-min_value`.
-        **parameters
-            Names and values of global parameters present in the algebraic expression defined as
-            `drive` (see above).
-
     Example
     -------
         >>> import ufedmm
@@ -94,95 +48,13 @@ class DynamicalVariable(object):
         >>> cv = ufedmm.CollectiveVariable('psi', openmm.CustomTorsionForce('theta'))
         >>> cv.force.addTorsion(0, 1, 2, 3, [])
         0
-        >>> mass = 50*unit.dalton*(unit.nanometer/unit.radians)**2
-        >>> K = 1000*unit.kilojoules_per_mole/unit.radians**2
-        >>> Ts = 1500*unit.kelvin
-        >>> ufedmm.DynamicalVariable('s_psi', -180*unit.degrees, 180*unit.degrees, mass, Ts, cv, K)
-        <s_psi in [-3.141592653589793, 3.141592653589793], periodic, m=50, T=1500>
 
     """
-    def __init__(self, id, min_value, max_value, mass, temperature, colvar, drive,
-                 sigma=None, grid_size=None, periodic=True, **parameters):
+    def __init__(self, id, force):
+        if not id.isidentifier():
+            raise ValueError('Parameter id must be a valid variable identifier')
         self.id = id
-        self.colvar = colvar
-        self.min_value = _standardize(min_value)
-        self.max_value = _standardize(max_value)
-        self._range = self.max_value - self.min_value
-        self.mass = _standardize(mass)
-        self.temperature = _standardize(temperature)
-        self.sigma = _standardize(sigma)
-
-        if sigma is None:
-            self.grid_size = None
-        else:
-            self._scaled_variance = (self.sigma/self._range)**2
-            if grid_size is None:
-                self.grid_size = int(np.ceil(5*self._range/self.sigma)) + 1
-            else:
-                self.grid_size = grid_size
-        self.periodic = periodic
-
-        self.parameters = {}
-        if isinstance(drive, str):
-            self.drive = drive
-            for key, value in parameters.items():
-                self.parameters[key] = _standardize(value)
-        else:
-            if periodic:
-                self.drive = f'0.5*K_{self.colvar.id}*min(d{self.colvar.id},{self._range}-d{self.colvar.id})^2'
-                self.drive += f'; d{self.colvar.id}=abs({self.colvar.id}-{self.id})'
-            else:
-                self.drive = f'0.5*K_{self.colvar.id}*({self.colvar.id}-{self.id})^2'
-            self.parameters[f'K_{self.colvar.id}'] = _standardize(drive)
-
-    def __repr__(self):
-        properties = f'm={self.mass}, T={self.temperature}'
-        status = 'periodic' if self.periodic else 'non-periodic'
-        return f'<{self.id} in [{self.min_value}, {self.max_value}], {status}, {properties}>'
-
-    def __getstate__(self):
-        return dict(
-            id=self.id,
-            min_value=self.min_value,
-            max_value=self.max_value,
-            mass=self.mass,
-            temperature=self.temperature,
-            colvar=self.colvar,
-            drive=self.drive,
-            sigma=self.sigma,
-            grid_size=self.grid_size,
-            periodic=self.periodic,
-            **self.parameters,
-        )
-
-    def __setstate__(self, kw):
-        self.__init__(**kw)
-
-    def _push_collective_variable(self, force):
-        force.addCollectiveVariable(self.colvar.id, copy.deepcopy(self.colvar.force))
-        for key, value in self.parameters.items():
-            force.addGlobalParameter(key, value)
-
-    def _push_extended_space_variable(self, force):
-        if self.periodic:
-            expression = f'{self.min_value}+{self._range}*(x/Lx-floor(x/Lx))'
-        else:
-            ramp_up = f'{self.min_value}+{2*self._range}*pos'
-            ramp_down = f'{self.max_value+self._range}-{2*self._range}*pos'
-            expression = f'select(step(0.5-pos),{ramp_up},{ramp_down})'
-            expression += '; pos=x/Lx-floor(x/Lx)'
-        parameter = openmm.CustomExternalForce(expression)
-        parameter.addGlobalParameter('Lx', 0.0)
-        parameter.addParticle(0, [])
-        force.addCollectiveVariable(f'{self.id}', parameter)
-
-    def _particle_mass(self, Lx):
-        length = Lx if self.periodic else Lx/2
-        return self.mass*(self._range/length)**2
-
-    def _particle_position(self, value, Lx, y=0):
-        length = Lx if self.periodic else Lx/2
-        return openmm.Vec3(length*(value - self.min_value)/self._range, y, 0)
+        self.force = force
 
     def evaluate(self, system, positions):
         """
@@ -206,15 +78,9 @@ class DynamicalVariable(object):
             >>> import ufedmm
             >>> from simtk import unit
             >>> model = ufedmm.AlanineDipeptideModel()
-            >>> mass = 50*unit.dalton*(unit.nanometer/unit.radians)**2
-            >>> K = 1000*unit.kilojoules_per_mole/unit.radians**2
-            >>> Ts = 1500*unit.kelvin
-            >>> bound = 180*unit.degrees
-            >>> s_phi = ufedmm.DynamicalVariable('s_phi', -bound, bound, mass, Ts, model.phi, K)
-            >>> s_psi = ufedmm.DynamicalVariable('s_psi', -bound, bound, mass, Ts, model.psi, K)
-            >>> s_phi.evaluate(model.system, model.positions)
+            >>> model.phi.evaluate(model.system, model.positions)
             3.141592653589793
-            >>> s_psi.evaluate(model.system, model.positions)
+            >>> model.psi.evaluate(model.system, model.positions)
             3.141592653589793
 
         """
@@ -222,12 +88,141 @@ class DynamicalVariable(object):
         new_system.setDefaultPeriodicBoxVectors(*system.getDefaultPeriodicBoxVectors())
         for index in range(len(positions)):
             new_system.addParticle(system.getParticleMass(index))
-        new_system.addForce(copy.deepcopy(self.colvar.force))
+        new_system.addForce(deepcopy(self.force))
         platform = openmm.Platform.getPlatformByName('Reference')
         context = openmm.Context(new_system, openmm.CustomIntegrator(0), platform)
         context.setPositions(positions)
         energy = context.getState(getEnergy=True).getPotentialEnergy()
         return energy.value_in_unit(unit.kilojoules_per_mole)
+
+
+class DynamicalVariable(object):
+    """
+    An extended-space variable whose dynamics is coupled to that of one of more collective variables
+    of a system.
+
+    Parameters
+    ----------
+        id : str
+            A valid identifier string.
+        min_value : float or unit.Quantity
+            The minimum allowable value.
+        max_value : float or unit.Quantity
+            The maximum allowable value.
+        mass : float or unit.Quantity
+            The mass of this dynamical variable.
+        temperature : float or unit.Quantity
+            The temperature of this .
+        colvar : :class:`~ufedmm.ufedmm.CollectiveVariable`
+            A colective variable.
+        potential : float or unit.Quantity or str
+            Either the value of the force constant of a harmonic driving force or an algebraic
+            expression giving the energy of the system as a function of this dynamical variable and
+            its associated collective variable. Such expression can also contain a set of global
+            parameters, whose values must be passed as keyword arguments (see below).
+
+    Keyword Args
+    ------------
+        sigma : float or unit.Quantity, default=None
+            The standard deviation. If this is `None`, then no bias will be considered.
+        grid_size : int, default=None
+            The grid size. If this is `None` and `sigma` is finite, then a convenient value will be
+            automatically chosen.
+        periodic : bool, default=True
+            Whether the collective variable is periodic with period `L=max_value-min_value`.
+        **parameters
+            Names and values of global parameters present in the algebraic expression defined as
+            `potential` (see above).
+
+    Example
+    -------
+        >>> import ufedmm
+        >>> from simtk import openmm, unit
+        >>> cv = ufedmm.CollectiveVariable('psi', openmm.CustomTorsionForce('theta'))
+        >>> cv.force.addTorsion(0, 1, 2, 3, [])
+        0
+        >>> mass = 50*unit.dalton*(unit.nanometer/unit.radians)**2
+        >>> K = 1000*unit.kilojoules_per_mole/unit.radians**2
+        >>> Ts = 1500*unit.kelvin
+        >>> ufedmm.DynamicalVariable('s_psi', -180*unit.degrees, 180*unit.degrees, mass, Ts, cv, K)
+        <s_psi in [-3.141592653589793, 3.141592653589793], periodic, m=50, T=1500>
+
+    """
+    def __init__(self, id, min_value, max_value, mass, temperature, colvar, potential,
+                 periodic=True, sigma=None, grid_size=None, **parameters):
+        self.id = id
+        self.min_value = _standardize(min_value)
+        self.max_value = _standardize(max_value)
+        self._range = self.max_value - self.min_value
+        self.mass = _standardize(mass)
+        self.temperature = _standardize(temperature)
+        self.colvar = colvar
+
+        if isinstance(potential, str):
+            self.potential = potential
+            self.parameters = {key: _standardize(value) for key, value in parameters.items()}
+        else:
+            id = self.colvar.id
+            if periodic:
+                self.potential = f'0.5*K_{id}*min(d{id},{self._range}-d{id})^2'
+                self.potential += f'; d{id}=abs({id}-{self.id})'
+            else:
+                self.potential = f'0.5*K_{id}*({id}-{self.id})^2'
+            self.parameters = {f'K_{id}': _standardize(potential)}
+
+        self.periodic = periodic
+
+        if sigma is None:
+            self.sigma = self.grid_size = None
+        else:
+            self.sigma = _standardize(sigma)
+            self._scaled_variance = (self.sigma/self._range)**2
+            if grid_size is None:
+                self.grid_size = int(np.ceil(5*self._range/self.sigma)) + 1
+            else:
+                self.grid_size = grid_size
+
+        if periodic:
+            expression = f'{self.min_value}+{self._range}*(x/Lx-floor(x/Lx))'
+        else:
+            ramp_up = f'{self.min_value}+{2*self._range}*pos'
+            ramp_down = f'{self.max_value+self._range}-{2*self._range}*pos'
+            expression = f'select(step(0.5-pos),{ramp_up},{ramp_down})'
+            expression += '; pos=x/Lx-floor(x/Lx)'
+        self.force = openmm.CustomExternalForce(expression)
+        self.force.addGlobalParameter('Lx', 0.0)
+        self.force.addParticle(0, [])
+
+    def __repr__(self):
+        properties = f'm={self.mass}, T={self.temperature}'
+        status = 'periodic' if self.periodic else 'non-periodic'
+        return f'<{self.id} in [{self.min_value}, {self.max_value}], {status}, {properties}>'
+
+    def __getstate__(self):
+        return dict(
+            id=self.id,
+            min_value=self.min_value,
+            max_value=self.max_value,
+            mass=self.mass,
+            temperature=self.temperature,
+            colvar=self.colvar,
+            potential=self.potential,
+            periodic=self.periodic,
+            sigma=self.sigma,
+            grid_size=self.grid_size,
+            **self.parameters,
+        )
+
+    def __setstate__(self, kw):
+        self.__init__(**kw)
+
+    def _particle_mass(self, Lx):
+        length = Lx if self.periodic else Lx/2
+        return self.mass*(self._range/length)**2
+
+    def _particle_position(self, value, Lx, y=0):
+        length = Lx if self.periodic else Lx/2
+        return openmm.Vec3(length*(value - self.min_value)/self._range, y, 0)
 
 
 class _Metadynamics(object):
@@ -266,7 +261,7 @@ class _Metadynamics(object):
         parameter_list = ', '.join(f'{v.id}' for v in self.bias_variables)
         self.force = openmm.CustomCVForce(f'bias({parameter_list})')
         for v in self.bias_variables:
-            v._push_extended_space_variable(self.force)
+            self.force.addCollectiveVariable(v.id, deepcopy(v.force))
         self.force.addTabulatedFunction('bias', self._table)
 
     def _add_bias(self, bias):
@@ -375,8 +370,10 @@ class UnifiedFreeEnergyDynamics(object):
 
         self.driving_force = openmm.CustomCVForce(self.get_energy_function())
         for v in self.variables:
-            v._push_collective_variable(self.driving_force)
-            v._push_extended_space_variable(self.driving_force)
+            self.driving_force.addCollectiveVariable(v.id, deepcopy(v.force))
+            self.driving_force.addCollectiveVariable(v.colvar.id, deepcopy(v.colvar.force))
+            for name, value in v.parameters.items():
+                self.driving_force.addGlobalParameter(name, value)
 
         if (all(v.sigma is None for v in self.variables) or height is None or frequency is None):
             self.bias_force = self._metadynamics = None
@@ -401,7 +398,7 @@ class UnifiedFreeEnergyDynamics(object):
         self.__init__(**kw)
 
     def get_energy_function(self):
-        energies = [v.drive.split(';', 1) for v in self.variables]
+        energies = [v.potential.split(';', 1) for v in self.variables]
         energy_terms, definitions = zip(*energies)
         expression = ';'.join(['+'.join(energy_terms)] + list(definitions))
         return expression
@@ -427,10 +424,10 @@ class UnifiedFreeEnergyDynamics(object):
         if extended:
             simulation.context.setPositions(positions)
         else:
-            extended_positions = copy.deepcopy(positions)
+            extended_positions = deepcopy(positions)
             Vx, Vy, _ = simulation.context.getState().getPeriodicBoxVectors()
             for i, v in enumerate(self.variables):
-                value = v.evaluate(simulation.system, positions)
+                value = v.colvar.evaluate(simulation.system, positions)
                 position = v._particle_position(value, Vx.x, y=Vy.y*(i+1)/(len(self.variables)+2))
                 extended_positions.append(position*unit.nanometers)
             simulation.context.setPositions(extended_positions)
@@ -537,7 +534,7 @@ class UnifiedFreeEnergyDynamics(object):
                     nb_force.addParticle(0.0, 1.0, 0.0)
                 else:
                     nb_force.addParticle([0.0]*nb_force.getNumPerParticleParameters())
-            parameter = self.driving_force.getCollectiveVariable(2*i+1)
+            parameter = self.driving_force.getCollectiveVariable(2*i)
             parameter.setParticleParameters(0, nparticles+i, [])
         system.addForce(self.driving_force)
 

@@ -20,8 +20,8 @@ def ufed_model():
     sigma = 18*unit.degrees
     height = 2.0*unit.kilojoules_per_mole
     frequency = 10
-    s_phi = ufedmm.DynamicalVariable('s_phi', -limit, limit, mass, Ts, model.phi, Ks, sigma)
-    s_psi = ufedmm.DynamicalVariable('s_psi', -limit, limit, mass, Ts, model.psi, Ks, sigma)
+    s_phi = ufedmm.DynamicalVariable('s_phi', -limit, limit, mass, Ts, model.phi, Ks, sigma=sigma)
+    s_psi = ufedmm.DynamicalVariable('s_psi', -limit, limit, mass, Ts, model.psi, Ks, sigma=sigma)
     return model, ufedmm.UnifiedFreeEnergyDynamics([s_phi, s_psi], 300*unit.kelvin, height, frequency)
 
 
