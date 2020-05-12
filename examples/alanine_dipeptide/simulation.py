@@ -26,9 +26,9 @@ limit = 180*unit.degrees
 sigma = 18*unit.degrees
 height = 2.0*unit.kilojoules_per_mole
 deposition_period = 200
-phi = ufedmm.CollectiveVariable('phi', model.phi, -limit, limit, mass, Ks, Ts, sigma)
-psi = ufedmm.CollectiveVariable('psi', model.psi, -limit, limit, mass, Ks, Ts, sigma)
-ufed = ufedmm.UnifiedFreeEnergyDynamics([phi, psi], temp, height, deposition_period)
+s_phi = ufedmm.DynamicalVariable('s_phi', -limit, limit, mass, Ts, model.phi, Ks, sigma)
+s_psi = ufedmm.DynamicalVariable('s_psi', -limit, limit, mass, Ts, model.psi, Ks, sigma)
+ufed = ufedmm.UnifiedFreeEnergyDynamics([s_phi, s_psi], temp, height, deposition_period)
 ufedmm.serialize(ufed, 'ufed_object.yml')
 integrator = ufedmm.GeodesicBAOABIntegrator(temp, gamma, dt)
 integrator.setRandomNumberSeed(seed)

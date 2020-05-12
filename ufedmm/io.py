@@ -87,9 +87,9 @@ class StateDataReporter(app.StateDataReporter):
         >>> dt = 2*unit.femtoseconds
         >>> gamma = 10/unit.picoseconds
         >>> limit = 180*unit.degrees
-        >>> phi = ufedmm.CollectiveVariable('phi', model.phi, -limit, limit, mass, Ks, Ts)
-        >>> psi = ufedmm.CollectiveVariable('psi', model.psi, -limit, limit, mass, Ks, Ts)
-        >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([phi, psi], T)
+        >>> s_phi = ufedmm.DynamicalVariable('s_phi', -limit, limit, mass, Ts, model.phi, Ks)
+        >>> s_psi = ufedmm.DynamicalVariable('s_psi', -limit, limit, mass, Ts, model.psi, Ks)
+        >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([s_phi, s_psi], T)
         >>> integrator = ufedmm.GeodesicBAOABIntegrator(dt, T, gamma)
         >>> platform = openmm.Platform.getPlatformByName('Reference')
         >>> simulation = ufed.simulation(model.topology, model.system, integrator, platform)
