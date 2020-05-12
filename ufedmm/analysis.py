@@ -33,9 +33,9 @@ class Analyzer(object):
         except TypeError:
             self._bins = [bins]*len(ufed.variables)
 
-        sample = [dataframe[f's_{cv.id}'] for cv in ufed.variables]
-        ranges = [(cv.min_value, cv.max_value) for cv in ufed.variables]
+        sample = [dataframe[cv.xvid] for cv in ufed.variables]
         forces = self._compute_forces(ufed, dataframe)
+        ranges = [(cv.min_value, cv.max_value) for cv in ufed.variables]
 
         counts = stats.binned_statistic_dd(sample, [], statistic='count', bins=self._bins, range=ranges)
         means = stats.binned_statistic_dd(sample, sample + forces, bins=self._bins, range=ranges)
