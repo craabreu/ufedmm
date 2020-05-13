@@ -240,7 +240,7 @@ class DynamicalVariableTuple(tuple):
         return parameters
 
 
-class Metadynamics(object):
+class GridBasedMetadynamics(object):
     """
     Extended-space Metadynamics.
 
@@ -280,14 +280,27 @@ class Metadynamics(object):
             self.force.addCollectiveVariable(v.id, deepcopy(v.force))
         self.force.addTabulatedFunction('bias', self._table)
 
-    def _add_bias(self, bias):
+    def add_bias(self, bias):
         self._bias += bias.flatten()
         if len(self.bias_variables) == 1:
             self._table.setFunctionParameters(self._bias, *self._bounds)
         else:
             self._table.setFunctionParameters(*self._widths, self._bias, *self._bounds)
 
-    def _add_gaussian(self, position):
+    def initialize(self, simulation):
+        num_particles = simulation.system.getNumParticles() - len(simulation.variables)
+        for i, index in enumerate(self.bias_indices):
+            parameter = self.force.getCollectiveVariable(i)
+            parameter.setParticleParameters(0, num_particles+index, [])
+        simulation.system.addForce(self.force)
+        simulation.context.reinitialize(preserveState=True)
+
+    def describeNextReport(self, simulation):
+        steps = self.frequency - simulation.currentStep % self.frequency
+        return (steps, False, False, False, False, False)
+
+    def report(self, simulation, state):
+        position = self.force.getCollectiveVariableValues(simulation.context)
         gaussians = []
         for i, v in enumerate(self.bias_variables):
             x = (position[i] - v.min_value)/v._range
@@ -305,23 +318,7 @@ class Metadynamics(object):
             bias = self.height*gaussians[0]
         else:
             bias = self.height*functools.reduce(np.multiply.outer, reversed(gaussians))
-        self._add_bias(bias)
-
-    def initialize(self, simulation):
-        num_particles = simulation.system.getNumParticles() - len(simulation.variables)
-        for i, index in enumerate(self.bias_indices):
-            parameter = self.force.getCollectiveVariable(i)
-            parameter.setParticleParameters(0, num_particles+index, [])
-        simulation.system.addForce(self.force)
-        simulation.context.reinitialize(preserveState=True)
-
-    def describeNextReport(self, simulation):
-        steps = self.frequency - simulation.currentStep % self.frequency
-        return (steps, False, False, False, False, False)
-
-    def report(self, simulation, state):
-        values = self.force.getCollectiveVariableValues(simulation.context)
-        self._add_gaussian(values)
+        self.add_bias(bias)
         self.force.updateParametersInContext(simulation.context)
 
 
@@ -459,11 +456,6 @@ class ExtendedSpaceSimulation(app.Simulation):
         for i, mass in enumerate(masses):
             self.system.setParticleMass(n+i, mass)
 
-    def set_bias(self, bias):
-        if self.metadynamics is not None:
-            self.metadynamics.add_bias(bias)
-            self.metadynamics.force.updateParametersInContext(self.context)
-
     def step(self, steps):
         if self._periodic_tasks:
             self.reporters += self._periodic_tasks
@@ -524,7 +516,7 @@ class UnifiedFreeEnergyDynamics(object):
         if all(v.sigma is None for v in variables) or height is None or frequency is None:
             self.metadynamics = None
         else:
-            self.metadynamics = Metadynamics(variables, height, frequency, grid_expansion)
+            self.metadynamics = GridBasedMetadynamics(variables, height, frequency, grid_expansion)
 
     def __repr__(self):
         properties = f'temperature={self.temperature}, height={self.height}, frequency={self.frequency}'
@@ -606,12 +598,11 @@ class UnifiedFreeEnergyDynamics(object):
             except Exception:
                 raise ValueError('Multiple temperatures require CustomIntegrator with per-dof variable `kT`')
             kB = _standardize(unit.MOLAR_GAS_CONSTANT_R)
-            vec3 = openmm.Vec3(1, 1, 1)
             nparticles = system.getNumParticles() - len(self.variables)
             for i in range(nparticles):
-                kT[i] = kB*self.temperature*vec3
+                kT[i] = kB*self.temperature*openmm.Vec3(1, 1, 1)
             for i, v in enumerate(self.variables):
-                kT[nparticles+i] = kB*v.temperature*vec3
+                kT[nparticles+i] = kB*v.temperature*openmm.Vec3(1, 0, 0)
             integrator.setPerDofVariableByName('kT', kT)
 
         return simulation
