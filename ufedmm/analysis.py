@@ -52,8 +52,8 @@ class Analyzer(object):
         extended_variables = [v.id for v in ufed.variables]
         all_variables = collective_variables + extended_variables
 
-        force = openmm.CustomCVForce(ufed.get_energy_function())
-        for key, value in ufed.get_parameters().items():
+        force = openmm.CustomCVForce(ufed.variables.get_energy_function())
+        for key, value in ufed.variables.get_parameters().items():
             force.addGlobalParameter(key, value)
         for variable in all_variables:
             force.addGlobalParameter(variable, 0)

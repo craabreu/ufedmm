@@ -9,6 +9,7 @@
 .. _CustomCVForce: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.CustomCVForce.html
 .. _CustomIntegrator: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.CustomIntegrator.html
 .. _Force: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.Force.html
+.. _Platform: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.Platform.html
 .. _System: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.System.html
 
 """
@@ -225,13 +226,28 @@ class DynamicalVariable(object):
         return openmm.Vec3(length*(value - self.min_value)/self._range, y, 0)
 
 
-class _Metadynamics(object):
+class DynamicalVariableTuple(tuple):
+    def get_energy_function(self):
+        energies = [v.potential.split(';', 1) for v in self]
+        energy_terms, definitions = zip(*energies)
+        expression = ';'.join(['+'.join(energy_terms)] + list(definitions))
+        return expression
+
+    def get_parameters(self):
+        parameters = {}
+        for v in self:
+            parameters.update(v.parameters)
+        return parameters
+
+
+class Metadynamics(object):
     """
     Extended-space Metadynamics.
 
     """
     def __init__(self, variables, height, frequency, grid_expansion):
-        self.bias_variables = [v for v in variables if v.sigma is not None]
+        self.bias_indices = [i for i, v in enumerate(variables) if v.sigma is not None]
+        self.bias_variables = [variables[i] for i in self.bias_indices]
         self.height = height
         self.frequency = frequency
         self.grid_expansion = grid_expansion
@@ -291,33 +307,170 @@ class _Metadynamics(object):
             bias = self.height*functools.reduce(np.multiply.outer, reversed(gaussians))
         self._add_bias(bias)
 
+    def initialize(self, simulation):
+        num_particles = simulation.system.getNumParticles() - len(simulation.variables)
+        for i, index in enumerate(self.bias_indices):
+            parameter = self.force.getCollectiveVariable(i)
+            parameter.setParticleParameters(0, num_particles+index, [])
+        simulation.system.addForce(self.force)
+        simulation.context.reinitialize(preserveState=True)
+
     def describeNextReport(self, simulation):
         steps = self.frequency - simulation.currentStep % self.frequency
         return (steps, False, False, False, False, False)
 
     def report(self, simulation, state):
-        cv_values = self.force.getCollectiveVariableValues(simulation.context)
-        self._add_gaussian(cv_values)
+        values = self.force.getCollectiveVariableValues(simulation.context)
+        self._add_gaussian(values)
         self.force.updateParametersInContext(simulation.context)
 
-    def update_bias_parameters(self, nparticles):
-        for i, v in enumerate(self.bias_variables):
-            parameter = self.force.getCollectiveVariable(i)
-            parameter.setParticleParameters(0, nparticles+i, [])
 
+class ExtendedSpaceSimulation(app.Simulation):
+    """
+    A simulation involving extended phase-space variables.
 
-class _Simulation(app.Simulation):
-    def __init__(self, metadynamics, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.metadynamics = metadynamics
+    Parameters
+    ----------
+        variables : list of DynamicalVariable
+            The dynamical variables to be added to the system's phase space.
+        topology : openmm.app.Topology
+            A Topology describing the the system to simulate.
+        system : openmm.System
+            The OpenMM System_ object to simulate.
+        integrator : openmm.Integrator
+            The OpenMM Integrator to use for simulating the System.
+
+    Keyword Args
+    ------------
+        platform : openmm.Platform, default=None
+            If not None, the OpenMM Platform_ to use.
+        platformProperties : dict, default=None
+            If not None, a set of platform-specific properties to pass to the Context's constructor
+
+    """
+    def __init__(self, variables, topology, system, integrator, platform=None, platformProperties=None):
+        self.variables = DynamicalVariableTuple(variables)
+        self._periodic_tasks = []
+
+        for force in system.getForces():
+            cls = force.__class__.__name__
+            if cls == 'CMMotionRemover' or cls.endswith('Barostat'):
+                raise Exception('UFED: system cannot contain CMMotionRemover nor any Barostat')
+
+        Vx, Vy, Vz = topology.getPeriodicBoxVectors()
+        if not (Vx.y == Vx.z == Vy.x == Vy.z == Vz.x == Vz.y == 0.0):
+            raise ValueError('UFED: only orthorhombic boxes are allowed')
+
+        self.driving_force = openmm.CustomCVForce(self.variables.get_energy_function())
+        for name, value in self.variables.get_parameters().items():
+            self.driving_force.addGlobalParameter(name, value)
+        for v in self.variables:
+            self.driving_force.addCollectiveVariable(v.id, deepcopy(v.force))
+            self.driving_force.addCollectiveVariable(v.colvar.id, deepcopy(v.colvar.force))
+
+        positions = [openmm.Vec3(0, 0, 0) for atom in topology.atoms()]
+        modeller = app.Modeller(topology, positions)
+        extra_atom = f'ATOM      1  Cs   Cs A   1       0.000   0.000   0.000  1.00  0.00'
+        pdb = app.PDBFile(io.StringIO(extra_atom))
+        for i in range(len(self.variables)):
+            modeller.add(pdb.topology, pdb.positions)
+        num_particles = system.getNumParticles()
+        nb_types = (openmm.NonbondedForce, openmm.CustomNonbondedForce)
+        nb_forces = [f for f in system.getForces() if isinstance(f, nb_types)]
+        for i, v in enumerate(self.variables):
+            system.addParticle(v._particle_mass(Vx.x))
+            for nb_force in nb_forces:
+                if isinstance(nb_force, openmm.NonbondedForce):
+                    nb_force.addParticle(0.0, 1.0, 0.0)
+                else:
+                    nb_force.addParticle([0.0]*nb_force.getNumPerParticleParameters())
+            parameter = self.driving_force.getCollectiveVariable(2*i)
+            parameter.setParticleParameters(0, num_particles+i, [])
+        system.addForce(self.driving_force)
+
+        super().__init__(modeller.topology, system, integrator, platform, platformProperties)
+        self.context.setParameter('Lx', Vx.x)
+
+    def add_periodic_task(self, task):
+        task.initialize(self)
+        self._periodic_tasks.append(task)
+
+    def set_positions(self, positions, extended=False, **kwargs):
+        """
+        Sets the positions of all particles in the simulation's context.
+
+        Parameters
+        ----------
+            positions : list of openmm.Vec3
+                The positions of all particles, which may include the extra particles that represent
+                the extended-space variables (see below).
+
+        Keyword Args
+        ------------
+            extended : bool, default=False
+                Whether `positions` include those of the extra particles that represent the
+                extended-space variables.
+            **kwargs
+                Identifiers and values to be assigned to the dynamical variables. For those which
+                are not specified, the value will be made equal to that of the associated collective
+                variables. Note that these keyword arguments will have no effect whatsoever if
+                `extended=False`.
+
+        """
+        if extended:
+            self.context.setPositions(positions)
+        else:
+            extended_positions = deepcopy(positions)
+            Vx, Vy, _ = self.context.getState().getPeriodicBoxVectors()
+            for i, v in enumerate(self.variables):
+                y = Vy.y*(i + 1)/(len(self.variables) + 2)
+                value = kwargs.get(v.id, v.colvar.evaluate(self.system, positions))
+                position = v._particle_position(value, Vx.x, y)
+                extended_positions.append(position*unit.nanometers)
+            self.context.setPositions(extended_positions)
+
+    def set_random_velocities(self, temperature, seed=None):
+        """
+        Sets the velocities of all particles in the simulation's context.
+
+        .. warning ::
+            The velocities of the extended-space variables are set to zero.
+
+        Parameters
+        ----------
+            temperature : float or unit.Quantity
+                The temperature.
+
+        Keyword Args
+        ------------
+            seed : int, default=None
+                A seed for the random number generator.
+
+        """
+        n = self.system.getNumParticles() - len(self.variables)
+        masses = []
+        for i, v in enumerate(self.variables):
+            masses.append(self.system.getParticleMass(n+i))
+            self.system.setParticleMass(n+i, 0)
+        if seed is None:
+            self.context.setVelocitiesToTemperature(temperature)
+        else:
+            self.context.setVelocitiesToTemperature(temperature, seed)
+        for i, mass in enumerate(masses):
+            self.system.setParticleMass(n+i, mass)
+
+    def set_bias(self, bias):
+        if self.metadynamics is not None:
+            self.metadynamics.add_bias(bias)
+            self.metadynamics.force.updateParametersInContext(self.context)
 
     def step(self, steps):
-        if self.metadynamics is None:
+        if self._periodic_tasks:
+            self.reporters += self._periodic_tasks
             self._simulate(endStep=self.currentStep+steps)
+            self.reporters = self.reporters[:-len(self._periodic_tasks)]
         else:
-            self.reporters.append(self.metadynamics)
             self._simulate(endStep=self.currentStep+steps)
-            self.reporters.pop()
 
 
 class UnifiedFreeEnergyDynamics(object):
@@ -362,24 +515,16 @@ class UnifiedFreeEnergyDynamics(object):
 
     """
     def __init__(self, variables, temperature, height=None, frequency=None, grid_expansion=20):
-        self.variables = variables
+        self.variables = DynamicalVariableTuple(variables)
         self.temperature = _standardize(temperature)
         self.height = _standardize(height)
         self.frequency = frequency
         self.grid_expansion = grid_expansion
 
-        self.driving_force = openmm.CustomCVForce(self.get_energy_function())
-        for name, value in self.get_parameters().items():
-            self.driving_force.addGlobalParameter(name, value)
-        for v in self.variables:
-            self.driving_force.addCollectiveVariable(v.id, deepcopy(v.force))
-            self.driving_force.addCollectiveVariable(v.colvar.id, deepcopy(v.colvar.force))
-
-        if (all(v.sigma is None for v in self.variables) or height is None or frequency is None):
-            self.bias_force = self._metadynamics = None
+        if all(v.sigma is None for v in variables) or height is None or frequency is None:
+            self.metadynamics = None
         else:
-            self._metadynamics = _Metadynamics(self.variables, self.height, frequency, grid_expansion)
-            self.bias_force = self._metadynamics.force
+            self.metadynamics = Metadynamics(variables, height, frequency, grid_expansion)
 
     def __repr__(self):
         properties = f'temperature={self.temperature}, height={self.height}, frequency={self.frequency}'
@@ -396,86 +541,6 @@ class UnifiedFreeEnergyDynamics(object):
 
     def __setstate__(self, kw):
         self.__init__(**kw)
-
-    def get_energy_function(self):
-        energies = [v.potential.split(';', 1) for v in self.variables]
-        energy_terms, definitions = zip(*energies)
-        expression = ';'.join(['+'.join(energy_terms)] + list(definitions))
-        return expression
-
-    def get_parameters(self):
-        parameters = {}
-        for v in self.variables:
-            parameters.update(v.parameters)
-        return parameters
-
-    def set_positions(self, simulation, positions, extended=False, **kwargs):
-        """
-        Sets the positions of all particles in a simulation context.
-
-        Parameters
-        ----------
-            simulation : openmm.Simulation
-                The simulation object.
-            positions : list of openmm.Vec3
-                The positions of all particles, which may include the extra particles that represent
-                the extended-space variables (see below).
-
-        Keyword Args
-        ------------
-            extended : bool, default=False
-                Whether `positions` include those of the extra particles that represent the
-                extended-space variables.
-            **kwargs
-                Identifiers and values to be assigned to the dynamical variables. For those which
-                are not specified, the value will be made equal to that of the associated collective
-                variables. Note that these keyword arguments will have no effect whatsoever if
-                `extended=False`.
-
-        """
-        if extended:
-            simulation.context.setPositions(positions)
-        else:
-            extended_positions = deepcopy(positions)
-            Vx, Vy, _ = simulation.context.getState().getPeriodicBoxVectors()
-            for i, v in enumerate(self.variables):
-                y = Vy.y*(i + 1)/(len(self.variables) + 2)
-                value = kwargs.get(v.id, v.colvar.evaluate(simulation.system, positions))
-                position = v._particle_position(value, Vx.x, y)
-                extended_positions.append(position*unit.nanometers)
-            simulation.context.setPositions(extended_positions)
-
-    def set_random_velocities(self, simulation, seed=None):
-        """
-        Sets the velocities of all particles in a simulation context.
-
-        Parameters
-        ----------
-            simulation : openmm.Simulation
-                The simulation.
-
-        Keyword Args
-        ------------
-            seed : int, default=None
-                A seed for the random number generator.
-
-        """
-        n = simulation.system.getNumParticles() - len(self.variables)
-        masses = []
-        for i, v in enumerate(self.variables):
-            masses.append(simulation.system.getParticleMass(n+i))
-            simulation.system.setParticleMass(n+i, 0)
-        if seed is None:
-            simulation.context.setVelocitiesToTemperature(self.temperature)
-        else:
-            simulation.context.setVelocitiesToTemperature(self.temperature, seed)
-        for i, mass in enumerate(masses):
-            simulation.system.setParticleMass(n+i, mass)
-
-    def set_bias(self, simulation, bias):
-        if simulation.metadynamics is not None:
-            simulation.metadynamics.add_bias(bias)
-            simulation.metadynamics.force.updateParametersInContext(simulation.context)
 
     def simulation(self, topology, system, integrator, platform=None, platformProperties=None):
         """
@@ -522,57 +587,27 @@ class UnifiedFreeEnergyDynamics(object):
             >>> simulation = ufed.simulation(model.topology, model.system, integrator)
 
         """
-        for force in system.getForces():
-            cls = force.__class__.__name__
-            if cls == 'CMMotionRemover' or cls.endswith('Barostat'):
-                raise Exception('UFED: system cannot contain CMMotionRemover nor any Barostat')
-
-        Vx, Vy, Vz = topology.getPeriodicBoxVectors()
-        if not (Vx.y == Vx.z == Vy.x == Vy.z == Vz.x == Vz.y == 0.0):
-            raise ValueError('UFED: only orthorhombic boxes are allowed')
-
-        positions = [openmm.Vec3(0, 0, 0) for atom in topology.atoms()]
-        modeller = app.Modeller(topology, positions)
-        extra_atom = f'ATOM      1  Cs   Cs A   1       0.000   0.000   0.000  1.00  0.00'
-        pdb = app.PDBFile(io.StringIO(extra_atom))
-        for i in range(len(self.variables)):
-            modeller.add(pdb.topology, pdb.positions)
-        nparticles = system.getNumParticles()
-        nb_types = (openmm.NonbondedForce, openmm.CustomNonbondedForce)
-        nb_forces = [f for f in system.getForces() if isinstance(f, nb_types)]
-        for i, v in enumerate(self.variables):
-            system.addParticle(v._particle_mass(Vx.x))
-            for nb_force in nb_forces:
-                if isinstance(nb_force, openmm.NonbondedForce):
-                    nb_force.addParticle(0.0, 1.0, 0.0)
-                else:
-                    nb_force.addParticle([0.0]*nb_force.getNumPerParticleParameters())
-            parameter = self.driving_force.getCollectiveVariable(2*i)
-            parameter.setParticleParameters(0, nparticles+i, [])
-        system.addForce(self.driving_force)
-
-        if self._metadynamics:
-            self._metadynamics.update_bias_parameters(nparticles)
-            system.addForce(self.bias_force)
-
-        simulation = _Simulation(
-            self._metadynamics,
-            modeller.topology,
+        simulation = ExtendedSpaceSimulation(
+            self.variables,
+            topology,
             system,
             integrator,
             platform,
             platformProperties,
         )
-        simulation.context.setParameter('Lx', Vx.x)
+
+        if self.metadynamics is not None:
+            simulation.add_periodic_task(self.metadynamics)
 
         if any(v.temperature != self.temperature for v in self.variables):
-            simulation.context.setPositions(modeller.positions)
+            simulation.context.setPositions([openmm.Vec3(0, 0, 0)]*system.getNumParticles())
             try:
                 kT = integrator.getPerDofVariableByName('kT')
             except Exception:
                 raise ValueError('Multiple temperatures require CustomIntegrator with per-dof variable `kT`')
             kB = _standardize(unit.MOLAR_GAS_CONSTANT_R)
             vec3 = openmm.Vec3(1, 1, 1)
+            nparticles = system.getNumParticles() - len(self.variables)
             for i in range(nparticles):
                 kT[i] = kB*self.temperature*vec3
             for i, v in enumerate(self.variables):
