@@ -112,11 +112,11 @@ class Analyzer(object):
         exponent = []
         derivative = []
         for v, variance in zip(self._ufed.variables, variances):
-            if v.periodic:
+            if v.periodic:  # von Mises
                 factor = 2*np.pi/v._range
-                exponent.append(lambda x: (np.cos(factor*x)-1.0)/variance)
-                derivative.append(lambda x: -np.sin(factor*x)*factor/variance)
-            else:
+                exponent.append(lambda x: (np.cos(factor*x)-1.0)/(factor*factor*variance))
+                derivative.append(lambda x: -np.sin(factor*x)/(factor*variance))
+            else:  # Gauss
                 exponent.append(lambda x: -0.5*x**2/variance)
                 derivative.append(lambda x: -x/variance)
 
