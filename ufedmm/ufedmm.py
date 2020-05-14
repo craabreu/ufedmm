@@ -184,7 +184,7 @@ class DynamicalVariable(object):
             else:
                 self.grid_size = grid_size
 
-        self.force = openmm.CustomExternalForce(self.expression())
+        self.force = openmm.CustomExternalForce(self.get_energy_function())
         self.force.addGlobalParameter('Lx', 0.0)
         self.force.addParticle(0, [])
 
@@ -219,7 +219,21 @@ class DynamicalVariable(object):
         length = Lx if self.periodic else Lx/2
         return openmm.Vec3(length*(value - self.min_value)/self._range, y, 0)*unit.nanometer
 
-    def expression(self, index=''):
+    def get_energy_function(self, index=''):
+        """
+        Returns the algebraic expression that transforms the x coordinate of a particle into this
+        dynamical variables.
+
+        Keyword Args
+        ------------
+            index : str or int, default=''
+                An index for the particle in question, if needed.
+
+        Returns
+        -------
+            str
+
+        """
         if self.periodic:
             energy = f'{self.min_value}+{self._range}*(x{index}/Lx-floor(x{index}/Lx))'
         else:
@@ -230,6 +244,22 @@ class DynamicalVariable(object):
         return energy
 
     def evaluate(self, x, Lx):
+        """
+        Computes the value of this dynamical variable for a given x coordinate and a given length of
+        the simulation box in the x direction.
+
+        Parameters
+        ----------
+            x : float or unit.Quantity
+                The x coordinate.
+            Lx : float or unit.Quantity
+                The length of the simulation box in the x direction.
+
+        Returns
+        -------
+            float
+
+        """
         pos = x/Lx - np.floor(x/Lx)
         if self.periodic:
             return self.min_value + self._range*pos
@@ -253,16 +283,34 @@ class DynamicalVariableTuple(tuple):
         return parameters
 
 
-class GridlessMetadynamics(object):
+class PeriodicTask(object):
+    def __init__(self, frequency):
+        self.frequency = frequency
+
+    def initialize(self, simulation):
+        pass
+
+    def update(self, simulation, steps):
+        pass
+
+    def describeNextReport(self, simulation):
+        steps = self.frequency - simulation.currentStep % self.frequency
+        return (steps, False, False, False, False, False)
+
+    def report(self, simulation, state):
+        pass
+
+
+class GridlessMetadynamics(PeriodicTask):
     """
     Extended-space Metadynamics.
 
     """
     def __init__(self, variables, height, frequency, buffer_size=100):
+        super().__init__(frequency)
         self.bias_indices = [i for i, v in enumerate(variables) if v.sigma is not None]
         self.bias_variables = DynamicalVariableTuple(variables[i] for i in self.bias_indices)
         self.height = height
-        self.frequency = frequency
         self.buffer_size = buffer_size
         exponents = []
         definitions = []
@@ -272,7 +320,7 @@ class GridlessMetadynamics(object):
                 exponents.append(f'{1.0/(factor*v.sigma)**2}*(cos({factor}*(v{i+1}-center{i+1}))-1)')
             else:  # Gauss
                 exponents.append(f'{0.5/v.sigma**2}*(v{i+1}-center{i+1})^2')
-            definitions.append(f'v{i+1}={v.expression(i+1)}')
+            definitions.append(f'v{i+1}={v.get_energy_function(i+1)}')
         hill = ';'.join([f'height*exp({"+".join(exponents)})'] + definitions)
         n = len(self.bias_variables)
         self.force = openmm.CustomCompoundBondForce(n, hill)
@@ -299,10 +347,6 @@ class GridlessMetadynamics(object):
         self._total_hills = self._num_hills + (steps - steps_until_next_report)//self.frequency
         self._add_buffer(simulation)
 
-    def describeNextReport(self, simulation):
-        steps = self.frequency - simulation.currentStep % self.frequency
-        return (steps, True, False, False, False, False)
-
     def report(self, simulation, state):
         positions = state.getPositions()
         xcoords = [positions[i].x for i in self.particles]
@@ -314,16 +358,16 @@ class GridlessMetadynamics(object):
         self.force.updateParametersInContext(simulation.context)
 
 
-class GriddedMetadynamics(object):
+class GriddedMetadynamics(PeriodicTask):
     """
     Extended-space Metadynamics.
 
     """
     def __init__(self, variables, height, frequency, grid_expansion):
+        super().__init__(frequency)
         self.bias_indices = [i for i, v in enumerate(variables) if v.sigma is not None]
         self.bias_variables = [variables[i] for i in self.bias_indices]
         self.height = height
-        self.frequency = frequency
         self.grid_expansion = grid_expansion
         self._widths = []
         self._bounds = []
@@ -368,13 +412,6 @@ class GriddedMetadynamics(object):
             parameter.setParticleParameters(0, num_particles+index, [])
         simulation.system.addForce(self.force)
         simulation.context.reinitialize(preserveState=True)
-
-    def update(self, simulation, steps):
-        pass
-
-    def describeNextReport(self, simulation):
-        steps = self.frequency - simulation.currentStep % self.frequency
-        return (steps, False, False, False, False, False)
 
     def report(self, simulation, state):
         position = self.force.getCollectiveVariableValues(simulation.context)
@@ -465,6 +502,15 @@ class ExtendedSpaceSimulation(app.Simulation):
         self.context.setParameter('Lx', Vx.x)
 
     def add_periodic_task(self, task):
+        """
+        Adds a task to be executed periodically along this simulation.
+
+        Parameters
+        ----------
+            task : PeriodicTask
+                A :class:`~ufedmm.ufedmm.PeriodicTask` object.
+
+        """
         task.initialize(self)
         self._periodic_tasks.append(task)
 
@@ -504,9 +550,10 @@ class ExtendedSpaceSimulation(app.Simulation):
                 extended_positions[n+i] = v._particle_position(value, Vx.x, y)
             self.context.setPositions(extended_positions)
 
-    def set_random_velocities(self, temperature, seed=None):
+    def set_velocities_to_temperature(self, temperature, random_seed=None):
         """
-        Sets the velocities of all particles in the simulation's context.
+        Sets the velocities of all particles in the system to random values chosen from a Boltzmann
+        distribution at a given temperature.
 
         .. warning ::
             The velocities of the extended-space variables are set to zero.
@@ -514,11 +561,11 @@ class ExtendedSpaceSimulation(app.Simulation):
         Parameters
         ----------
             temperature : float or unit.Quantity
-                The temperature.
+                The temperature of the system.
 
         Keyword Args
         ------------
-            seed : int, default=None
+            random_seed : int, default=None
                 A seed for the random number generator.
 
         """
@@ -527,14 +574,23 @@ class ExtendedSpaceSimulation(app.Simulation):
         for i, v in enumerate(self.variables):
             masses.append(self.system.getParticleMass(n+i))
             self.system.setParticleMass(n+i, 0)
-        if seed is None:
+        if random_seed is None:
             self.context.setVelocitiesToTemperature(temperature)
         else:
-            self.context.setVelocitiesToTemperature(temperature, seed)
+            self.context.setVelocitiesToTemperature(temperature, random_seed)
         for i, mass in enumerate(masses):
             self.system.setParticleMass(n+i, mass)
 
     def step(self, steps):
+        """
+        Executed a given number of simulation steps.
+
+        Parameters
+        ----------
+            steps : int
+                The number of steps to be executed.
+
+        """
         if self._periodic_tasks:
             for task in self._periodic_tasks:
                 task.update(self, steps)
@@ -570,8 +626,8 @@ class UnifiedFreeEnergyDynamics(object):
             The buffer size.
 
     Properties:
-        driving_force : openmm.CustomCVForce
-            The driving force.
+        metadynamics : PeriodicTask
+            If not `None`, it is the periodic task used to add hills to the bias potential.
 
     Example
     -------
