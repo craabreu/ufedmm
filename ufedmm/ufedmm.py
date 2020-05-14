@@ -32,7 +32,7 @@ def _standardize(quantity):
 
 class CollectiveVariable(object):
     """
-    A collective variable.
+    A function of particle coordinates evaluated by means of an OpenMM Force_ object.
 
     Parameters
     ----------
@@ -59,7 +59,7 @@ class CollectiveVariable(object):
 
     def evaluate(self, system, positions):
         """
-        Computes the value of the collective variable for a given system and set of particle
+        Computes the value of the collective variable for a given system and a given set of particle
         coordinates.
 
         Parameters
@@ -85,15 +85,16 @@ class CollectiveVariable(object):
             3.141592653589793
 
         """
-        new_system = openmm.System()
-        new_system.setDefaultPeriodicBoxVectors(*system.getDefaultPeriodicBoxVectors())
-        for index in range(len(positions)):
-            new_system.addParticle(system.getParticleMass(index))
-        new_system.addForce(deepcopy(self.force))
+        system_copy = deepcopy(system)
+        for force in system_copy.getForces():
+            force.setForceGroup(0)
+        force_copy = deepcopy(self.force)
+        force_copy.setForceGroup(1)
+        system_copy.addForce(force_copy)
         platform = openmm.Platform.getPlatformByName('Reference')
-        context = openmm.Context(new_system, openmm.CustomIntegrator(0), platform)
+        context = openmm.Context(system_copy, openmm.CustomIntegrator(0), platform)
         context.setPositions(positions)
-        energy = context.getState(getEnergy=True).getPotentialEnergy()
+        energy = context.getState(getEnergy=True, groups={1}).getPotentialEnergy()
         return energy.value_in_unit(unit.kilojoules_per_mole)
 
 
@@ -216,7 +217,7 @@ class DynamicalVariable(object):
 
     def _particle_position(self, value, Lx, y=0):
         length = Lx if self.periodic else Lx/2
-        return openmm.Vec3(length*(value - self.min_value)/self._range, y, 0)
+        return openmm.Vec3(length*(value - self.min_value)/self._range, y, 0)*unit.nanometer
 
     def expression(self, index=''):
         if self.periodic:
@@ -493,12 +494,14 @@ class ExtendedSpaceSimulation(app.Simulation):
             self.context.setPositions(positions)
         else:
             extended_positions = deepcopy(positions)
+            n = len(extended_positions)
+            for i in range(len(self.variables)):
+                extended_positions.append(openmm.Vec3(0, 0, 0)*unit.nanometer)
             Vx, Vy, _ = self.context.getState().getPeriodicBoxVectors()
             for i, v in enumerate(self.variables):
                 y = Vy.y*(i + 1)/(len(self.variables) + 2)
-                value = kwargs.get(v.id, v.colvar.evaluate(self.system, positions))
-                position = v._particle_position(value, Vx.x, y)
-                extended_positions.append(position*unit.nanometers)
+                value = kwargs.get(v.id, v.colvar.evaluate(self.system, extended_positions))
+                extended_positions[n+i] = v._particle_position(value, Vx.x, y)
             self.context.setPositions(extended_positions)
 
     def set_random_velocities(self, temperature, seed=None):
