@@ -442,7 +442,7 @@ class ExtendedSpaceSimulation(app.Simulation):
 
         positions = [openmm.Vec3(0, 0, 0) for atom in topology.atoms()]
         modeller = app.Modeller(topology, positions)
-        extra_atom = f'ATOM      1  Cs   Cs A   1       0.000   0.000   0.000  1.00  0.00'
+        extra_atom = 'ATOM      1  Cs   Cs A   1       0.000   0.000   0.000  1.00  0.00'
         pdb = app.PDBFile(io.StringIO(extra_atom))
         for i in range(len(self.variables)):
             modeller.add(pdb.topology, pdb.positions)
