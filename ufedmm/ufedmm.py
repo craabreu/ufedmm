@@ -183,14 +183,7 @@ class DynamicalVariable(object):
             else:
                 self.grid_size = grid_size
 
-        if periodic:
-            expression = f'{self.min_value}+{self._range}*(x/Lx-floor(x/Lx))'
-        else:
-            ramp_up = f'{self.min_value}+{2*self._range}*pos'
-            ramp_down = f'{self.max_value+self._range}-{2*self._range}*pos'
-            expression = f'select(step(0.5-pos),{ramp_up},{ramp_down})'
-            expression += '; pos=x/Lx-floor(x/Lx)'
-        self.force = openmm.CustomExternalForce(expression)
+        self.force = openmm.CustomExternalForce(self.expression())
         self.force.addGlobalParameter('Lx', 0.0)
         self.force.addParticle(0, [])
 
@@ -225,6 +218,25 @@ class DynamicalVariable(object):
         length = Lx if self.periodic else Lx/2
         return openmm.Vec3(length*(value - self.min_value)/self._range, y, 0)
 
+    def expression(self, index=''):
+        if self.periodic:
+            energy = f'{self.min_value}+{self._range}*(x{index}/Lx-floor(x{index}/Lx))'
+        else:
+            ramp_up = f'{self.min_value}+{2*self._range}*pos{index}'
+            ramp_down = f'{self.max_value+self._range}-{2*self._range}*pos{index}'
+            energy = f'select(step(0.5-pos),{ramp_up},{ramp_down})'
+            energy += f'; pos{index}=x{index}/Lx-floor(x{index}/Lx)'
+        return energy
+
+    def evaluate(self, x, Lx):
+        pos = x/Lx - np.floor(x/Lx)
+        if self.periodic:
+            return self.min_value + self._range*pos
+        elif pos < 0.5:
+            return self.min_value + 2*self._range*pos
+        else:
+            return self.max_value + self._range*(1 - 2*pos)
+
 
 class DynamicalVariableTuple(tuple):
     def get_energy_function(self):
@@ -240,7 +252,68 @@ class DynamicalVariableTuple(tuple):
         return parameters
 
 
-class GridBasedMetadynamics(object):
+class GridlessMetadynamics(object):
+    """
+    Extended-space Metadynamics.
+
+    """
+    def __init__(self, variables, height, frequency, buffer_size=100):
+        self.bias_indices = [i for i, v in enumerate(variables) if v.sigma is not None]
+        self.bias_variables = DynamicalVariableTuple(variables[i] for i in self.bias_indices)
+        self.height = height
+        self.frequency = frequency
+        self.buffer_size = buffer_size
+        exponents = []
+        definitions = []
+        for i, v in enumerate(self.bias_variables):
+            if v.periodic:  # von Mises
+                factor = 2*np.pi/v._range
+                exponents.append(f'{1.0/(factor*v.sigma)**2}*(cos({factor}*(v{i+1}-center{i+1}))-1)')
+            else:  # Gauss
+                exponents.append(f'{0.5/v.sigma**2}*(v{i+1}-center{i+1})^2')
+            definitions.append(f'v{i+1}={v.expression(i+1)}')
+        hill = ';'.join([f'height*exp({"+".join(exponents)})'] + definitions)
+        n = len(self.bias_variables)
+        self.force = openmm.CustomCompoundBondForce(n, hill)
+        self.force.addGlobalParameter('Lx', 0)
+        self.force.addPerBondParameter('height')
+        for i in range(n):
+            self.force.addPerBondParameter(f'center{i+1}')
+        self._num_hills = 0
+
+    def _add_buffer(self, simulation):
+        size = min(self.buffer_size, self._total_hills - self.force.getNumBonds())
+        for i in range(size):
+            self.force.addBond(self.particles, [0]*(len(self.bias_variables)+1))
+        simulation.context.reinitialize(preserveState=True)
+
+    def initialize(self, simulation):
+        num_particles = simulation.system.getNumParticles() - len(simulation.variables)
+        self.particles = [num_particles + index for index in self.bias_indices]
+        self.Lx = simulation.context.getParameter('Lx')
+        simulation.system.addForce(self.force)
+
+    def update(self, simulation, steps):
+        steps_until_next_report = self.frequency - simulation.currentStep % self.frequency
+        self._total_hills = self._num_hills + (steps - steps_until_next_report)//self.frequency
+        self._add_buffer(simulation)
+
+    def describeNextReport(self, simulation):
+        steps = self.frequency - simulation.currentStep % self.frequency
+        return (steps, True, False, False, False, False)
+
+    def report(self, simulation, state):
+        positions = state.getPositions()
+        xcoords = [positions[i].x for i in self.particles]
+        centers = [v.evaluate(x, self.Lx) for x, v in zip(xcoords, self.bias_variables)]
+        if self._num_hills == self.force.getNumBonds():
+            self._add_buffer(simulation)
+        self.force.setBondParameters(self._num_hills, self.particles, [self.height] + centers)
+        self._num_hills += 1
+        self.force.updateParametersInContext(simulation.context)
+
+
+class GriddedMetadynamics(object):
     """
     Extended-space Metadynamics.
 
@@ -295,29 +368,31 @@ class GridBasedMetadynamics(object):
         simulation.system.addForce(self.force)
         simulation.context.reinitialize(preserveState=True)
 
+    def update(self, simulation, steps):
+        pass
+
     def describeNextReport(self, simulation):
         steps = self.frequency - simulation.currentStep % self.frequency
         return (steps, False, False, False, False, False)
 
     def report(self, simulation, state):
         position = self.force.getCollectiveVariableValues(simulation.context)
-        gaussians = []
+        hills = []
         for i, v in enumerate(self.bias_variables):
             x = (position[i] - v.min_value)/v._range
-            if v.periodic:
-                x = x % 1.0
             dist = np.abs(np.linspace(0, 1, num=v.grid_size) - x)
             if v.periodic:
-                dist = np.min(np.array([dist, np.abs(dist-1)]), axis=0)
-            values = np.exp(-0.5*dist*dist/v._scaled_variance)
+                values = np.exp((np.cos(2*np.pi*dist)-1)/(4*np.pi**2*v._scaled_variance))  # von Mises
+            else:
+                values = np.exp(-0.5*dist*dist/v._scaled_variance)  # Gauss
             if self._expanded[i]:
                 n = self._extra_points[i] + 1
                 values = np.hstack((values[-n:-1], values, values[1:n]))
-            gaussians.append(values)
+            hills.append(values)
         if len(self.bias_variables) == 1:
-            bias = self.height*gaussians[0]
+            bias = self.height*hills[0]
         else:
-            bias = self.height*functools.reduce(np.multiply.outer, reversed(gaussians))
+            bias = self.height*functools.reduce(np.multiply.outer, reversed(hills))
         self.add_bias(bias)
         self.force.updateParametersInContext(simulation.context)
 
@@ -458,7 +533,9 @@ class ExtendedSpaceSimulation(app.Simulation):
 
     def step(self, steps):
         if self._periodic_tasks:
-            self.reporters += self._periodic_tasks
+            for task in self._periodic_tasks:
+                task.update(self, steps)
+                self.reporters.append(task)
             self._simulate(endStep=self.currentStep+steps)
             self.reporters = self.reporters[:-len(self._periodic_tasks)]
         else:
@@ -478,18 +555,20 @@ class UnifiedFreeEnergyDynamics(object):
 
     Keyword Args
     ------------
-        grid_expansion : int, default=20
-            The grid expansion.
         height : float or unit.Quantity, default=None
             The height.
         frequency : int, default=None
             The frequency.
+        grid_expansion : int, default=20
+            The grid expansion.
+        enforce_gridless : bool, default=False
+            For gridless metadynamics even for 1D to 3D problems.
+        buffer_size : int, default=100
+            The buffer size.
 
     Properties:
         driving_force : openmm.CustomCVForce
             The driving force.
-        bias_force : openmm.CustomCVForce
-            The bias force.
 
     Example
     -------
@@ -506,17 +585,23 @@ class UnifiedFreeEnergyDynamics(object):
         <variables=[s_phi, s_psi], temperature=300, height=None, frequency=None>
 
     """
-    def __init__(self, variables, temperature, height=None, frequency=None, grid_expansion=20):
+    def __init__(self, variables, temperature, height=None, frequency=None,
+                 grid_expansion=20, enforce_gridless=False, buffer_size=100):
         self.variables = DynamicalVariableTuple(variables)
         self.temperature = _standardize(temperature)
         self.height = _standardize(height)
         self.frequency = frequency
         self.grid_expansion = grid_expansion
+        self.enforce_gridless = enforce_gridless
+        self.buffer_size = buffer_size
 
-        if all(v.sigma is None for v in variables) or height is None or frequency is None:
+        dimension = sum(v.sigma is not None for v in variables)
+        if dimension == 0 or height is None or frequency is None:
             self.metadynamics = None
+        elif dimension > 3 or enforce_gridless:
+            self.metadynamics = GridlessMetadynamics(variables, height, frequency, buffer_size)
         else:
-            self.metadynamics = GridBasedMetadynamics(variables, height, frequency, grid_expansion)
+            self.metadynamics = GriddedMetadynamics(variables, height, frequency, grid_expansion)
 
     def __repr__(self):
         properties = f'temperature={self.temperature}, height={self.height}, frequency={self.frequency}'
@@ -529,6 +614,8 @@ class UnifiedFreeEnergyDynamics(object):
             height=self.height,
             frequency=self.frequency,
             grid_expansion=self.grid_expansion,
+            enforce_gridless=self.enforce_gridless,
+            buffer_size=self.buffer_size,
         )
 
     def __setstate__(self, kw):
