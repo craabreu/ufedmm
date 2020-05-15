@@ -322,6 +322,24 @@ class DynamicalVariableTuple(tuple):
             parameters.update(v.parameters)
         return parameters
 
+    def get_hills_force(self):
+        exponents = []
+        definitions = []
+        for i, v in enumerate(self):
+            if v.periodic:  # von Mises
+                factor = 2*np.pi/v._range
+                exponents.append(f'{1.0/(factor*v.sigma)**2}*(cos({factor}*({v.id}-{v.id}_0))-1)')
+            else:  # Gauss
+                exponents.append(f'{0.5/v.sigma**2}*({v.id}-{v.id}_0)^2')
+            definitions.append(f'{v.id}={v.get_energy_function(i+1)}')
+        hill = ';'.join([f'height*exp({"+".join(exponents)})'] + definitions)
+        force = openmm.CustomCompoundBondForce(len(self), hill)
+        force.addGlobalParameter('Lx', 0)
+        force.addPerBondParameter('height')
+        for v in self:
+            force.addPerBondParameter(f'{v.id}_0')
+        return force
+
 
 class PeriodicTask(object):
     def __init__(self, frequency):
@@ -352,22 +370,7 @@ class GridlessMetadynamics(PeriodicTask):
         self.bias_variables = DynamicalVariableTuple(variables[i] for i in self.bias_indices)
         self.height = height
         self.buffer_size = buffer_size
-        exponents = []
-        definitions = []
-        for i, v in enumerate(self.bias_variables):
-            if v.periodic:  # von Mises
-                factor = 2*np.pi/v._range
-                exponents.append(f'{1.0/(factor*v.sigma)**2}*(cos({factor}*(v{i+1}-center{i+1}))-1)')
-            else:  # Gauss
-                exponents.append(f'{0.5/v.sigma**2}*(v{i+1}-center{i+1})^2')
-            definitions.append(f'v{i+1}={v.get_energy_function(i+1)}')
-        hill = ';'.join([f'height*exp({"+".join(exponents)})'] + definitions)
-        n = len(self.bias_variables)
-        self.force = openmm.CustomCompoundBondForce(n, hill)
-        self.force.addGlobalParameter('Lx', 0)
-        self.force.addPerBondParameter('height')
-        for i in range(n):
-            self.force.addPerBondParameter(f'center{i+1}')
+        self.force = self.bias_variables.get_hills_force()
         self._num_hills = 0
 
     def _add_buffer(self, simulation):
@@ -377,15 +380,22 @@ class GridlessMetadynamics(PeriodicTask):
         simulation.context.reinitialize(preserveState=True)
 
     def initialize(self, simulation):
-        num_particles = simulation.system.getNumParticles() - len(simulation.variables)
-        self.particles = [num_particles + index for index in self.bias_indices]
+        self.particles = [simulation.get_num_particles() + index for index in self.bias_indices]
         self.Lx = simulation.context.getParameter('Lx')
         simulation.system.addForce(self.force)
 
     def update(self, simulation, steps):
         steps_until_next_report = self.frequency - simulation.currentStep % self.frequency
-        self._total_hills = self._num_hills + (steps - steps_until_next_report)//self.frequency
+        if steps_until_next_report > steps:
+            required_hills = 0
+        else:
+            required_hills = (steps - steps_until_next_report)//self.frequency + 1
+        self._total_hills = self._num_hills + required_hills
         self._add_buffer(simulation)
+
+    def describeNextReport(self, simulation):
+        steps = self.frequency - simulation.currentStep % self.frequency
+        return (steps, True, False, False, False, False)
 
     def report(self, simulation, state):
         positions = state.getPositions()
@@ -524,7 +534,7 @@ class ExtendedSpaceSimulation(app.Simulation):
         pdb = app.PDBFile(io.StringIO(extra_atom))
         for i in range(len(self.variables)):
             modeller.add(pdb.topology, pdb.positions)
-        num_particles = system.getNumParticles()
+        self._num_particles = system.getNumParticles()
         nb_types = (openmm.NonbondedForce, openmm.CustomNonbondedForce)
         nb_forces = [f for f in system.getForces() if isinstance(f, nb_types)]
         for i, v in enumerate(self.variables):
@@ -535,7 +545,7 @@ class ExtendedSpaceSimulation(app.Simulation):
                 else:
                     nb_force.addParticle([0.0]*nb_force.getNumPerParticleParameters())
             parameter = self.driving_force.getCollectiveVariable(2*i)
-            parameter.setParticleParameters(0, num_particles+i, [])
+            parameter.setParticleParameters(0, self._num_particles+i, [])
         system.addForce(self.driving_force)
 
         super().__init__(modeller.topology, system, integrator, platform, platformProperties)
@@ -553,6 +563,17 @@ class ExtendedSpaceSimulation(app.Simulation):
         """
         task.initialize(self)
         self._periodic_tasks.append(task)
+
+    def get_num_particles(self):
+        """
+        Returns the number of real particles in a simulation.
+
+        Returns
+        -------
+            int
+
+        """
+        return self._num_particles
 
     def set_positions(self, positions, extended=False, **kwargs):
         """
