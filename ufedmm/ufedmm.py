@@ -57,6 +57,18 @@ class CollectiveVariable(object):
         self.id = id
         self.force = force
 
+    def _create_context(self, system, positions):
+        system_copy = deepcopy(system)
+        for force in system_copy.getForces():
+            force.setForceGroup(0)
+        force_copy = deepcopy(self.force)
+        force_copy.setForceGroup(1)
+        system_copy.addForce(force_copy)
+        platform = openmm.Platform.getPlatformByName('Reference')
+        context = openmm.Context(system_copy, openmm.CustomIntegrator(0), platform)
+        context.setPositions(positions)
+        return context
+
     def evaluate(self, system, positions):
         """
         Computes the value of the collective variable for a given system and a given set of particle
@@ -85,17 +97,45 @@ class CollectiveVariable(object):
             3.141592653589793
 
         """
-        system_copy = deepcopy(system)
-        for force in system_copy.getForces():
-            force.setForceGroup(0)
-        force_copy = deepcopy(self.force)
-        force_copy.setForceGroup(1)
-        system_copy.addForce(force_copy)
-        platform = openmm.Platform.getPlatformByName('Reference')
-        context = openmm.Context(system_copy, openmm.CustomIntegrator(0), platform)
-        context.setPositions(positions)
+        context = self._create_context(system, positions)
         energy = context.getState(getEnergy=True, groups={1}).getPotentialEnergy()
         return energy.value_in_unit(unit.kilojoules_per_mole)
+
+    def effective_mass(self, system, positions):
+        """
+        Computes the effective mass of the collective variable for a given system and a given set of
+        particle coordinates.
+
+        Parameters
+        ----------
+            system : openmm.System
+                The system for which the collective variable will be evaluated.
+            positions : list of openmm.Vec3
+                A list whose size equals the number of particles in the system and which contains
+                the coordinates of these particles.
+
+        Returns
+        -------
+            float
+
+        Example
+        -------
+            >>> import ufedmm
+            >>> from simtk import unit
+            >>> model = ufedmm.AlanineDipeptideModel()
+            >>> model.phi.effective_mass(model.system, model.positions)
+            0.0479588726559707
+            >>> model.psi.effective_mass(model.system, model.positions)
+            0.05115582071188152
+
+        """
+        context = self._create_context(system, positions)
+        forces = _standardize(context.getState(getForces=True, groups={1}).getForces(asNumpy=True))
+        summation = 0.0
+        for i, f in enumerate(forces):
+            m = system.getParticleMass(i).value_in_unit(unit.dalton)
+            summation += f.dot(f)/m
+        return 1.0/summation
 
 
 class DynamicalVariable(object):
