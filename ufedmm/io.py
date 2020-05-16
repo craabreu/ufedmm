@@ -87,17 +87,17 @@ class StateDataReporter(app.StateDataReporter):
         >>> dt = 2*unit.femtoseconds
         >>> gamma = 10/unit.picoseconds
         >>> limit = 180*unit.degrees
-        >>> phi = ufedmm.CollectiveVariable('phi', model.phi, -limit, limit, mass, Ks, Ts)
-        >>> psi = ufedmm.CollectiveVariable('psi', model.psi, -limit, limit, mass, Ks, Ts)
-        >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([phi, psi], T)
+        >>> s_phi = ufedmm.DynamicalVariable('s_phi', -limit, limit, mass, Ts, model.phi, Ks)
+        >>> s_psi = ufedmm.DynamicalVariable('s_psi', -limit, limit, mass, Ts, model.psi, Ks)
+        >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([s_phi, s_psi], T)
         >>> integrator = ufedmm.GeodesicBAOABIntegrator(dt, T, gamma)
         >>> platform = openmm.Platform.getPlatformByName('Reference')
         >>> simulation = ufed.simulation(model.topology, model.system, integrator, platform)
-        >>> ufed.set_positions(simulation, model.positions)
-        >>> reporter = ufedmm.StateDataReporter(stdout, 1, ufed.driving_force, step=True)
+        >>> simulation.set_positions(model.positions)
+        >>> reporter = ufedmm.StateDataReporter(stdout, 1, simulation.driving_force, step=True)
         >>> reporter.report(simulation, simulation.context.getState())
-        #"Step","phi","s_phi","psi","s_psi"
-        0,3.141592653589793,-3.141592653589793,3.141592653589793,-3.141592653589793
+        #"Step","s_phi","phi","s_psi","psi"
+        0,-3.141592653589793,3.141592653589793,-3.141592653589793,3.141592653589793
 
     """
     def __init__(self, file, report_interval, cv_force, **kwargs):
