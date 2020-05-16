@@ -277,10 +277,8 @@ class DynamicalVariable(object):
         if self.periodic:
             energy = f'{self.min_value}+{self._range}*(x{index}/Lx-floor(x{index}/Lx))'
         else:
-            ramp_up = f'{self.min_value}+{2*self._range}*pos{index}'
-            ramp_down = f'{self.max_value+self._range}-{2*self._range}*pos{index}'
-            energy = f'select(step(0.5-pos),{ramp_up},{ramp_down})'
-            energy += f'; pos{index}=x{index}/Lx-floor(x{index}/Lx)'
+            energy = f'{self.min_value}+{2*self._range}*min(pos{index},1-pos{index})'
+            energy += f';pos{index}=x{index}/Lx-floor(x{index}/Lx)'
         return energy
 
     def evaluate(self, x, Lx):
@@ -303,16 +301,15 @@ class DynamicalVariable(object):
         pos = x/Lx - np.floor(x/Lx)
         if self.periodic:
             return self.min_value + self._range*pos
-        elif pos < 0.5:
-            return self.min_value + 2*self._range*pos
         else:
-            return self.max_value + self._range*(1 - 2*pos)
+            return self.min_value + 2*self._range*min(pos, 1-pos)
 
 
 class DynamicalVariableTuple(tuple):
     def get_energy_function(self):
         energies = [v.potential.split(';', 1) for v in self]
-        energy_terms, definitions = zip(*energies)
+        energy_terms = [energy[0] for energy in energies]
+        definitions = [energy[1] for energy in energies if len(energy) == 2]
         expression = ';'.join(['+'.join(energy_terms)] + list(definitions))
         return expression
 
