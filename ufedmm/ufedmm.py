@@ -353,7 +353,7 @@ class PeriodicTask(object):
 
     def describeNextReport(self, simulation):
         steps = self.frequency - simulation.currentStep % self.frequency
-        return (steps, False, False, False, False, False)
+        return (steps, True, False, False, False, False)
 
     def report(self, simulation, state):
         pass
@@ -393,14 +393,10 @@ class GridlessMetadynamics(PeriodicTask):
         self._total_hills = self._num_hills + required_hills
         self._add_buffer(simulation)
 
-    def describeNextReport(self, simulation):
-        steps = self.frequency - simulation.currentStep % self.frequency
-        return (steps, True, False, False, False, False)
-
     def report(self, simulation, state):
-        positions = state.getPositions()
-        xcoords = [positions[i].x for i in self.particles]
-        centers = [v.evaluate(x, self.Lx) for x, v in zip(xcoords, self.bias_variables)]
+        coords = state.getPositions()
+        xcoords = [coords[index].x for index in self.particles]
+        centers = [v.evaluate(x, self.Lx) for v, x in zip(self.bias_variables, xcoords)]
         if self._num_hills == self.force.getNumBonds():
             self._add_buffer(simulation)
         self.force.setBondParameters(self._num_hills, self.particles, [self.height] + centers)
@@ -432,42 +428,53 @@ class GriddedMetadynamics(PeriodicTask):
             self._expanded += [expanded]
             self._extra_points += [extra_points]
         self._bias = np.zeros(np.prod(self._widths))
-        if len(variables) == 1:
+        num_bias_variables = len(self.bias_variables)
+        if num_bias_variables == 1:
             self._table = openmm.Continuous1DFunction(
                 self._bias, *self._bounds,  # self.bias_variables[0].periodic,
             )
-        elif len(variables) == 2:
+        elif num_bias_variables == 2:
             self._table = openmm.Continuous2DFunction(*self._widths, self._bias, *self._bounds)
-        elif len(variables) == 3:
+        elif num_bias_variables == 3:
             self._table = openmm.Continuous3DFunction(*self._widths, self._bias, *self._bounds)
         else:
             raise ValueError('UFED requires 1, 2, or 3 biased collective variables')
-        parameter_list = ', '.join(f'{v.id}' for v in self.bias_variables)
-        self.force = openmm.CustomCVForce(f'bias({parameter_list})')
-        for v in self.bias_variables:
-            self.force.addCollectiveVariable(v.id, deepcopy(v.force))
+        expression = f'bias({",".join(v.id for v in self.bias_variables)})'
+        for i, v in enumerate(self.bias_variables):
+            expression += f';{v.id}={v.get_energy_function(i+1)}'
+        self.force = openmm.CustomCVForce(expression)
+        for i in range(num_bias_variables):
+            x = openmm.CustomExternalForce('x')
+            x.addParticle(0, [])
+            self.force.addCollectiveVariable(f'x{i+1}', x)
+        # self.force = openmm.CustomCompoundBondForce(num_bias_variables, expression)
+        self.force.addGlobalParameter('Lx', 0)
         self.force.addTabulatedFunction('bias', self._table)
 
-    def add_bias(self, bias):
+    def add_bias(self, simulation, bias):
         self._bias += bias.flatten()
         if len(self.bias_variables) == 1:
             self._table.setFunctionParameters(self._bias, *self._bounds)
         else:
             self._table.setFunctionParameters(*self._widths, self._bias, *self._bounds)
+        self.force.updateParametersInContext(simulation.context)
 
     def initialize(self, simulation):
-        num_particles = simulation.system.getNumParticles() - len(simulation.variables)
-        for i, index in enumerate(self.bias_indices):
-            parameter = self.force.getCollectiveVariable(i)
-            parameter.setParticleParameters(0, num_particles+index, [])
+        self.particles = [simulation.get_num_particles() + index for index in self.bias_indices]
+        self.Lx = simulation.context.getParameter('Lx')
+        for i, particle in enumerate(self.particles):
+            self.force.getCollectiveVariable(i).setParticleParameters(0, particle, [])
+        # self.force.addBond(self.particles, [])
         simulation.system.addForce(self.force)
         simulation.context.reinitialize(preserveState=True)
 
     def report(self, simulation, state):
-        position = self.force.getCollectiveVariableValues(simulation.context)
+        coords = state.getPositions()
+        xcoords = [coords[index].x for index in self.particles]
+        centers = [v.evaluate(x, self.Lx) for v, x in zip(self.bias_variables, xcoords)]
         hills = []
         for i, v in enumerate(self.bias_variables):
-            x = (position[i] - v.min_value)/v._range
+            x = (centers[i] - v.min_value)/v._range
             dist = np.abs(np.linspace(0, 1, num=v.grid_size) - x)
             if v.periodic:
                 values = np.exp((np.cos(2*np.pi*dist)-1)/(4*np.pi**2*v._scaled_variance))  # von Mises
@@ -481,8 +488,7 @@ class GriddedMetadynamics(PeriodicTask):
             bias = self.height*hills[0]
         else:
             bias = self.height*functools.reduce(np.multiply.outer, reversed(hills))
-        self.add_bias(bias)
-        self.force.updateParametersInContext(simulation.context)
+        self.add_bias(simulation, bias)
 
 
 class ExtendedSpaceSimulation(app.Simulation):
