@@ -319,24 +319,6 @@ class DynamicalVariableTuple(tuple):
             parameters.update(v.parameters)
         return parameters
 
-    def get_hills_force(self):
-        exponents = []
-        definitions = []
-        for i, v in enumerate(self):
-            if v.periodic:  # von Mises
-                factor = 2*np.pi/v._range
-                exponents.append(f'{1.0/(factor*v.sigma)**2}*(cos({factor}*({v.id}-{v.id}_0))-1)')
-            else:  # Gauss
-                exponents.append(f'{0.5/v.sigma**2}*({v.id}-{v.id}_0)^2')
-            definitions.append(f'{v.id}={v.get_energy_function(i+1)}')
-        hill = ';'.join([f'height*exp({"+".join(exponents)})'] + definitions)
-        force = openmm.CustomCompoundBondForce(len(self), hill)
-        force.addGlobalParameter('Lx', 0)
-        force.addPerBondParameter('height')
-        for v in self:
-            force.addPerBondParameter(f'{v.id}_0')
-        return force
-
 
 class PeriodicTask(object):
     def __init__(self, frequency):
@@ -365,10 +347,26 @@ class GridlessMetadynamics(PeriodicTask):
         super().__init__(frequency)
         self.bias_indices = [i for i, v in enumerate(variables) if v.sigma is not None]
         self.bias_variables = DynamicalVariableTuple(variables[i] for i in self.bias_indices)
-        self.height = height
+        self.height = _standardize(height)
         self.buffer_size = buffer_size
-        self.force = self.bias_variables.get_hills_force()
-        self._num_hills = 0
+
+        num_bias_variables = len(self.bias_variables)
+        centers = [f'center{i+1}' for i in range(num_bias_variables)]
+        exponents = []
+        for v, center in zip(self.bias_variables, centers):
+            if v.periodic:  # von Mises
+                factor = 2*np.pi/v._range
+                exponents.append(f'{1.0/(factor*v.sigma)**2}*(cos({factor}*({v.id}-{center}))-1)')
+            else:  # Gauss
+                exponents.append(f'{0.5/v.sigma**2}*({v.id}-{center})^2')
+        expression = f'height*exp({"+".join(exponents)})'
+        for i, v in enumerate(self.bias_variables):
+            expression += f';{v.id}={v.get_energy_function(i+1)}'
+        self.force = openmm.CustomCompoundBondForce(num_bias_variables, expression)
+        self.force.addGlobalParameter('Lx', 0)
+        self.force.addPerBondParameter('height')
+        for center in centers:
+            self.force.addPerBondParameter(center)
 
     def _add_buffer(self, simulation):
         size = min(self.buffer_size, self._total_hills - self.force.getNumBonds())
@@ -379,6 +377,7 @@ class GridlessMetadynamics(PeriodicTask):
     def initialize(self, simulation):
         self.particles = [simulation.get_num_particles() + index for index in self.bias_indices]
         self.Lx = simulation.context.getParameter('Lx')
+        self._num_hills = 0
         simulation.system.addForce(self.force)
 
     def update(self, simulation, steps):
@@ -410,7 +409,7 @@ class GriddedMetadynamics(PeriodicTask):
         super().__init__(frequency)
         self.bias_indices = [i for i, v in enumerate(variables) if v.sigma is not None]
         self.bias_variables = [variables[i] for i in self.bias_indices]
-        self.height = height
+        self.height = _standardize(height)
         self.grid_expansion = grid_expansion
         self._widths = []
         self._bounds = []
@@ -472,19 +471,20 @@ class GriddedMetadynamics(PeriodicTask):
         hills = []
         for i, v in enumerate(self.bias_variables):
             x = (centers[i] - v.min_value)/v._range
-            dist = np.abs(np.linspace(0, 1, num=v.grid_size) - x)
+            dist = np.linspace(0, 1, num=v.grid_size) - x
             if v.periodic:
-                values = np.exp((np.cos(2*np.pi*dist)-1)/(4*np.pi**2*v._scaled_variance))  # von Mises
+                exponents = (np.cos(2*np.pi*dist)-1)/(4*np.pi*np.pi*v._scaled_variance)  # von Mises
             else:
-                values = np.exp(-0.5*dist*dist/v._scaled_variance)  # Gauss
+                exponents = -0.5*dist*dist/v._scaled_variance  # Gauss
+            values = self.height*np.exp(exponents)
             if self._expanded[i]:
                 n = self._extra_points[i] + 1
                 values = np.hstack((values[-n:-1], values, values[1:n]))
             hills.append(values)
         if len(self.bias_variables) == 1:
-            bias = self.height*hills[0]
+            bias = hills[0]
         else:
-            bias = self.height*functools.reduce(np.multiply.outer, reversed(hills))
+            bias = functools.reduce(np.multiply.outer, reversed(hills))
         self.add_bias(simulation, bias)
 
 
