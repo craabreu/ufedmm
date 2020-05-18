@@ -478,15 +478,15 @@ class Metadynamics(PeriodicTask):
                     exponents = (np.cos(2*np.pi*dist)-1)/(4*np.pi*np.pi*v._scaled_variance)
                 else:  # Gauss
                     exponents = -0.5*dist*dist/v._scaled_variance
-                values = self.height*np.exp(exponents)
+                hills.append(self.height*np.exp(exponents))
+            ndim = len(self.bias_variables)
+            bias = hills[0] if ndim == 1 else functools.reduce(np.multiply.outer, reversed(hills))
+            for axis, v in enumerate(self.bias_variables):
                 if v.periodic:
-                    n = self._extra_points[i] + 1
-                    values = np.hstack((values[-n:-1], values, values[1:n]))
-                hills.append(values)
-            if len(self.bias_variables) == 1:
-                bias = hills[0]
-            else:
-                bias = functools.reduce(np.multiply.outer, reversed(hills))
+                    n = self._extra_points[axis] + 1
+                    begin = tuple(slice(1, n) if i == axis else slice(None) for i in range(ndim))
+                    end = tuple(slice(-n, -1) if i == axis else slice(None) for i in range(ndim))
+                    bias = np.concatenate((bias[end], bias, bias[begin]), axis=axis)
             self.add_bias(simulation, bias)
         else:
             if self._num_hills == self.force.getNumBonds():
