@@ -324,7 +324,7 @@ class PeriodicTask(object):
     def __init__(self, frequency):
         self.frequency = frequency
 
-    def initialize(self, simulation):
+    def initialize(self, simulation, force_group):
         pass
 
     def update(self, simulation, steps):
@@ -443,7 +443,7 @@ class Metadynamics(PeriodicTask):
                 self._table.setFunctionParameters(*self._widths, self._bias, *self._bounds)
             self.force.updateParametersInContext(simulation.context)
 
-    def initialize(self, simulation):
+    def initialize(self, simulation, force_group):
         self.particles = [simulation.get_num_particles() + index for index in self.bias_indices]
         self.Lx = simulation.context.getParameter('Lx')
         if self._use_grid:
@@ -451,6 +451,7 @@ class Metadynamics(PeriodicTask):
                 self.force.getCollectiveVariable(i).setParticleParameters(0, particle, [])
         else:
             self._num_hills = 0
+        self.force.setForceGroup(force_group)
         simulation.system.addForce(self.force)
         simulation.context.reinitialize(preserveState=True)
 
@@ -561,7 +562,7 @@ class ExtendedSpaceSimulation(app.Simulation):
         super().__init__(modeller.topology, system, integrator, platform, platformProperties)
         self.context.setParameter('Lx', Vx.x)
 
-    def add_periodic_task(self, task):
+    def add_periodic_task(self, task, force_group=0):
         """
         Adds a task to be executed periodically along this simulation.
 
@@ -570,8 +571,13 @@ class ExtendedSpaceSimulation(app.Simulation):
             task : PeriodicTask
                 A :class:`~ufedmm.ufedmm.PeriodicTask` object.
 
+        Keyword Args
+        ------------
+            force_group : int, default=0
+                The force group to add new forces to.
+
         """
-        task.initialize(self)
+        task.initialize(self, force_group)
         self._periodic_tasks.append(task)
 
     def get_num_particles(self):
