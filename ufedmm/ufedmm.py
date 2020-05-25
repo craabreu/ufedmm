@@ -529,6 +529,9 @@ class ExtendedSpaceSimulation(app.Simulation):
                 raise Exception('UFED: system cannot contain CMMotionRemover nor any Barostat')
 
         Vx, Vy, Vz = topology.getPeriodicBoxVectors()
+        Vx = openmm.Vec3(_standardize(Vx[0]), _standardize(Vx[1]), _standardize(Vx[2]))
+        Vy = openmm.Vec3(_standardize(Vy[0]), _standardize(Vy[1]), _standardize(Vy[2]))
+        Vz = openmm.Vec3(_standardize(Vz[0]), _standardize(Vz[1]), _standardize(Vz[2]))
         if not (Vx.y == Vx.z == Vy.x == Vy.z == Vz.x == Vz.y == 0.0):
             raise ValueError('UFED: only orthorhombic boxes are allowed')
 
