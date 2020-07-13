@@ -32,7 +32,7 @@ class AlanineDipeptideModel(object):
         box_length : unit.Quantity, default=25*unit.angstroms
             The size of the simulation box. This is only effective if water is not `None`.
 
-    Properties
+    Attributes
     ----------
         system : openmm.System
             The system.

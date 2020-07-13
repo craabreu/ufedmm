@@ -9,3 +9,6 @@ Glossary
 
     NHC
         Nosé-Hoover Chain
+
+    SDE
+        Stochastic Differential Equation

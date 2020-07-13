@@ -25,8 +25,8 @@ if os.getenv('SPELLCHECK'):
 source_suffix = '.rst'
 master_doc = 'index'
 
-project = 'AFED for OpenMM'
-copyright = ("2019, Charlles Abreu. Project structure based on the "
+project = 'UFED for OpenMM'
+copyright = ("2020, Charlles Abreu. Project structure based on the "
              "Computational Molecular Science Python Cookiecutter version 1.0")
 author = 'Charlles Abreu'
 
