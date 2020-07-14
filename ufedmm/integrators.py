@@ -195,7 +195,7 @@ class DoubleTimeScaleRegulatedIntegrator(CustomIntegrator):
         boost += f'; c=sqrt({n}*kT/m)'
         boost += '; Q=kT/omega^2'
 
-        scaling = f'c*asinhz'
+        scaling = 'c*asinhz'
         scaling += '; asinhz=(2*step(z)-1)*log(select(step(za-1E8),2*za,za+sqrt(1+z*z))); za=abs(z)'
         scaling += f'; z=sinh(v/c)*exp(-v_eta*{0.5*fraction}*dt)'
         scaling += f'; c=sqrt({n}*kT/m)'
