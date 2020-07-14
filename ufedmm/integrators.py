@@ -181,6 +181,7 @@ class DoubleTimeScaleRegulatedIntegrator(CustomIntegrator):
             The regulation parameter.
 
     """
+
     def __init__(self, step_size, substeps, temperature, time_scale, friction_coefficient, n):
         super().__init__(temperature, step_size)
         self.addGlobalVariable('omega', 1/time_scale)

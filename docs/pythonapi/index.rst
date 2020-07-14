@@ -6,6 +6,7 @@ Python API
 
     ufedmm
     analysis
+    cvlib
     integrators
     io
     testmodels
