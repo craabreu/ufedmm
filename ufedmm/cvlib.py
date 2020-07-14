@@ -48,16 +48,23 @@ class CoordinationNumber(openmm.CustomNonbondedForce):
 
     .. math::
         N(\\mathbf{g}_1, \\mathbf{g}_2) = \\sum_{i \\in \\mathbf{g}_1} \\sum_{j \\in \\mathbf{g}_2}
-                                          F_n \\left(\\frac{d_{i,j}}{d_0}\\right)
+                     S\\left(\\frac{d_{i,j}}{d_0}-1\\right) F_n \\left(\\frac{d_{i,j}}{d_0}\\right)
 
     where :math:`d_0` is a threshold distance and :math:`d_{ij}` is the distance between atoms
     :math:`i \\in \\mathbf{g}_1` and :math:`j \\in \\mathbf{g}_2`.
     The function :math:`F_n(x)` is a continuous step function defined as
 
     .. math::
-        F_n(x) = \\frac{S(x-1)}{1+x^n}
+        F_n(x) = \\frac{1}{1+x^n}
 
-    where :math:`n` is a sharpness parameter and :math:`S(x)` is a switching function given by
+    where :math:`n` is a sharpness parameter. With :math:`n = 6` (default), this is the same
+    function defined in :cite:`Iannuzzi_2003`. It has the following shape for varying `n` values:
+
+    .. image::
+        figures/coordination_number.png
+        :align: center
+
+    Besides, :math:`S(x)` is a switching function given by
 
     .. math::
         S(x) = \\begin{cases}
@@ -66,16 +73,8 @@ class CoordinationNumber(openmm.CustomNonbondedForce):
                    0 & x > 1
                \\end{cases}
 
-    It has the following shape:
-
-    .. image::
-        figures/coordination_number.png
-        :align: center
-
-    With :math:`n = 6` (default), the amount summed up for each atom pair is the same as the one
-    defined in :cite:`Iannuzzi_2003`, except that here it decays more smoothly to zero throughout
-    the interval :math:`r_{i,j} \\in [d_0, 2 d_0]`, meaning that :math:`2 d_0` is an actual cutoff
-    distance.
+    Thus, the amount summed up for each atom pair decays smoothly to zero throughout the interval
+    :math:`r_{i,j} \\in [d_0, 2 d_0]`, meaning that :math:`2 d_0` is an actual cutoff distance.
 
     .. warning::
         If the two specified atom groups share atoms, each pair `i,j` among these atoms will be
@@ -115,20 +114,21 @@ class CoordinationNumber(openmm.CustomNonbondedForce):
         self.addInteractionGroup(group1, group2)
 
 
-class AngleHelixContent(openmm.CustomCompoundBondForce):
+class HelixAngleContent(openmm.CustomAngleForce):
     """
      Fractional alpha-helix content of a sequence of residues in a protein chain based on the
      angles between consecutive alpha-carbon atoms, defined as follows:
 
     .. math::
         \\alpha_\\theta(r_M,\\cdots,r_N) = \\frac{1}{N-M-1} \\sum_{i=M+1}^{N-1} F_n\\left(
-        \\frac{|\\theta(\\mathrm{C}_\\alpha^{i-1},\\mathrm{C}_\\alpha^i,\\mathrm{C}_\\alpha^{i+1})
-        - \\theta_\\mathrm{ref}|}{\\delta \\theta_0}\\right)
+        \\frac{\\theta(\\mathrm{C}_\\alpha^{i-1},\\mathrm{C}_\\alpha^i,\\mathrm{C}_\\alpha^{i+1})
+        - \\theta_\\mathrm{ref}}{\\delta \\theta_0}\\right)
 
     where :math:`\\theta(\\mathrm{C}_\\alpha^i,\\mathrm{C}_\\alpha^{i+1},\\mathrm{C}_\\alpha^{i+2})`
     is the angle between three consecutive alpha-carbon atoms.
 
-    The function :math:`F_n(x)` is defined as in :class:`CoordinationNumber`.
+    The function :math:`F_n(x)` is defined as in :class:`CoordinationNumber`, but only even integer
+    values are accepted for `n`.
 
     Parameters
     ----------
@@ -139,7 +139,7 @@ class AngleHelixContent(openmm.CustomCompoundBondForce):
 
     Keyword Args
     ------------
-        n : int or float, default=6
+        n : even integer, default=6
             Exponent that controls the sharpness of the sigmoidal function.
         theta_ref : unit.Quantity, default=88*unit.degrees
             The reference value of the alpha carbon angle in the alpha helix.
@@ -150,10 +150,21 @@ class AngleHelixContent(openmm.CustomCompoundBondForce):
 
     def __init__(self, topology, first, last,
                  n=6, theta_ref=88*unit.degrees, theta_tol=15*unit.degrees):
-        pass
+
+        residues = [r for (i, r) in enumerate(topology.residues()) if first <= i <= last]
+        if len(set(r.chain.index for r in residues)) > 1:
+            raise ValueError('AngleHelixContent requires all residues in a single chain')
+        if n % 2 != 0:
+            raise ValueError("AngleHelixContent requires n to be an even integer number")
+        super().__init__(f'1/({last-first-1}*(1+x^{n})); x=(theta - theta_ref)/theta_tol')
+        self.addGlobalParameter('theta_ref', theta_ref)
+        self.addGlobalParameter('theta_tol', theta_tol)
+        alpha_carbons = [atom.index for r in residues for atom in r.atoms() if atom.name == 'CA']
+        for i, j, k in zip(alpha_carbons[0:-3], alpha_carbons[1:-2], alpha_carbons[2:-1]):
+            self.addAngle(i, j, k)
 
 
-class HydrogenBondHelixContent(openmm.CustomCompoundBondForce):
+class HelixHydrogenBondContent(openmm.CustomCompoundBondForce):
     """
      Fractional alpha-helix content of a sequence of residues in a protein chain based on the
      hydrogen bonds between oxygen atoms and H-N groups located four residues apart, defined as
@@ -188,7 +199,7 @@ class HydrogenBondHelixContent(openmm.CustomCompoundBondForce):
         pass
 
 
-class RamachandranHelixContent(openmm.CustomCompoundBondForce):
+class HelixRamachandranContent(openmm.CustomCompoundBondForce):
     """
      Fractional alpha-helix content of a sequence of residues in a protein chain based on the
      Ramachandran dihedral angles, defined as follows:
