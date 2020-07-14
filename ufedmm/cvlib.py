@@ -13,6 +13,8 @@
 
 """
 
+import re
+
 from simtk import openmm, unit
 
 
@@ -150,7 +152,6 @@ class HelixAngleContent(openmm.CustomAngleForce):
 
     def __init__(self, topology, first, last,
                  n=6, theta_ref=88*unit.degrees, theta_tol=15*unit.degrees):
-
         residues = [r for (i, r) in enumerate(topology.residues()) if first <= i <= last]
         if len(set(r.chain.index for r in residues)) > 1:
             raise ValueError('AngleHelixContent requires all residues in a single chain')
@@ -161,10 +162,10 @@ class HelixAngleContent(openmm.CustomAngleForce):
         self.addGlobalParameter('theta_tol', theta_tol)
         alpha_carbons = [atom.index for r in residues for atom in r.atoms() if atom.name == 'CA']
         for i, j, k in zip(alpha_carbons[0:-3], alpha_carbons[1:-2], alpha_carbons[2:-1]):
-            self.addAngle(i, j, k)
+            self.addAngle(i, j, k, [])
 
 
-class HelixHydrogenBondContent(openmm.CustomCompoundBondForce):
+class HelixHydrogenBondContent(openmm.CustomBondForce):
     """
      Fractional alpha-helix content of a sequence of residues in a protein chain based on the
      hydrogen bonds between oxygen atoms and H-N groups located four residues apart, defined as
@@ -196,16 +197,26 @@ class HelixHydrogenBondContent(openmm.CustomCompoundBondForce):
     """
 
     def __init__(self, topology, first, last, n=6, d0=3.3*unit.angstroms):
-        pass
+        residues = [r for (i, r) in enumerate(topology.residues()) if first <= i <= last]
+        if len(set(r.chain.index for r in residues)) > 1:
+            raise ValueError('HelixHydrogenBondContent requires all residues in a single chain')
+        super().__init__(f'1/({last-first-3}*(1+x^{n})); x=r/d0')
+        self.addGlobalParameter('d0', d0)
+        reH = re.compile('\\b(H|1H|HN1|HT1|H1|HN)\\b')
+        reO = re.compile('\\b(O|OCT1|OC1|OT1|O1)\\b')
+        oxygens = [atom.index for r in residues for atom in r.atoms() if re.match(reO, atom.name)]
+        hydrogens = [atom.index for r in residues for atom in r.atoms() if re.match(reH, atom.name)]
+        for i, j in zip(oxygens, hydrogens):
+            self.addBond(i, j, [])
 
 
-class HelixRamachandranContent(openmm.CustomCompoundBondForce):
+class HelixRamachandranContent(openmm.CustomTorsionForce):
     """
      Fractional alpha-helix content of a sequence of residues in a protein chain based on the
      Ramachandran dihedral angles, defined as follows:
 
     .. math::
-        \\alpha_{\\phi,\\psi}(r_M,\\cdots,r_N) = \\frac{1}{2(N-M)} \\sum_{i=M+1}^N \\Bigg[
+        \\alpha_{\\phi,\\psi}(r_M,\\cdots,r_N) = \\frac{1}{2(N-M-1)} \\sum_{i=M+1}^{N-1} \\Bigg[
             F_n\\left(
                 \\frac{|\\phi(\\mathrm{C}^{i-1},\\mathrm{N}^i,\\mathrm{C}_\\alpha^i, \\mathrm{C}^i)
                 - \\phi_\\mathrm{ref}|}{\\delta \\phi_0}
@@ -220,7 +231,8 @@ class HelixRamachandranContent(openmm.CustomCompoundBondForce):
     :math:`\\psi(\\mathrm{N}^i,\\mathrm{C}_\\alpha^i, \\mathrm{C}^i, \\mathrm{N}^{i+1})` are the
     Ramachandran dihedral angles.
 
-    The function :math:`F_n(x)` is defined as in :class:`CoordinationNumber`.
+    The function :math:`F_n(x)` is defined as in :class:`CoordinationNumber`, but only even integer
+    values are accepted for `n`.
 
     Parameters
     ----------
@@ -247,4 +259,17 @@ class HelixRamachandranContent(openmm.CustomCompoundBondForce):
     def __init__(self, topology, first, last, n=6,
                  phi_ref=-60*unit.degrees, phi_tol=15*unit.degrees,
                  psi_ref=-60*unit.degrees, psi_tol=15*unit.degrees):
-        pass
+
+        residues = [r for (i, r) in enumerate(topology.residues()) if first <= i <= last]
+        if len(set(r.chain.index for r in residues)) > 1:
+            raise ValueError('HelixRamachandranContent requires all residues in a single chain')
+        super().__init__(f'1/({2*(last-first)}*(1+x^{n})); x=(theta - theta_ref)/theta_tol')
+        self.addPerTorsionParameter('theta_ref')
+        self.addPerTorsionParameter('theta_tol')
+        C = [atom.index for r in residues for atom in r.atoms() if atom.name == 'C']
+        N = [atom.index for r in residues for atom in r.atoms() if atom.name == 'N']
+        CA = [atom.index for r in residues for atom in r.atoms() if atom.name == 'CA']
+        for i, j, k, l in zip(C[0:-3], N[1:-2], CA[1:-2], C[1:-2]):
+            self.addTorsion(i, j, k, l, [phi_ref, phi_tol])
+        for i, j, k, l in zip(N[1:-2], CA[1:-2], C[1:-2], N[2:-1]):
+            self.addTorsion(i, j, k, l, [psi_ref, psi_tol])
