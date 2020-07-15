@@ -4,6 +4,8 @@ REMARK    MANUALLY EDITED: RENAMING OF ATOM 11 FROM HN TO H2
 REMARK                     RENAMING OF ALL OTHER HN ATOMS TO H
 REMARK                     RENAMING OF ATOM 174 FROM HO TO HXT
 REMARK                     REMOVAL OF CONECT SECTION
+REMARK                     INCLUSION OF SIMULATION BOX
+CRYST1   30.000   30.000   30.000  90.00  90.00  90.00 P 1           1
 ATOM      1  N   ALA A   1       0.000   0.000   0.000  1.00  0.00           N  
 ATOM      2  CA  ALA A   1       1.456   0.000   0.000  1.00  0.00           C  
 ATOM      3  C   ALA A   1       1.930   0.000   1.463  1.00  0.00           C  

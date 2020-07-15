@@ -174,7 +174,7 @@ class HelixHydrogenBondContent(openmm.CustomBondForce):
      follows:
 
     .. math::
-        \\alpha_\\mathrm{hb}(r_M,\\cdots,r_N) = \\frac{1}{M-N-3} \\sum_{i=M+2}^{N-2} F_n\\left(
+        \\alpha_\\mathrm{hb}(r_M,\\cdots,r_N) = \\frac{1}{M-N-2} \\sum_{i=M+2}^{N-2} F_n\\left(
         \\frac{d(\\mathrm{O}^{i-2}, \\mathrm{H}^{i+2})}{d_0}\\right)
 
     where :math:`d(\\mathrm{O}^{i-2}, \\mathrm{H}^{i+2})` is the distance between the oxygen and
@@ -202,7 +202,7 @@ class HelixHydrogenBondContent(openmm.CustomBondForce):
         residues = [r for r in topology.residues() if first <= r.index <= last]
         if len(set(r.chain.index for r in residues)) > 1:
             raise ValueError('HelixHydrogenBondContent requires all residues in a single chain')
-        super().__init__(f'1/({last-first-3}*(1+x^{n})); x=r/d0')
+        super().__init__(f'1/({last-first-2}*(1+x^{n})); x=r/d0')
         self.addGlobalParameter('d0', d0)
         reH = re.compile('\\b(H|1H|HN1|HT1|H1|HN)\\b')
         reO = re.compile('\\b(O|OCT1|OC1|OT1|O1)\\b')
