@@ -528,7 +528,10 @@ class ExtendedSpaceSimulation(app.Simulation):
             if cls == 'CMMotionRemover' or cls.endswith('Barostat'):
                 raise Exception('UFED: system cannot contain CMMotionRemover nor any Barostat')
 
-        Vx, Vy, Vz = topology.getPeriodicBoxVectors()
+        box_vectors = topology.getPeriodicBoxVectors()
+        if box_vectors is None:
+            raise Exception('UFED: system must be confined in a simulation box')
+        Vx, Vy, Vz = box_vectors
         Vx = openmm.Vec3(_standardize(Vx[0]), _standardize(Vx[1]), _standardize(Vx[2]))
         Vy = openmm.Vec3(_standardize(Vy[0]), _standardize(Vy[1]), _standardize(Vy[2]))
         Vz = openmm.Vec3(_standardize(Vz[0]), _standardize(Vz[1]), _standardize(Vz[2]))

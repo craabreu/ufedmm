@@ -11,7 +11,6 @@ parser.add_argument('--water', dest='water', help='the water model', choices=wat
 parser.add_argument('--ff', dest='ff', help='the pepdide force field', default='amber03')
 parser.add_argument('--seed', dest='seed', help='the RNG seed', default=None)
 parser.add_argument('--platform', dest='platform', help='the computation platform', default='Reference')
-parser.add_argument('--gridless', dest='gridless', help='enforce gridless?', choices=['yes', 'no'], default='no')
 args = parser.parse_args()
 
 seed = random.SystemRandom().randint(0, 2**31) if args.seed is None else args.seed
@@ -29,8 +28,7 @@ height = 2.0*unit.kilojoules_per_mole
 deposition_period = 200
 s_phi = ufedmm.DynamicalVariable('s_phi', -limit, limit, mass, Ts, model.phi, Ks, sigma=sigma)
 s_psi = ufedmm.DynamicalVariable('s_psi', -limit, limit, mass, Ts, model.psi, Ks, sigma=sigma)
-ufed = ufedmm.UnifiedFreeEnergyDynamics([s_phi, s_psi], temp, height, deposition_period,
-                                        enforce_gridless=args.gridless=='yes')
+ufed = ufedmm.UnifiedFreeEnergyDynamics([s_phi, s_psi], temp, height, deposition_period)
 ufedmm.serialize(ufed, 'ufed_object.yml')
 integrator = ufedmm.GeodesicBAOABIntegrator(temp, gamma, dt)
 integrator.setRandomNumberSeed(seed)
