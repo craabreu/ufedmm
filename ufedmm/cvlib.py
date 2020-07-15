@@ -154,7 +154,7 @@ class HelixAngleContent(openmm.CustomAngleForce):
 
     def __init__(self, topology, first, last,
                  n=6, theta_ref=88*unit.degrees, theta_tol=15*unit.degrees):
-        residues = [r for (i, r) in enumerate(topology.residues()) if first <= i <= last]
+        residues = [r for r in topology.residues() if first <= r.index <= last]
         if len(set(r.chain.index for r in residues)) > 1:
             raise ValueError('AngleHelixContent requires all residues in a single chain')
         if n % 2 != 0:
@@ -163,7 +163,7 @@ class HelixAngleContent(openmm.CustomAngleForce):
         self.addGlobalParameter('theta_ref', theta_ref)
         self.addGlobalParameter('theta_tol', theta_tol)
         alpha_carbons = [atom.index for r in residues for atom in r.atoms() if atom.name == 'CA']
-        for i, j, k in zip(alpha_carbons[0:-3], alpha_carbons[1:-2], alpha_carbons[2:-1]):
+        for i, j, k in zip(alpha_carbons[0:-2], alpha_carbons[1:-1], alpha_carbons[2:]):
             self.addAngle(i, j, k, [])
 
 
@@ -199,7 +199,7 @@ class HelixHydrogenBondContent(openmm.CustomBondForce):
     """
 
     def __init__(self, topology, first, last, n=6, d0=3.3*unit.angstroms):
-        residues = [r for (i, r) in enumerate(topology.residues()) if first <= i <= last]
+        residues = [r for r in topology.residues() if first <= r.index <= last]
         if len(set(r.chain.index for r in residues)) > 1:
             raise ValueError('HelixHydrogenBondContent requires all residues in a single chain')
         super().__init__(f'1/({last-first-3}*(1+x^{n})); x=r/d0')
@@ -208,7 +208,7 @@ class HelixHydrogenBondContent(openmm.CustomBondForce):
         reO = re.compile('\\b(O|OCT1|OC1|OT1|O1)\\b')
         oxygens = [atom.index for r in residues for atom in r.atoms() if re.match(reO, atom.name)]
         hydrogens = [atom.index for r in residues for atom in r.atoms() if re.match(reH, atom.name)]
-        for i, j in zip(oxygens, hydrogens):
+        for i, j in zip(oxygens[:-3], hydrogens[3:]):
             self.addBond(i, j, [])
 
 
@@ -238,6 +238,9 @@ class HelixRamachandranContent(openmm.CustomTorsionForce):
     The function :math:`F_n(x)` is defined as in :class:`CoordinationNumber`, but only even integer
     values are accepted for `n`.
 
+    Default values are the overall average alpha-helix dihedral angles and their dispersions
+    reported in :cite:`Hovmoller_2002`.
+
     Parameters
     ----------
         topology : openmm.app.Topology
@@ -249,22 +252,22 @@ class HelixRamachandranContent(openmm.CustomTorsionForce):
     ------------
         n : even integer, default=6
             Exponent that controls the sharpness of the sigmoidal function.
-        phi_ref : unit.Quantity, default=-60*unit.degrees
+        phi_ref : unit.Quantity, default=-63.8*unit.degrees
             The reference value of the Ramachandran :math:`\\phi` dihedral angle in the alpha helix.
-        phi_tol : unit.Quantity, default=15*unit.degrees
+        phi_tol : unit.Quantity, default=25*unit.degrees
             The tolerance for the deviation from the Ramachandran :math:`\\phi` dihedral angle.
-        psi_ref : unit.Quantity, default=-45*unit.degrees
+        psi_ref : unit.Quantity, default=-41.1*unit.degrees
             The reference value of the Ramachandran :math:`\\psi` dihedral angle in the alpha helix.
-        psi_tol : unit.Quantity, default=15*unit.degrees
+        psi_tol : unit.Quantity, default=25*unit.degrees
             The tolerance for the deviation from the Ramachandran :math:`\\psi` dihedral angle.
 
     """
 
     def __init__(self, topology, first, last, n=6,
-                 phi_ref=-60*unit.degrees, phi_tol=15*unit.degrees,
-                 psi_ref=-45*unit.degrees, psi_tol=15*unit.degrees):
+                 phi_ref=-63.8*unit.degrees, phi_tol=25*unit.degrees,
+                 psi_ref=-41.1*unit.degrees, psi_tol=25*unit.degrees):
 
-        residues = [r for (i, r) in enumerate(topology.residues()) if first <= i <= last]
+        residues = [r for r in topology.residues() if first <= r.index <= last]
         if len(set(r.chain.index for r in residues)) > 1:
             raise ValueError('HelixRamachandranContent requires all residues in a single chain')
         super().__init__(f'1/({2*(last-first)}*(1+x^{n})); x=(theta - theta_ref)/theta_tol')
@@ -273,7 +276,27 @@ class HelixRamachandranContent(openmm.CustomTorsionForce):
         C = [atom.index for r in residues for atom in r.atoms() if atom.name == 'C']
         N = [atom.index for r in residues for atom in r.atoms() if atom.name == 'N']
         CA = [atom.index for r in residues for atom in r.atoms() if atom.name == 'CA']
-        for i, j, k, l in zip(C[0:-3], N[1:-2], CA[1:-2], C[1:-2]):
+        for i, j, k, l in zip(C[:-1], N[1:], CA[1:], C[1:]):
             self.addTorsion(i, j, k, l, [phi_ref, phi_tol])
-        for i, j, k, l in zip(N[1:-2], CA[1:-2], C[1:-2], N[2:-1]):
+        for i, j, k, l in zip(N[:-1], CA[:-1], C[:-1], N[1:]):
             self.addTorsion(i, j, k, l, [psi_ref, psi_tol])
+
+    def atom_indices(self):
+        """
+        Returns
+        -------
+            phi_indices : list of tuples
+                The indices of the atoms in the :math:`\\phi` dihedrals.
+            psi_indices : list of tuples
+                The indices of the atoms in the :math:`\\psi` dihedrals.
+
+        """
+        N = self.getNumTorsions()//2
+        phi_indices = []
+        psi_indices = []
+        for index in range(N):
+            i, j, k, l, parameters = self.getTorsionParameters(index)
+            phi_indices.append((i, j, k, l))
+            i, j, k, l, parameters = self.getTorsionParameters(index + N)
+            psi_indices.append((i, j, k, l))
+        return phi_indices, psi_indices
