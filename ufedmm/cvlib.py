@@ -124,10 +124,12 @@ class HelixAngleContent(openmm.CustomAngleForce):
     .. math::
         \\alpha_\\theta(r_M,\\cdots,r_N) = \\frac{1}{N-M-1} \\sum_{i=M+1}^{N-1} F_n\\left(
         \\frac{\\theta(\\mathrm{C}_\\alpha^{i-1},\\mathrm{C}_\\alpha^i,\\mathrm{C}_\\alpha^{i+1})
-        - \\theta_\\mathrm{ref}}{\\delta \\theta_0}\\right)
+        - \\theta_\\mathrm{ref}}{\\theta_\\mathrm{tol}}\\right)
 
-    where :math:`\\theta(\\mathrm{C}_\\alpha^i,\\mathrm{C}_\\alpha^{i+1},\\mathrm{C}_\\alpha^{i+2})`
-    is the angle between three consecutive alpha-carbon atoms.
+    where :math:`\\theta(\\mathrm{C}_\\alpha^{i-1},\\mathrm{C}_\\alpha^i,\\mathrm{C}_\\alpha^{i+1})`
+    is the angle between three consecutive alpha-carbon atoms, :math:`\\theta_\\mathrm{ref}` is the
+    reference value of this angle, and :math:`\\theta_\\mathrm{tol}` is the tolerance threshold
+    around this reference.
 
     The function :math:`F_n(x)` is defined as in :class:`CoordinationNumber`, but only even integer
     values are accepted for `n`.
@@ -176,7 +178,7 @@ class HelixHydrogenBondContent(openmm.CustomBondForce):
         \\frac{d(\\mathrm{O}^{i-2}, \\mathrm{H}^{i+2})}{d_0}\\right)
 
     where :math:`d(\\mathrm{O}^{i-2}, \\mathrm{H}^{i+2})` is the distance between the oxygen and
-    hydrogen atoms.
+    hydrogen atoms and :math:`d_0` is the threshold distance for characterizing a hydrogen bond.
 
     The function :math:`F_n(x)` is defined as in :class:`CoordinationNumber`.
 
@@ -218,18 +220,20 @@ class HelixRamachandranContent(openmm.CustomTorsionForce):
     .. math::
         \\alpha_{\\phi,\\psi}(r_M,\\cdots,r_N) = \\frac{1}{2(N-M-1)} \\sum_{i=M+1}^{N-1} \\Bigg[
             F_n\\left(
-                \\frac{|\\phi(\\mathrm{C}^{i-1},\\mathrm{N}^i,\\mathrm{C}_\\alpha^i, \\mathrm{C}^i)
-                - \\phi_\\mathrm{ref}|}{\\delta \\phi_0}
+                \\frac{\\phi(\\mathrm{C}^{i-1},\\mathrm{N}^i,\\mathrm{C}_\\alpha^i, \\mathrm{C}^i)
+                - \\phi_\\mathrm{ref}}{\\phi_\\mathrm{tol}}
             \\right) + \\\\
             F_n\\left(
-                \\frac{|\\psi(\\mathrm{N}^i,\\mathrm{C}_\\alpha^i, \\mathrm{C}^i, \\mathrm{N}^{i+1})
-                - \\psi_\\mathrm{ref}|}{\\delta \\psi_0}
+                \\frac{\\psi(\\mathrm{N}^i,\\mathrm{C}_\\alpha^i, \\mathrm{C}^i, \\mathrm{N}^{i+1})
+                - \\psi_\\mathrm{ref}}{\\psi_\\mathrm{tol}}
             \\right)
         \\Bigg]
 
     where :math:`\\phi(\\mathrm{C}^{i-1},\\mathrm{N}^i,\\mathrm{C}_\\alpha^i, \\mathrm{C}^i)` and
     :math:`\\psi(\\mathrm{N}^i,\\mathrm{C}_\\alpha^i, \\mathrm{C}^i, \\mathrm{N}^{i+1})` are the
-    Ramachandran dihedral angles.
+    Ramachandran dihedral angles, :math:`\\phi_\\mathrm{ref}` and :math:`\\psi_\\mathrm{ref}` are
+    their reference values in an alpha helix, and :math:`\\phi_\\mathrm{tol}` and
+    :math:`\\psi_\\mathrm{tol}` are the threshold tolerances around these refenrences.
 
     The function :math:`F_n(x)` is defined as in :class:`CoordinationNumber`, but only even integer
     values are accepted for `n`.
@@ -243,22 +247,22 @@ class HelixRamachandranContent(openmm.CustomTorsionForce):
 
     Keyword Args
     ------------
-        n : int or float, default=6
+        n : even integer, default=6
             Exponent that controls the sharpness of the sigmoidal function.
-        phi_ref : unit.Quantity, default=*unit.degrees
+        phi_ref : unit.Quantity, default=-60*unit.degrees
             The reference value of the Ramachandran :math:`\\phi` dihedral angle in the alpha helix.
-        phi_tol : unit.Quantity, default=*unit.degrees
+        phi_tol : unit.Quantity, default=15*unit.degrees
             The tolerance for the deviation from the Ramachandran :math:`\\phi` dihedral angle.
-        psi_ref : unit.Quantity, default=*unit.degrees
+        psi_ref : unit.Quantity, default=-45*unit.degrees
             The reference value of the Ramachandran :math:`\\psi` dihedral angle in the alpha helix.
-        psi_tol : unit.Quantity, default=*unit.degrees
+        psi_tol : unit.Quantity, default=15*unit.degrees
             The tolerance for the deviation from the Ramachandran :math:`\\psi` dihedral angle.
 
     """
 
     def __init__(self, topology, first, last, n=6,
                  phi_ref=-60*unit.degrees, phi_tol=15*unit.degrees,
-                 psi_ref=-60*unit.degrees, psi_tol=15*unit.degrees):
+                 psi_ref=-45*unit.degrees, psi_tol=15*unit.degrees):
 
         residues = [r for (i, r) in enumerate(topology.residues()) if first <= i <= last]
         if len(set(r.chain.index for r in residues)) > 1:
