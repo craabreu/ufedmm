@@ -48,7 +48,7 @@ class Analyzer(object):
         self.mean_forces = [means.statistic[n+i].flatten()[index] for i in range(n)]
 
     def _compute_forces(self, ufed, dataframe):
-        collective_variables = [v.colvar.id for v in ufed.variables]
+        collective_variables = [colvar.id for v in ufed.variables for colvar in v.colvars]
         extended_variables = [v.id for v in ufed.variables]
         all_variables = collective_variables + extended_variables
 

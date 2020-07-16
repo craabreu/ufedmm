@@ -146,17 +146,19 @@ class DynamicalVariable(object):
     Parameters
     ----------
         id : str
-            A valid identifier string.
+            A valid identifier string for this dynamical variable.
         min_value : float or unit.Quantity
-            The minimum allowable value.
+            The minimum allowable value for this dynamical variable.
         max_value : float or unit.Quantity
-            The maximum allowable value.
+            The maximum allowable value for this dynamical variable.
         mass : float or unit.Quantity
-            The mass of this dynamical variable.
+            The mass assigned to this dynamical variable, whose unit of measurement must be
+            compatible with `unit.dalton*(unit.nanometers/X)**2`, where `X` is the unit of
+            measurement of the dynamical variable itself.
         temperature : float or unit.Quantity
-            The temperature of this .
-        colvar : :class:`~ufedmm.ufedmm.CollectiveVariable`
-            A colective variable.
+            The temperature of the heat bath attached to this variable.
+        colvars : :class:`~ufedmm.ufedmm.CollectiveVariable` or list thereof
+            Either a single colective variable or a list.
         potential : float or unit.Quantity or str
             Either the value of the force constant of a harmonic driving force or an algebraic
             expression giving the energy of the system as a function of this dynamical variable and
@@ -190,7 +192,7 @@ class DynamicalVariable(object):
         <s_psi in [-3.141592653589793, 3.141592653589793], periodic, m=50, T=1500>
 
     """
-    def __init__(self, id, min_value, max_value, mass, temperature, colvar, potential,
+    def __init__(self, id, min_value, max_value, mass, temperature, colvars, potential,
                  periodic=True, sigma=None, grid_size=None, **parameters):
         self.id = id
         self.min_value = _standardize(min_value)
@@ -198,23 +200,24 @@ class DynamicalVariable(object):
         self._range = self.max_value - self.min_value
         self.mass = _standardize(mass)
         self.temperature = _standardize(temperature)
-        self.colvar = colvar
+
+        self.colvars = colvars if isinstance(colvars, (list, tuple)) else [colvars]
 
         if isinstance(potential, str):
             self.potential = potential
             self.parameters = {key: _standardize(value) for key, value in parameters.items()}
         else:
-            id = self.colvar.id
+            cv_id = self.colvars[0].id
             if periodic:
-                self.potential = f'0.5*K_{id}*min(d{id},{self._range}-d{id})^2'
-                self.potential += f'; d{id}=abs({id}-{self.id})'
+                self.potential = f'0.5*K_{cv_id}*min(d{cv_id},{self._range}-d{cv_id})^2'
+                self.potential += f'; d{cv_id}=abs({cv_id}-{self.id})'
             else:
-                self.potential = f'0.5*K_{id}*({id}-{self.id})^2'
-            self.parameters = {f'K_{id}': _standardize(potential)}
+                self.potential = f'0.5*K_{cv_id}*({cv_id}-{self.id})^2'
+            self.parameters = {f'K_{cv_id}': _standardize(potential)}
 
         self.periodic = periodic
 
-        if sigma is None:
+        if sigma is None or sigma == 0.0:
             self.sigma = self.grid_size = None
         else:
             self.sigma = _standardize(sigma)
@@ -240,7 +243,7 @@ class DynamicalVariable(object):
             max_value=self.max_value,
             mass=self.mass,
             temperature=self.temperature,
-            colvar=self.colvar,
+            colvars=self.colvars,
             potential=self.potential,
             periodic=self.periodic,
             sigma=self.sigma,
@@ -543,7 +546,8 @@ class ExtendedSpaceSimulation(app.Simulation):
             self.driving_force.addGlobalParameter(name, value)
         for v in self.variables:
             self.driving_force.addCollectiveVariable(v.id, deepcopy(v.force))
-            self.driving_force.addCollectiveVariable(v.colvar.id, deepcopy(v.colvar.force))
+            for colvar in v.colvars:
+                self.driving_force.addCollectiveVariable(colvar.id, deepcopy(colvar.force))
 
         positions = [openmm.Vec3(0, 0, 0) for atom in topology.atoms()]
         modeller = app.Modeller(topology, positions)
@@ -629,9 +633,12 @@ class ExtendedSpaceSimulation(app.Simulation):
             Vx, Vy, _ = self.context.getState().getPeriodicBoxVectors()
             for i, v in enumerate(self.variables):
                 y = Vy.y*(i + 1)/(len(self.variables) + 2)
-                value = kwargs.get(v.id, v.colvar.evaluate(self.system, extended_positions))
+                # TEMPORARY (works for harmonic driving force, but not for a general one):
+                value = kwargs.get(v.id, v.colvars[0].evaluate(self.system, extended_positions))
                 extended_positions[n+i] = v._particle_position(value, Vx.x, y)
             self.context.setPositions(extended_positions)
+            # TODO: for each dynamical variable, compute all associated cv's and use sympy and
+            # scipy to minimize the potential with respect to the dynamical variable.
 
     def set_velocities_to_temperature(self, temperature, random_seed=None):
         """
