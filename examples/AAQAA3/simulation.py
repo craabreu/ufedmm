@@ -33,9 +33,9 @@ system = force_field.createSystem(
     removeCMMotion=False,
 )
 
-cv = ufedmm.CollectiveVariable('hc', cvlib.HelixHydrogenBondContent(pdb.topology, 1, 13))
+# cv = ufedmm.CollectiveVariable('hc', cvlib.HelixHydrogenBondContent(pdb.topology, 1, 13))
 # cv = ufedmm.CollectiveVariable('hc', cvlib.HelixAngleContent(pdb.topology, 0, 14))
-# cv = ufedmm.CollectiveVariable('hc', cvlib.HelixRamachandranContent(pdb.topology, 0, 14))
+cv = ufedmm.CollectiveVariable('hc', cvlib.HelixRamachandranContent(pdb.topology, 0, 14))
 
 s_hc = ufedmm.DynamicalVariable('s_hc', 0.0, 1.0, mass, Ts, cv, Ks, sigma=sigma, periodic=False)
 

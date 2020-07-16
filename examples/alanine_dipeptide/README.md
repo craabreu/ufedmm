@@ -1,8 +1,13 @@
-Examples
-========
-
 Alanine Dipeptide
------------------
+=================
+
+Ramanchandran Free-Energy Surfaces
+----------------------------------
+
+Dipeptide in vacuum        |  Dipeptide in solution
+:-------------------------:|:-------------------------:
+![](vacuum.png)            |  ![](solution.png)
+
 
 The default force field used for the dipeptide is `AMBER-03`.
 
@@ -25,4 +30,3 @@ python alanine_dipeptide.py --water tip3p
 ```
 
 Note: other available water models are `spce`, `tip4pew`, and `tip5p`.
-
