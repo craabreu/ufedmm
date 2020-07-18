@@ -11,7 +11,7 @@ import numpy as np
 
 from scipy import stats
 from simtk import openmm
-from ufedmm.ufedmm import _standardize
+from ufedmm.ufedmm import _standardized
 
 
 class Analyzer(object):
@@ -105,9 +105,9 @@ class Analyzer(object):
             variances = [(v._range/self._bins[i])**2 for i, v in enumerate(self._ufed.variables)]
         else:
             try:
-                variances = [_standardize(value)**2 for value in sigma]
+                variances = [_standardized(value)**2 for value in sigma]
             except TypeError:
-                variances = [_standardize(sigma)**2]*len(self._ufed.variables)
+                variances = [_standardized(sigma)**2]*len(self._ufed.variables)
 
         exponent = []
         derivative = []
