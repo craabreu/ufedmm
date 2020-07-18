@@ -16,7 +16,7 @@ import yaml
 from simtk.openmm import app
 
 
-class MultipleFiles:
+class Tee:
     """
     Allows the use of multiple outputs in an OpenMM Reporter.
 
@@ -30,7 +30,7 @@ class MultipleFiles:
         >>> import tempfile
         >>> from sys import stdout
         >>> file = tempfile.TemporaryFile(mode='w+t')
-        >>> print('test', file=ufedmm.MultipleFiles(stdout, file))
+        >>> print('test', file=ufedmm.Tee(stdout, file))
         test
 
     """
@@ -61,18 +61,18 @@ class StateDataReporter(app.StateDataReporter):
 
     All original functionalities of StateDataReporter_ are preserved.
 
-    Besides, it is possible to report the current values of all collective variables, driver
-    parameters, and other properties associated to a passed AFED integrator.
+    Besides, it is possible to report the current values of all collective variables associated to
+    a passed CustomCVForce_ object.
 
     Parameters
     ----------
-        file : str or stream or afed.MultipleFiles
+        file : str or stream or afed.temperature
             The file to write to, specified as a file name, file object, or
-            :class:`~afed.output.MultipleFiles` object.
+            :class:`~ufedmm.io.Tee` object.
         report_interval : int
             The interval (in time steps) at which to report state data.
         cv_force : openmm.CustomCVForce
-            The UFED object force.
+            A force whose collective variables will be reported.
 
     Example
     -------

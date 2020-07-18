@@ -52,7 +52,7 @@ simulation.minimizeEnergy(tolerance=0.1*unit.kilojoules_per_mole)
 positions = simulation.context.getState(getPositions=True).getPositions()
 app.PDBFile.writeFile(pdb.topology, positions, open('minimized.pdb', 'w'))
 simulation.context.setVelocitiesToTemperature(temp, seed)
-output = ufedmm.MultipleFiles(stdout, 'output.csv')
+output = ufedmm.Tee(stdout, 'output.csv')
 simulation.reporters += [
     ufedmm.StateDataReporter(output, 100, simulation.driving_force, potentialEnergy=True, step=True, speed=True),
     app.PDBReporter('output.pdb', 200)
