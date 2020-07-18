@@ -481,7 +481,7 @@ class Metadynamics(PeriodicTask):
             self._add_buffer(simulation)
 
     def report(self, simulation, state):
-        _, centers = state.getExtendedPositions()
+        _, centers = state.getExtendedSpacePositions()
         if self._use_grid:
             hills = []
             for i, v in enumerate(self.bias_variables):
@@ -529,7 +529,7 @@ class ExtendedSpaceState(openmm.State):
         positions, _ = self._split(super().getPositions(asNumpy), asNumpy)
         return positions
 
-    def getExtendedPositions(self, asNumpy=False):
+    def getExtendedSpacePositions(self, asNumpy=False):
         positions, xvars = self._split(super().getPositions())
         Vx, _, _ = self.getPeriodicBoxVectors()
         values = [v.evaluate(x, Vx.x) for (v, x) in zip(self._variables, xvars)]
@@ -663,8 +663,8 @@ class ExtendedSpaceSimulation(app.Simulation):
         for i in range(len(self.variables)):
             modeller.add(pdb.topology, pdb.positions)
         np = system.getNumParticles()
-        nb_types = (openmm.NonbondedForce, openmm.CustomNonbondedForce)
-        nb_forces = [f for f in system.getForces() if isinstance(f, nb_types)]
+        nb_forces = [f for f in system.getForces()
+                     if isinstance(f, (openmm.NonbondedForce, openmm.CustomNonbondedForce))]
         for i, v in enumerate(self.variables):
             system.addParticle(v._particle_mass(Vx.x))
             for nb_force in nb_forces:
@@ -707,66 +707,6 @@ class ExtendedSpaceSimulation(app.Simulation):
         """
         task.initialize(self, force_group)
         self._periodic_tasks.append(task)
-
-    def set_positions(self, positions, extended=False, **kwargs):
-        """
-        Sets the positions of all particles in the simulation's context.
-
-        Parameters
-        ----------
-            positions : list of openmm.Vec3
-                The positions of all particles, which may include the extra particles that represent
-                the extended-space variables (see below).
-
-        Keyword Args
-        ------------
-            extended : bool, default=False
-                Whether `positions` include those of the extra particles that represent the
-                extended-space variables.
-            **kwargs
-                Identifiers and values to be assigned to the dynamical variables. For those which
-                are not specified, the value will be made equal to that of the associated collective
-                variables. Note that these keyword arguments will have no effect whatsoever if
-                `extended=False`.
-
-        """
-        if extended:
-            self.context.setPositions(positions)
-        else:
-            extended_positions = deepcopy(positions)
-            n = len(extended_positions)
-            for i in range(len(self.variables)):
-                extended_positions.append(openmm.Vec3(0, 0, 0)*unit.nanometer)
-            Vx, Vy, _ = self.context.getState().getPeriodicBoxVectors()
-            for i, v in enumerate(self.variables):
-                y = Vy.y*(i + 1)/(len(self.variables) + 2)
-                # TEMPORARY (works for harmonic driving force, but not for a general one):
-                value = kwargs.get(v.id, v.colvars[0].evaluate(self.system, extended_positions))
-                extended_positions[n+i] = v._particle_position(value, Vx.x, y)
-            self.context.setPositions(extended_positions)
-            # TODO: for each dynamical variable, compute all associated cv's and use sympy and
-            # scipy to minimize the potential with respect to the dynamical variable.
-
-    def set_velocities_to_temperature(self, temperature, random_seed=None):
-        """
-        Sets the velocities of all particles in the system to random values chosen from a Boltzmann
-        distribution at a given temperature.
-
-        .. warning ::
-            The velocities of the extended-space variables are set to zero.
-
-        Parameters
-        ----------
-            temperature : float or unit.Quantity
-                The temperature of the system.
-
-        Keyword Args
-        ------------
-            random_seed : int, default=None
-                A seed for the random number generator.
-
-        """
-        self.context.setVelocitiesToTemperature(temperature, random_seed)
 
     def step(self, steps):
         """
@@ -933,7 +873,7 @@ class UnifiedFreeEnergyDynamics(object):
             try:
                 kT = integrator.getPerDofVariableByName('kT')
             except Exception:
-                raise ValueError('CustomIntegrator with per-dof variable `kT` required')
+                raise ValueError('CustomIntegrator with per-dof variable `kT` is required')
             kB = _standardized(unit.MOLAR_GAS_CONSTANT_R)
             nparticles = system.getNumParticles() - len(self.variables)
             for i in range(nparticles):
