@@ -6,7 +6,7 @@ Unit and regression test for the ufedmm package.
 import ufedmm
 # import pytest
 import sys
-import yaml
+import io
 
 from simtk import unit
 
@@ -32,7 +32,10 @@ def test_ufedmm_imported():
 
 def test_serialization():
     model, old = ufed_model()
-    new = yaml.load(yaml.dump(old), Loader=yaml.FullLoader)
+    pipe = io.StringIO()
+    ufedmm.serialize(old, pipe)
+    pipe.seek(0)
+    new = ufedmm.deserialize(pipe)
     assert new.__repr__() == old.__repr__()
     for var1, var2 in zip(old.variables, new.variables):
         assert var1.__repr__() == var2.__repr__()
