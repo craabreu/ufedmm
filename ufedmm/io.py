@@ -93,7 +93,7 @@ class StateDataReporter(app.StateDataReporter):
         >>> integrator = ufedmm.GeodesicBAOABIntegrator(dt, T, gamma)
         >>> platform = openmm.Platform.getPlatformByName('Reference')
         >>> simulation = ufed.simulation(model.topology, model.system, integrator, platform)
-        >>> simulation.set_positions(model.positions)
+        >>> simulation.context.setPositions(model.positions)
         >>> reporter = ufedmm.StateDataReporter(stdout, 1, simulation.driving_force, step=True)
         >>> reporter.report(simulation, simulation.context.getState())
         #"Step","s_phi","phi","s_psi","psi"

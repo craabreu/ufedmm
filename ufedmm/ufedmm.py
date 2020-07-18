@@ -308,7 +308,7 @@ class DynamicalVariable(object):
             return self.min_value + 2*self._range*min(pos, 1-pos)
 
 
-class DynamicalVariableTuple(tuple):
+class _DynamicalVariableTuple(tuple):
     def get_energy_function(self):
         energies = [v.potential.split(';', 1) for v in self]
         energy_terms = [energy[0] for energy in energies]
@@ -371,7 +371,7 @@ class Metadynamics(PeriodicTask):
                  enforce_gridless=False):
         super().__init__(frequency)
         self.bias_indices = [i for i, v in enumerate(variables) if v.sigma is not None]
-        self.bias_variables = DynamicalVariableTuple(variables[i] for i in self.bias_indices)
+        self.bias_variables = _DynamicalVariableTuple(variables[i] for i in self.bias_indices)
         self.height = _standardize(height)
         self.buffer_size = buffer_size
         self.grid_expansion = grid_expansion
@@ -469,7 +469,7 @@ class Metadynamics(PeriodicTask):
             self._add_buffer(simulation)
 
     def report(self, simulation, state):
-        coords = state.getPositions()
+        coords = state.getExtendedPositions()
         xcoords = [coords[index].x for index in self.particles]
         centers = [v.evaluate(x, self.Lx) for v, x in zip(self.bias_variables, xcoords)]
         if self._use_grid:
@@ -499,6 +499,98 @@ class Metadynamics(PeriodicTask):
             self.force.updateParametersInContext(simulation.context)
 
 
+class _ExtendedSpaceState(openmm.State):
+    """
+    An extension of OpenMM's State class.
+
+    """
+    def __init__(self, np, state):
+        self.__class__ = type(state.__class__.__name__, (self.__class__, state.__class__), {})
+        self.__dict__ = state.__dict__
+        self._np = np
+
+    def getPositions(self, asNumpy=False):
+        positions = super().getPositions(asNumpy)
+        return positions[:self._np, :] if asNumpy else positions[:self._np]
+
+    def getExtendedPositions(self):
+        return super().getPositions()
+
+    def getVelocities(self, asNumpy=False):
+        velocities = super().getVelocities(asNumpy)
+        return velocities[:self._np, :] if asNumpy else velocities[:self._np]
+
+    def getExtendedVelocities(self):
+        return super().getVelocities()
+
+
+class _ExtendedSpaceContext(openmm.Context):
+    """
+    An extension of OpenMM's Context class.
+
+    """
+    def __init__(self, np, variables, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._np = np
+        self._variables = variables
+
+    def getState(self, **kwargs):
+        return _ExtendedSpaceState(self._np, super().getState(**kwargs))
+
+    def setPositions(self, positions):
+        """
+        Sets the positions of all particles in this context.
+
+        Parameters
+        ----------
+            positions : list of openmm.Vec3
+                The positions of all particles.
+
+        """
+        extended_positions = deepcopy(positions)
+        for v in self._variables:
+            extended_positions.append(openmm.Vec3(0, 0, 0)*unit.nanometer)
+        Vx, Vy, _ = self.getState().getPeriodicBoxVectors()
+        for i, v in enumerate(self._variables):
+            y = Vy.y*(i + 1)/(len(self._variables) + 2)
+            # TEMPORARY (works for harmonic driving force, but not for a general one):
+            value = v.colvars[0].evaluate(self.getSystem(), extended_positions)
+            extended_positions[self._np+i] = v._particle_position(value, Vx.x, y)
+        super().setPositions(extended_positions)
+        # TODO: for each dynamical variable, compute all associated cv's and use sympy and
+        # scipy to minimize the potential with respect to the dynamical variable.
+
+    def setVelocitiesToTemperature(self, temperature, randomSeed=None):
+        """
+        Sets the velocities of all particles in the system to random values chosen from a Boltzmann
+        distribution at a given temperature.
+
+        .. warning ::
+            The velocities of the extended-space variables are set to zero.
+
+        Parameters
+        ----------
+            temperature : float or unit.Quantity
+                The temperature of the system.
+
+        Keyword Args
+        ------------
+            randomSeed : int, default=None
+                A seed for the random number generator.
+
+        """
+        system = self.getSystem()
+        masses = [system.getParticleMass(self._np + i) for i in range(len(self._variables))]
+        for i in range(len(self._variables)):
+            system.setParticleMass(self._np + i, 0)
+        super().setVelocitiesToTemperature(temperature, randomSeed)
+        for i, mass in enumerate(masses):
+            system.setParticleMass(self._np + i, mass)
+
+    def setExtendedPositions(self, positions):
+        super().setPositions(positions)
+
+
 class ExtendedSpaceSimulation(app.Simulation):
     """
     A simulation involving extended phase-space variables.
@@ -523,7 +615,7 @@ class ExtendedSpaceSimulation(app.Simulation):
 
     """
     def __init__(self, variables, topology, system, integrator, platform=None, platformProperties=None):
-        self.variables = DynamicalVariableTuple(variables)
+        self.variables = _DynamicalVariableTuple(variables)
         self._periodic_tasks = []
 
         for force in system.getForces():
@@ -534,6 +626,7 @@ class ExtendedSpaceSimulation(app.Simulation):
         box_vectors = topology.getPeriodicBoxVectors()
         if box_vectors is None:
             raise Exception('UFED: system must be confined in a simulation box')
+        self._usesPBC = True
         Vx, Vy, Vz = box_vectors
         Vx = openmm.Vec3(_standardize(Vx[0]), _standardize(Vx[1]), _standardize(Vx[2]))
         Vy = openmm.Vec3(_standardize(Vy[0]), _standardize(Vy[1]), _standardize(Vy[2]))
@@ -555,7 +648,7 @@ class ExtendedSpaceSimulation(app.Simulation):
         pdb = app.PDBFile(io.StringIO(extra_atom))
         for i in range(len(self.variables)):
             modeller.add(pdb.topology, pdb.positions)
-        self._num_particles = system.getNumParticles()
+        np = self._num_particles = system.getNumParticles()
         nb_types = (openmm.NonbondedForce, openmm.CustomNonbondedForce)
         nb_forces = [f for f in system.getForces() if isinstance(f, nb_types)]
         for i, v in enumerate(self.variables):
@@ -566,10 +659,21 @@ class ExtendedSpaceSimulation(app.Simulation):
                 else:
                     nb_force.addParticle([0.0]*nb_force.getNumPerParticleParameters())
             parameter = self.driving_force.getCollectiveVariable(2*i)
-            parameter.setParticleParameters(0, self._num_particles+i, [])
+            parameter.setParticleParameters(0, np+i, [])
         system.addForce(self.driving_force)
 
-        super().__init__(modeller.topology, system, integrator, platform, platformProperties)
+        self.topology = topology
+        self.system = system
+        self.integrator = integrator
+        self.currentStep = 0
+        self.reporters = []
+        if platform is None:
+            self.context = _ExtendedSpaceContext(np, variables, system, integrator)
+        elif platformProperties is None:
+            self.context = _ExtendedSpaceContext(np, variables, system, integrator, platform)
+        else:
+            self.context = _ExtendedSpaceContext(np, variables, system, integrator,
+                                                 platform, platformProperties)
         self.context.setParameter('Lx', Vx.x)
 
     def add_periodic_task(self, task, force_group=0):
@@ -659,17 +763,7 @@ class ExtendedSpaceSimulation(app.Simulation):
                 A seed for the random number generator.
 
         """
-        n = self.system.getNumParticles() - len(self.variables)
-        masses = []
-        for i, v in enumerate(self.variables):
-            masses.append(self.system.getParticleMass(n+i))
-            self.system.setParticleMass(n+i, 0)
-        if random_seed is None:
-            self.context.setVelocitiesToTemperature(temperature)
-        else:
-            self.context.setVelocitiesToTemperature(temperature, random_seed)
-        for i, mass in enumerate(masses):
-            self.system.setParticleMass(n+i, mass)
+        self.context.setVelocitiesToTemperature(temperature, random_seed)
 
     def step(self, steps):
         """
@@ -736,7 +830,7 @@ class UnifiedFreeEnergyDynamics(object):
     """
     def __init__(self, variables, temperature, height=None, frequency=None,
                  grid_expansion=20, enforce_gridless=False, buffer_size=100):
-        self.variables = DynamicalVariableTuple(variables)
+        self.variables = _DynamicalVariableTuple(variables)
         self.temperature = _standardize(temperature)
         self.height = _standardize(height)
         self.frequency = frequency
@@ -832,7 +926,7 @@ class UnifiedFreeEnergyDynamics(object):
             )
 
         if any(v.temperature != self.temperature for v in self.variables):
-            simulation.context.setPositions([openmm.Vec3(0, 0, 0)]*system.getNumParticles())
+            simulation.context.setExtendedPositions([openmm.Vec3(0, 0, 0)]*system.getNumParticles())
             try:
                 kT = integrator.getPerDofVariableByName('kT')
             except Exception:
