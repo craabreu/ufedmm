@@ -39,7 +39,7 @@ def _standardized(quantity):
 
 class CollectiveVariable(object):
     """
-    A function of particle coordinates evaluated through an OpenMM Force_ object.
+    A function of particle coordinates evaluated by means of an OpenMM Force_ object.
 
     Parameters
     ----------
@@ -113,6 +113,14 @@ class CollectiveVariable(object):
         Computes the effective mass of the collective variable for a given system and a given set of
         particle coordinates.
 
+        The effective mass of a collective variable :math:`q(\\mathbf{r})` is defined as
+        :cite:`Cuendet_2014`:
+
+        .. math::
+            m_\\mathrm{eff} = \\left(
+                \\sum_{j=1}^N \\frac{1}{m_j} \\left\\|\\frac{dq}{d\\mathbf{r}_j}\\right\\|^2
+            \\right)^{-1}
+
         Parameters
         ----------
             system : openmm.System
@@ -138,11 +146,8 @@ class CollectiveVariable(object):
         """
         context = self._create_context(system, positions)
         forces = _standardized(context.getState(getForces=True, groups={1}).getForces(asNumpy=True))
-        summation = 0.0
-        for i, f in enumerate(forces):
-            m = system.getParticleMass(i).value_in_unit(unit.dalton)
-            summation += f.dot(f)/m
-        return 1.0/summation
+        denom = sum(f.dot(f)/_standardized(system.getParticleMass(i)) for i, f in enumerate(forces))
+        return 1.0/denom
 
 
 class DynamicalVariable(object):
@@ -237,7 +242,7 @@ class DynamicalVariable(object):
             else:
                 self.grid_size = grid_size
 
-        self.force = openmm.CustomExternalForce(self.get_energy_function())
+        self.force = openmm.CustomExternalForce(self._get_energy_function())
         self.force.addGlobalParameter('Lx', 0.0)
         self.force.addParticle(0, [])
 
@@ -272,7 +277,7 @@ class DynamicalVariable(object):
         length = Lx if self.periodic else Lx/2
         return openmm.Vec3(length*(value - self.min_value)/self._range, y, 0)*unit.nanometer
 
-    def get_energy_function(self, index=''):
+    def _get_energy_function(self, index=''):
         """
         Returns the algebraic expression that transforms the x coordinate of a particle into this
         dynamical variables.
@@ -351,7 +356,7 @@ class PeriodicTask(object):
         pass
 
 
-class Metadynamics(PeriodicTask):
+class _Metadynamics(PeriodicTask):
     """
     Extended-space Metadynamics.
 
@@ -411,7 +416,7 @@ class Metadynamics(PeriodicTask):
             self._table = openmm.Continuous3DFunction(*self._widths, self._bias, *self._bounds)
         expression = f'bias({",".join(v.id for v in self.bias_variables)})'
         for i, v in enumerate(self.bias_variables):
-            expression += f';{v.id}={v.get_energy_function(i+1)}'
+            expression += f';{v.id}={v._get_energy_function(i+1)}'
         force = openmm.CustomCVForce(expression)
         for i in range(num_bias_variables):
             x = openmm.CustomExternalForce('x')
@@ -433,7 +438,7 @@ class Metadynamics(PeriodicTask):
                 exponents.append(f'({-0.5/v.sigma**2})*({v.id}-{center})^2')
         expression = f'height*exp({"+".join(exponents)})'
         for i, v in enumerate(self.bias_variables):
-            expression += f';{v.id}={v.get_energy_function(i+1)}'
+            expression += f';{v.id}={v._get_energy_function(i+1)}'
         force = openmm.CustomCompoundBondForce(num_bias_variables, expression)
         force.addPerBondParameter('height')
         for center in centers:
@@ -509,7 +514,7 @@ class Metadynamics(PeriodicTask):
             self.force.updateParametersInContext(simulation.context)
 
 
-class ExtendedSpaceState(openmm.State):
+class _ExtendedSpaceState(openmm.State):
     """
     An extension of OpenMM's State_ class.
 
@@ -536,7 +541,7 @@ class ExtendedSpaceState(openmm.State):
         return positions, np.array(values) if asNumpy else values
 
 
-class ExtendedSpaceContext(openmm.Context):
+class _ExtendedSpaceContext(openmm.Context):
     """
     An extension of OpenMM's Context_ class.
 
@@ -548,7 +553,7 @@ class ExtendedSpaceContext(openmm.Context):
         self.setParameter('Lx', Vx.x)
 
     def getState(self, **kwargs):
-        return ExtendedSpaceState(self.variables, super().getState(**kwargs))
+        return _ExtendedSpaceState(self.variables, super().getState(**kwargs))
 
     def setPositions(self, positions):
         """
@@ -568,7 +573,7 @@ class ExtendedSpaceContext(openmm.Context):
         minisystem = openmm.System()
         expression = self.variables.get_energy_function()
         for i, v in enumerate(self.variables):
-            expression += f'; {v.id}={v.get_energy_function(index=i+1)}'
+            expression += f'; {v.id}={v._get_energy_function(index=i+1)}'
         force = openmm.CustomCompoundBondForce(nvars, expression)
         force.addBond(range(nvars), [])
         for name, value in self.variables.get_parameters().items():
@@ -697,12 +702,12 @@ class ExtendedSpaceSimulation(app.Simulation):
         self.reporters = []
         self._usesPBC = True
         if platform is None:
-            self.context = ExtendedSpaceContext(variables, system, integrator)
+            self.context = _ExtendedSpaceContext(variables, system, integrator)
         elif platformProperties is None:
-            self.context = ExtendedSpaceContext(variables, system, integrator, platform)
+            self.context = _ExtendedSpaceContext(variables, system, integrator, platform)
         else:
-            self.context = ExtendedSpaceContext(variables, system, integrator,
-                                                platform, platformProperties)
+            self.context = _ExtendedSpaceContext(variables, system, integrator,
+                                                 platform, platformProperties)
 
     def add_periodic_task(self, task, force_group=0):
         """
@@ -872,7 +877,7 @@ class UnifiedFreeEnergyDynamics(object):
 
         if self.metadynamics:
             simulation.add_periodic_task(
-                Metadynamics(
+                _Metadynamics(
                     self.variables,
                     self.height,
                     self.frequency,

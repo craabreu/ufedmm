@@ -5,8 +5,8 @@ Python API
     :glob:
 
     ufedmm
-    analysis
     cvlib
+    analysis
     integrators
     io
     testmodels
