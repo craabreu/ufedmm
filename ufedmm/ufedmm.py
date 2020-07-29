@@ -39,7 +39,14 @@ def _standardized(quantity):
 
 class CollectiveVariable(object):
     """
-    A function of particle coordinates evaluated by means of an OpenMM Force_ object.
+    A function of particle coordinates, evaluated by means of an OpenMM Force_ object.
+
+    Quoting OpenMM's CustomCVForce_ manual entry:
+
+        "Each collective variable is defined by a Force object. The Force's potential energy is
+        computed, and that becomes the value of the variable. This provides enormous flexibility
+        in defining collective variables, especially by using custom forces. Anything that can
+        be computed as a potential function can also be used as a collective variable."
 
     Parameters
     ----------
@@ -152,8 +159,8 @@ class CollectiveVariable(object):
 
 class DynamicalVariable(object):
     """
-    An extended-space variable whose dynamics is coupled to that of one of more collective variables
-    of a system.
+    An extended phase-space variable, whose dynamics is coupled to that of one of more collective
+    variables of a system.
 
     The coupling occurs in the form of a potential energy term involving this dynamical variable
     and its associated collective variables.
@@ -558,7 +565,7 @@ class _ExtendedSpaceContext(openmm.Context):
     def setPositions(self, positions):
         """
         Sets the positions of all particles in this context and, from these positions, determines
-        and sets the values of all extended-space variables.
+        and sets suitable values of all extended-space variables.
 
         Parameters
         ----------
@@ -771,10 +778,6 @@ class UnifiedFreeEnergyDynamics(object):
         buffer_size : int, default=100
             The buffer size.
 
-    Properties:
-        metadynamics : PeriodicTask
-            If not `None`, it is the periodic task used to add hills to the bias potential.
-
     Example
     -------
         >>> import ufedmm
@@ -801,7 +804,7 @@ class UnifiedFreeEnergyDynamics(object):
         self.buffer_size = buffer_size
 
         dimensions = sum(v.sigma is not None for v in variables)
-        self.metadynamics = not (dimensions == 0 or height is None or frequency is None)
+        self._metadynamics = not (dimensions == 0 or height is None or frequency is None)
 
     def __repr__(self):
         properties = f'temperature={self.temperature}, height={self.height}, frequency={self.frequency}'
@@ -875,7 +878,7 @@ class UnifiedFreeEnergyDynamics(object):
             platformProperties,
         )
 
-        if self.metadynamics:
+        if self._metadynamics:
             simulation.add_periodic_task(
                 _Metadynamics(
                     self.variables,
