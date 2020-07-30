@@ -493,7 +493,9 @@ class _Metadynamics(PeriodicTask):
             self._add_buffer(simulation)
 
     def report(self, simulation, state):
-        _, centers = state.getExtendedSpacePositions()
+        _, xvars = state.getPositions(extended=True)
+        Lx = simulation.context.getParameter('Lx')
+        centers = [v.evaluate(x, Lx) for (v, x) in zip(simulation.variables, xvars)]
         if self._use_grid:
             hills = []
             for i, v in enumerate(self.bias_variables):
@@ -533,19 +535,17 @@ class _ExtendedSpaceState(openmm.State):
 
     def _split(self, vector, asNumpy=False):
         np = (vector.shape[0] if asNumpy else len(vector)) - len(self._variables)
-        particles_part = vector[:np, :] if asNumpy else vector[:np]
-        variables_part = vector[np:, 0] if asNumpy else [v.x for v in vector[np:]]
-        return particles_part, variables_part
+        particles_contribution = vector[:np, :] if asNumpy else vector[:np]
+        variables_contribution = vector[np:, 0] if asNumpy else [v.x for v in vector[np:]]
+        return particles_contribution, variables_contribution
 
-    def getPositions(self, asNumpy=False):
-        positions, _ = self._split(super().getPositions(asNumpy), asNumpy)
-        return positions
+    def getPositions(self, asNumpy=False, extended=False):
+        positions, xvars = self._split(super().getPositions(asNumpy), asNumpy)
+        return (positions, xvars) if extended else positions
 
-    def getExtendedSpacePositions(self, asNumpy=False):
-        positions, xvars = self._split(super().getPositions())
-        Vx, _, _ = self.getPeriodicBoxVectors()
-        values = [v.evaluate(x, Vx.x) for (v, x) in zip(self._variables, xvars)]
-        return positions, np.array(values) if asNumpy else values
+    def getVelocities(self, asNumpy=False, extended=False):
+        velocities, vxvars = self._split(super().getVelocities(asNumpy), asNumpy)
+        return (velocities, vxvars) if extended else velocities
 
 
 class _ExtendedSpaceContext(openmm.Context):
@@ -565,7 +565,7 @@ class _ExtendedSpaceContext(openmm.Context):
     def setPositions(self, positions):
         """
         Sets the positions of all particles in this context and, from these positions, determines
-        and sets suitable values of all extended-space variables.
+        and sets suitable values for all extended-space variables.
 
         Parameters
         ----------

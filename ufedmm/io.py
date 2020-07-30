@@ -12,6 +12,7 @@
 
 import sys
 import yaml
+import ufedmm
 
 from simtk.openmm import app
 
@@ -61,8 +62,9 @@ class StateDataReporter(app.StateDataReporter):
 
     All original functionalities of StateDataReporter_ are preserved.
 
-    Besides, it is possible to report the current values of all collective variables associated to
-    a passed CustomCVForce_ object.
+    Besides, if it is added to an :class:`~ufedmm.ufedmm.ExtendedSpaceSimulation` object, e.g. one
+    created through the :func:`~ufedmm.ufedmm.UnifiedFreeEnergyDynamics.simulation` method, then a
+    new set of keywords are available.
 
     Parameters
     ----------
@@ -71,8 +73,12 @@ class StateDataReporter(app.StateDataReporter):
             :class:`~ufedmm.io.Tee` object.
         report_interval : int
             The interval (in time steps) at which to report state data.
-        cv_force : openmm.CustomCVForce
-            A force whose collective variables will be reported.
+
+    Keyword Args
+    ------------
+        variables : bool, default=False
+            If this is `True`, then the current values of all collective variables and
+            dynamical variables related to the extended-space simulation will be reported.
 
     Example
     -------
@@ -94,15 +100,16 @@ class StateDataReporter(app.StateDataReporter):
         >>> platform = openmm.Platform.getPlatformByName('Reference')
         >>> simulation = ufed.simulation(model.topology, model.system, integrator, platform)
         >>> simulation.context.setPositions(model.positions)
-        >>> reporter = ufedmm.StateDataReporter(stdout, 1, simulation.driving_force, step=True)
-        >>> reporter.report(simulation, simulation.context.getState())
+        >>> simulation.context.setVelocitiesToTemperature(300*unit.kelvin, 1234)
+        >>> reporter = ufedmm.StateDataReporter(stdout, 1, step=True, variables=True)
+        >>> reporter.report(simulation, simulation.context.getState(getEnergy=True))
         #"Step","s_phi","phi","s_psi","psi"
         0,-3.141592653589793,3.141592653589793,-3.141592653589793,3.141592653589793
 
     """
-    def __init__(self, file, report_interval, cv_force, **kwargs):
+    def __init__(self, file, report_interval, **kwargs):
+        self._variables = kwargs.pop('variables', False)
         super().__init__(file, report_interval, **kwargs)
-        self._cv_force = cv_force
         self._backSteps = -sum([self._speed, self._elapsedTime, self._remainingTime])
 
     def _add_item(self, lst, item):
@@ -111,17 +118,25 @@ class StateDataReporter(app.StateDataReporter):
         else:
             lst.insert(self._backSteps, item)
 
+    def _initializeConstants(self, simulation):
+        super()._initializeConstants(simulation)
+        self._cv_names = []
+        if isinstance(simulation, ufedmm.ExtendedSpaceSimulation):
+            force = simulation.driving_force
+            for index in range(force.getNumCollectiveVariables()):
+                self._cv_names.append(force.getCollectiveVariableName(index))
+
     def _constructHeaders(self):
         headers = super()._constructHeaders()
-        for index in range(self._cv_force.getNumCollectiveVariables()):
-            cv = self._cv_force.getCollectiveVariableName(index)
+        for cv in self._cv_names:
             self._add_item(headers, cv)
         return headers
 
     def _constructReportValues(self, simulation, state):
         values = super()._constructReportValues(simulation, state)
-        for cv in self._cv_force.getCollectiveVariableValues(simulation.context):
-            self._add_item(values, cv)
+        if self._cv_names:
+            for cv in simulation.driving_force.getCollectiveVariableValues(simulation.context):
+                self._add_item(values, cv)
         return values
 
 

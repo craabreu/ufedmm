@@ -6,7 +6,10 @@ Unified Free Energy Dynamics with OpenMM
 
 
 from ._version import get_versions
-from .ufedmm import CollectiveVariable, DynamicalVariable, UnifiedFreeEnergyDynamics  # noqa: F401, F403
+from .ufedmm import CollectiveVariable  # noqa: F401, F403
+from .ufedmm import DynamicalVariable  # noqa: F401, F403
+from .ufedmm import ExtendedSpaceSimulation  # noqa: F401, F403
+from .ufedmm import UnifiedFreeEnergyDynamics  # noqa: F401, F403
 from .integrators import *  # noqa: F401, F403
 from .io import *  # noqa: F401, F403
 from .analysis import *  # noqa: F401, F403
