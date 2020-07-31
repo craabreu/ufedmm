@@ -604,11 +604,12 @@ class _ExtendedSpaceContext(openmm.Context):
 
     def setVelocitiesToTemperature(self, temperature, randomSeed=None):
         """
-        Sets the velocities of all particles in the system to random values chosen from a Boltzmann
-        distribution at a given temperature.
+        Sets the velocities of all particles in the system to random values chosen from a
+        Maxwell-Boltzmann distribution at a given temperature.
 
         .. warning ::
-            The velocities of the extended-space variables are set to zero.
+            The velocities of the extended-space variables are set to values consistent with the
+            distribution at its own specified temperature.
 
         Parameters
         ----------
@@ -622,13 +623,14 @@ class _ExtendedSpaceContext(openmm.Context):
 
         """
         system = self.getSystem()
-        np = system.getNumParticles() - len(self.variables)
-        masses = [system.getParticleMass(np + i) for i in range(len(self.variables))]
-        for i in range(len(self.variables)):
-            system.setParticleMass(np + i, 0)
-        super().setVelocitiesToTemperature(temperature, randomSeed)
-        for i, mass in enumerate(masses):
-            system.setParticleMass(np + i, mass)
+        Ntotal = system.getNumParticles()
+        Natoms = Ntotal - len(self.variables)
+        m = np.array([system.getParticleMass(i)/unit.dalton for i in range(Ntotal)])
+        T = np.array([_standardized(temperature)]*Natoms + [v.temperature for v in self.variables])
+        sigma = np.sqrt(_standardized(unit.MOLAR_GAS_CONSTANT_R)*T/m)
+        random_state = np.random.RandomState(randomSeed)
+        velocities = sigma[:, np.newaxis]*random_state.normal(0, 1, (Ntotal, 3))
+        super().setVelocities(velocities)
 
     def setExtendedPositions(self, positions):
         super().setPositions(positions)
