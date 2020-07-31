@@ -218,9 +218,13 @@ class DoubleTimeScaleRegulatedIntegrator(CustomIntegrator):
         self.addComputePerDof('v', 'v + 0.5*dt*f1/m')
 
 
-class GeodesicBAOABIntegrator(CustomIntegrator):
+class GeodesicLangevinIntegrator(CustomIntegrator):
     """
-    The Geodesic BAOAB integrator :cite:`Leimkuhler_2016`.
+    A geodesic Langevin integrator :cite:`Leimkuhler_2016`, which can be integrated by using
+    either the LF-Middle or the VV-Middle scheme :cite:`Zhang_2019`.
+
+    .. note:
+        The VV-Middle scheme is also known as the BAOAB :cite:`Leimkuhler_2016` or VRORV method.
 
     Parameters
     ----------
@@ -233,6 +237,8 @@ class GeodesicBAOABIntegrator(CustomIntegrator):
 
     Keyword Args
     ------------
+        scheme : str, default='LF-Middle'
+            The integration scheme. Valid options are 'LF-Middle' (default) and 'VV-Middle'.
         rattles : int, default=1
             The number of RATTLE computations. If `rattles=0`, then no constraints are considered.
 
@@ -242,7 +248,7 @@ class GeodesicBAOABIntegrator(CustomIntegrator):
         >>> dt = 2*unit.femtoseconds
         >>> temp = 300*unit.kelvin
         >>> gamma = 10/unit.picoseconds
-        >>> ufedmm.GeodesicBAOABIntegrator(temp, gamma, dt, rattles=1)
+        >>> ufedmm.GeodesicLangevinIntegrator(temp, gamma, dt, rattles=1, scheme='VV-Middle')
         Per-dof variables:
           kT, x0
         Global variables:
@@ -268,7 +274,9 @@ class GeodesicBAOABIntegrator(CustomIntegrator):
 
     """
 
-    def __init__(self, temperature, friction_coefficient, step_size, rattles=1):
+    def __init__(self, temperature, friction_coefficient, step_size, rattles=1, scheme='LF-Middle'):
+        if scheme not in ['LF-Middle', 'VV-Middle']:
+            raise Exception(f'Invalid value {scheme} for keyword scheme')
         super().__init__(temperature, step_size)
         self._rattles = rattles
         self.addGlobalVariable('friction', friction_coefficient)
@@ -276,11 +284,11 @@ class GeodesicBAOABIntegrator(CustomIntegrator):
             self.addGlobalVariable('irattle', 0)
         self.addPerDofVariable('x0', 0)
         self.addUpdateContextState()
-        self._B()
+        self._B(0.5 if scheme == 'VV-Middle' else 1)
         self._A()
         self._O()
         self._A()
-        self._B()
+        self._B(0.5 if scheme == 'VV-Middle' else 0)
 
     def _A(self):
         if self._rattles > 1:
@@ -296,10 +304,11 @@ class GeodesicBAOABIntegrator(CustomIntegrator):
             self.addComputeGlobal('irattle', 'irattle + 1')
             self.endBlock()
 
-    def _B(self):
-        self.addComputePerDof('v', 'v + 0.5*dt*f/m')
-        if self._rattles > 0:
-            self.addConstrainVelocities()
+    def _B(self, fraction):
+        if fraction > 0:
+            self.addComputePerDof('v', f'v + {fraction}*dt*f/m')
+            if self._rattles > 0:
+                self.addConstrainVelocities()
 
     def _O(self):
         expression = 'z*v + sqrt((1 - z*z)*kT/m)*gaussian; z = exp(-friction*dt)'
