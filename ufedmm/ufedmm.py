@@ -544,8 +544,10 @@ class _ExtendedSpaceState(openmm.State):
         return (positions, xvars) if extended else positions
 
     def getVelocities(self, asNumpy=False, extended=False):
-        velocities, vxvars = self._split(super().getVelocities(asNumpy), asNumpy)
-        return (velocities, vxvars) if extended else velocities
+        velocities = super().getVelocities(asNumpy)
+        if not extended:
+            velocities, _ = self._split(velocities, asNumpy)
+        return velocities
 
 
 class _ExtendedSpaceContext(openmm.Context):
@@ -833,7 +835,7 @@ class UnifiedFreeEnergyDynamics(object):
             temperature, then the passed integrator must be a CustomIntegrator object containing
             a per-dof variable called `kT`. The content of this variable is the Boltzmann constant
             times the temperature associated to each degree of freedom. One can employ, for
-            instance, a :class:`~ufedmm.integrators.GeodesicBAOABIntegrator`.
+            instance, a :class:`~ufedmm.integrators.GeodesicLangevinIntegrator`.
 
         Parameters
         ----------
@@ -865,7 +867,7 @@ class UnifiedFreeEnergyDynamics(object):
             >>> s_phi = ufedmm.DynamicalVariable('s_phi', -limit, limit, mass, Ts, model.phi, Ks)
             >>> s_psi = ufedmm.DynamicalVariable('s_psi', -limit, limit, mass, Ts, model.psi, Ks)
             >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([s_phi, s_psi], 300*unit.kelvin)
-            >>> integrator = ufedmm.GeodesicBAOABIntegrator(300*unit.kelvin, gamma, dt)
+            >>> integrator = ufedmm.GeodesicLangevinIntegrator(300*unit.kelvin, gamma, dt)
             >>> simulation = ufed.simulation(model.topology, model.system, integrator)
 
         """

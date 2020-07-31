@@ -43,7 +43,7 @@ s_hc = ufedmm.DynamicalVariable('s_hc', 0.0, 1.0, mass, Ts, [hc_hb, hc_a, hc_d],
 
 ufed = ufedmm.UnifiedFreeEnergyDynamics([s_hc], temp, height, deposition_period)
 ufedmm.serialize(ufed, 'ufed_object.yml')
-integrator = ufedmm.GeodesicBAOABIntegrator(temp, gamma, dt)
+integrator = ufedmm.GeodesicLangevinIntegrator(temp, gamma, dt)
 integrator.setRandomNumberSeed(seed)
 platform = openmm.Platform.getPlatformByName(args.platform)
 simulation = ufed.simulation(pdb.topology, system, integrator, platform)
@@ -54,7 +54,7 @@ app.PDBFile.writeFile(pdb.topology, positions, open('minimized.pdb', 'w'))
 simulation.context.setVelocitiesToTemperature(temp, seed)
 output = ufedmm.Tee(stdout, 'output.csv')
 simulation.reporters += [
-    ufedmm.StateDataReporter(output, 100, simulation.driving_force, potentialEnergy=True, step=True, speed=True),
+    ufedmm.StateDataReporter(output, 100, step=True, multipleTemperatures=True, variables=True, speed=True),
     app.PDBReporter('output.pdb', 200)
 ]
 simulation.step(nsteps)
