@@ -95,7 +95,12 @@ class CustomIntegrator(openmm.CustomIntegrator):
 class AbstractMiddleIntegrator(CustomIntegrator):
     """
     An abstract class for middle-type integrators.
-    It is meant for inheritance only and does not actually include thermostatting.
+
+    .. warning::
+        This class is meant for inheritance only and does not actually include thermostatting.
+        Concrete subclasses are available, such as :class:`MiddleMassiveNHCIntegrator` and
+        :class:`GeodesicLangevinIntegrator`, for instance.
+
     Child classes will differ by the thermostat algorithm, which must be implemented
     by overriding the `_bath` method (see the example below).
     Temperature is treated as a per-dof parameter so as to allow adiabatic simulations.
@@ -106,25 +111,25 @@ class AbstractMiddleIntegrator(CustomIntegrator):
 
     .. math::
         & \\dot{r}_i = v_i \\\\
-        & \\dot{v}_i = \\frac{\\sum_{k=1}^m F_i^{[k]}}{m_i} + \\mathrm{bath}(T_i, v_i)
+        & \\dot{v}_i = \\frac{\\sum_{k=1}^m F_i^{[k]}}{m_i}
                      + \\sum_{k=1}^{n_c} \\lambda_k \\nabla_{r_i} \\sigma_k
-
-    where :math:`\\sigma_k(\\mathbf{r}) = 0` for every constraint :math:`k`.
+                     + \\mathrm{bath}(T_i, v_i) \\\\
+        & \\sigma_k(\\mathbf{r}) = 0
 
     An approximate solution is obtained by applying the Trotter-Suzuki splitting formula.
     In the particular case of two time scales, the default splitting scheme goes as follows:
 
     .. math::
         e^{\\Delta t\\mathcal{L}} =
-        e^{\\frac{\\Delta t}{2}\\mathcal{L}^{[2]}_p}
-        \\left[
-        e^{\\frac{\\Delta t}{2 n_1}\\mathcal{L}^{[1]}_p}
-        e^{\\frac{\\Delta t}{2 n_1}\\mathcal{L}_r}
-        e^{\\frac{\\Delta t}{n_1}\\mathcal{L}_\\mathrm{bath}}
-        e^{\\frac{\\Delta t}{2 n_1}\\mathcal{L}_r}
-        e^{\\frac{\\Delta t}{2 n_1}\\mathcal{L}^{[1]}_p}
-        \\right]^{n_1}
-        e^{\\frac{\\Delta t}{2}\\mathcal{L}^{[2]}_p}
+            e^{\\frac{\\Delta t}{2}\\mathcal{L}^{[1]}_p}
+            \\left[
+                e^{\\frac{\\Delta t}{2 n_0}\\mathcal{L}^{[0]}_p}
+                e^{\\frac{\\Delta t}{2 n_0}\\mathcal{L}_r}
+                e^{\\frac{\\Delta t}{n_0}\\mathcal{L}_\\mathrm{bath}}
+                e^{\\frac{\\Delta t}{2 n_0}\\mathcal{L}_r}
+                e^{\\frac{\\Delta t}{2 n_0}\\mathcal{L}^{[0]}_p}
+            \\right]^{n_0}
+            e^{\\frac{\\Delta t}{2}\\mathcal{L}^{[1]}_p}
 
     Each exponential operator is the solution of a particular subsystem of equations.
     If `\\mathrm{bath}(T_i, v_i) = 0`, the scheme above is time-reversible, measure-preserving,
@@ -133,13 +138,13 @@ class AbstractMiddleIntegrator(CustomIntegrator):
 
     .. math::
         e^{\\Delta t\\mathcal{L}} =
-        \\left[
-        e^{\\frac{\\Delta t}{2 n_1}\\mathcal{L}_r}
-        e^{\\frac{\\Delta t}{n_1}\\mathcal{L}_\\mathrm{bath}}
-        e^{\\frac{\\Delta t}{2 n_1}\\mathcal{L}_r}
-        e^{\\frac{\\Delta t}{n_1}\\mathcal{L}^{[1]}_p}
-        \\right]^{n_1}
-        e^{\\Delta t\\mathcal{L}^{[2]}_p}
+            \\left[
+                e^{\\frac{\\Delta t}{2 n_0}\\mathcal{L}_r}
+                e^{\\frac{\\Delta t}{n_0}\\mathcal{L}_\\mathrm{bath}}
+                e^{\\frac{\\Delta t}{2 n_0}\\mathcal{L}_r}
+                e^{\\frac{\\Delta t}{n_0}\\mathcal{L}^{[0]}_p}
+            \\right]^{n_0}
+            e^{\\Delta t\\mathcal{L}^{[1]}_p}
 
     This is referred to as the ``LF-Middle`` scheme :cite:`Zhang_2019`, where LF stands for
     Leap-Frog. In contrast to the previous scheme, it is not time-reversible. However, in single
@@ -153,17 +158,17 @@ class AbstractMiddleIntegrator(CustomIntegrator):
             The temperature of the heat bath.
         step_size : float or unit.Quantity
             The outer step size with which to integrate the equations of motion.
-
-    Keyword Args
-    ------------
-        num_rattles : int, default=0
+        num_rattles : int
             The number of RATTLE computations for geodesic integration :cite:`Leimkuhler_2016`.
-            If ``num_rattles=0`` (default), then no constraints are considered at all.
-        scheme : str, default='VV-Middle'
+            If ``num_rattles=0``, then no constraints are considered at all.
+        scheme : str
             Which splitting scheme will be used. Valid options are 'VV-Middle' and 'LF-Middle'.
-        loops : list(int), default=[1]
-            A list of `m` integers, where `loops[k]` determines how many iterations of force group
-            `k` are internally executed for every iteration of force group `k+1`.
+        respa_loops : list(int)
+            A list of `m` integers, where `respa_loops[k]` determines how many substeps with
+            force group `k` are internally executed for every step with force group `k+1`.
+        bath_loops : int
+            The number of iterations of the bath operator per each step at time scale `0`. This
+            is useful when the bath operator is not exact, but derived from a splitting solution.
 
     Example
     -------
@@ -171,7 +176,7 @@ class AbstractMiddleIntegrator(CustomIntegrator):
         >>> from simtk import unit
         >>> class MiddleNoseHooverIntegrator(integrators.AbstractMiddleIntegrator):
         ...     def __init__(self, ndof, tau, temperature, step_size, num_rattles=1):
-        ...         super().__init__(temperature, step_size, num_rattles)
+        ...         super().__init__(temperature, step_size, num_rattles, 'VV-Middle', [1], 1)
         ...         gkT = ndof*unit.MOLAR_GAS_CONSTANT_R*temperature
         ...         self.addGlobalVariable('gkT', gkT)
         ...         self.addGlobalVariable('Q', gkT*tau**2)
@@ -209,19 +214,21 @@ class AbstractMiddleIntegrator(CustomIntegrator):
 
     """
 
-    def __init__(self, temperature, step_size, num_rattles=0, scheme='VV-Middle', loops=[1]):
+    def __init__(self, temperature, step_size, num_rattles, scheme, respa_loops, bath_loops):
         if scheme not in ['LF-Middle', 'VV-Middle']:
             raise Exception(f'Invalid value {scheme} for keyword scheme')
         super().__init__(temperature, step_size)
         self._num_rattles = num_rattles
         self._scheme = scheme
-        self._respa_loops = loops
+        self._respa_loops = respa_loops
+        self._bath_loops = bath_loops
         num_rattles > 0 and self.addPerDofVariable('x0', 0)
         num_rattles > 1 and self.addGlobalVariable('irattle', 0)
-        for scale, n in enumerate(loops):
+        for scale, n in enumerate(respa_loops):
             n > 1 and self.addGlobalVariable(f'irespa{scale}', 0)
+        bath_loops > 1 and self.addGlobalVariable('ibath', 0)
         self.addUpdateContextState()
-        self._integrate_respa(1, len(loops)-1)
+        self._integrate_respa(1, len(respa_loops)-1)
 
     def _integrate_respa(self, fraction, scale):
         if scale >= 0:
@@ -237,8 +244,14 @@ class AbstractMiddleIntegrator(CustomIntegrator):
                 self.endBlock()
         else:
             self._translation(0.5*fraction)
-            self._bath(fraction)
+            if self._bath_loops > 1:
+                self.addComputeGlobal('ibath', '0')
+                self.beginWhileBlock(f'ibath < {self._bath_loops}')
+            self._bath(fraction/self._bath_loops)
             self._num_rattles > 0 and self.addConstrainVelocities()
+            if self._bath_loops > 1:
+                self.addComputeGlobal('ibath', 'ibath + 1')
+                self.endBlock()
             self._translation(0.5*fraction)
 
     def _translation(self, fraction):
@@ -266,7 +279,7 @@ class AbstractMiddleIntegrator(CustomIntegrator):
         return
 
 
-class DoubleTimeScaleRegulatedIntegrator(CustomIntegrator):
+class _DoubleTimeScaleRegulatedIntegrator(CustomIntegrator):
     """
     A regulated version of the massive Nose-Hoover-Langevin :cite:`Samoletov_2007,Leimkuhler_2009`
     method. Regulation means that velocities are modified so as to remain below a
@@ -415,10 +428,12 @@ class GeodesicLangevinIntegrator(AbstractMiddleIntegrator):
 
     Keyword Args
     ------------
-        scheme : str, default='LF-Middle'
-            The integration scheme. Valid options are 'LF-Middle' (default) and 'VV-Middle'.
         num_rattles : int, default=1
-            The number of RATTLE computations. If `rattles=0`, then no constraints are considered.
+            See :class:`AbstractMiddleIntegrator`.
+        scheme : str, default='LF-Middle'
+            See :class:`AbstractMiddleIntegrator`.
+        respa_loops : list(int), default=[1]
+            See :class:`AbstractMiddleIntegrator`.
 
     Example
     -------
@@ -453,8 +468,8 @@ class GeodesicLangevinIntegrator(AbstractMiddleIntegrator):
     """
 
     def __init__(self, temperature, friction_coefficient, step_size,
-                 num_rattles=1, scheme='LF-Middle', loops=[1]):
-        super().__init__(temperature, step_size, num_rattles, scheme, loops)
+                 num_rattles=1, scheme='LF-Middle', respa_loops=[1]):
+        super().__init__(temperature, step_size, num_rattles, scheme, respa_loops, 1)
         self.addGlobalVariable('friction', friction_coefficient)
 
     def _bath(self, fraction):
@@ -467,9 +482,8 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleIntegrator):
     A massive, middle-type Nose-Hoover Chain Thermostat solver :cite:`Martyna_1992`
     with optional multiple time-scale integration via RESPA.
 
-    .. note::
-        To enable RESPA, the forces in OpenMM system must be split into distinct force
-        groups and the keyword ``loop`` (see below) must be a list with multiple entries.
+    To enable RESPA, the forces in OpenMM system must be split into distinct force
+    groups and the keyword ``respa_loop`` (see below) must be a list with multiple entries.
 
     Parameters
     ----------
@@ -482,10 +496,10 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleIntegrator):
 
     Keyword Args
     ------------
+        nchain : int, default=2
+            The number of thermostats in each Nose-Hoover chain.
         scheme : str, default='VV-Middle'
-            The integration scheme. Valid options are 'LF-Middle' and 'VV-Middle' (default).
-        num_rattles : int, default=1
-            The number of RATTLE computations. If `rattles=0`, then no constraints are considered.
+            See :class:`AbstractMiddleIntegrator`.
 
     Example
     -------
@@ -510,10 +524,10 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleIntegrator):
 
     """
 
-    def __init__(self, temperature, time_constant, step_size, nchain=2, scheme='VV-Middle', loops=[1]):
+    def __init__(self, temperature, time_constant, step_size, nchain=2, scheme='VV-Middle', respa_loops=[1]):
         self._tau = _standardized(time_constant)
         self._nchain = nchain
-        super().__init__(temperature, step_size, num_rattles=0, scheme=scheme, loops=loops)
+        super().__init__(temperature, step_size, 0, scheme, respa_loops, 1)
         self.addPerDofVariable('Q', 0)
         self.addPerDofVariable('invQ', 0)
         for i in range(nchain):

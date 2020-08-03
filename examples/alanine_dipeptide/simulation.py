@@ -24,7 +24,8 @@ Ks = 1000*unit.kilojoules_per_mole/unit.radians**2
 Ts = 1500*unit.kelvin
 limit = 180*unit.degrees
 sigma = 18*unit.degrees
-height = 2.0*unit.kilojoules_per_mole
+# height = 2.0*unit.kilojoules_per_mole
+height = 0
 deposition_period = 200
 s_phi = ufedmm.DynamicalVariable('s_phi', -limit, limit, mass, Ts, model.phi, Ks, sigma=sigma)
 s_psi = ufedmm.DynamicalVariable('s_psi', -limit, limit, mass, Ts, model.psi, Ks, sigma=sigma)
