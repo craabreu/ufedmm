@@ -906,6 +906,6 @@ class UnifiedFreeEnergyDynamics(object):
                 kT[i] = kB*self.temperature*openmm.Vec3(1, 1, 1)
             for i, v in enumerate(self.variables):
                 kT[nparticles+i] = kB*v.temperature*openmm.Vec3(1, 0, 0)
-            integrator.setPerDofVariableByName('kT', kT)
+            integrator.update_temperature(kT)
 
         return simulation

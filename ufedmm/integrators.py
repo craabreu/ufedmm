@@ -14,6 +14,7 @@
 """
 
 from simtk import openmm, unit
+from ufedmm.ufedmm import _standardized
 
 
 class CustomIntegrator(openmm.CustomIntegrator):
@@ -87,6 +88,9 @@ class CustomIntegrator(openmm.CustomIntegrator):
             readable_lines.append(line)
         return '\n'.join(readable_lines)
 
+    def update_temperature(self, kT):
+        self.setPerDofVariableByName('kT', kT)
+
 
 class AbstractMiddleIntegrator(CustomIntegrator):
     """
@@ -149,9 +153,12 @@ class AbstractMiddleIntegrator(CustomIntegrator):
             The temperature of the heat bath.
         step_size : float or unit.Quantity
             The outer step size with which to integrate the equations of motion.
-        num_rattles : bool, default=False
+
+    Keyword Args
+    ------------
+        num_rattles : int, default=0
             The number of RATTLE computations for geodesic integration :cite:`Leimkuhler_2016`.
-            If ``num_rattles=0``, then no constraints are considered at all.
+            If ``num_rattles=0`` (default), then no constraints are considered at all.
         scheme : str, default='VV-Middle'
             Which splitting scheme will be used. Valid options are 'VV-Middle' and 'LF-Middle'.
         loops : list(int), default=[1]
@@ -164,7 +171,7 @@ class AbstractMiddleIntegrator(CustomIntegrator):
         >>> from simtk import unit
         >>> class MiddleNoseHooverIntegrator(integrators.AbstractMiddleIntegrator):
         ...     def __init__(self, ndof, tau, temperature, step_size, num_rattles=1):
-        ...         super().__init__(temperature, step_size, num_rattles, 'VV-Middle', [1])
+        ...         super().__init__(temperature, step_size, num_rattles)
         ...         gkT = ndof*unit.MOLAR_GAS_CONSTANT_R*temperature
         ...         self.addGlobalVariable('gkT', gkT)
         ...         self.addGlobalVariable('Q', gkT*tau**2)
@@ -174,7 +181,7 @@ class AbstractMiddleIntegrator(CustomIntegrator):
         ...     def _bath(self, fraction):
         ...         self.addComputeSum('twoK', 'm*v*v')
         ...         self.addComputeGlobal('v_eta', f'v_eta + {0.5*fraction}*dt*(twoK - gkT)/Q')
-        ...         self.addComputeGlobal('scaling', 'exp(-{fraction}*dt*v_eta)')
+        ...         self.addComputeGlobal('scaling', f'exp(-{fraction}*dt*v_eta)')
         ...         self.addComputePerDof('v', f'v*scaling')
         ...         self.addComputeGlobal('v_eta', f'v_eta + {0.5*fraction}*dt*(scaling^2*twoK - gkT)/Q')
         >>> integrator = MiddleNoseHooverIntegrator(500, 10*unit.femtoseconds, 300*unit.kelvin,
@@ -194,7 +201,7 @@ class AbstractMiddleIntegrator(CustomIntegrator):
            2: x <- x + 0.5*dt*v
            3: twoK <- sum(m*v*v)
            4: v_eta <- v_eta + 0.5*dt*(twoK - gkT)/Q
-           5: scaling <- exp(-{fraction}*dt*v_eta)
+           5: scaling <- exp(-1.0*dt*v_eta)
            6: v <- v*scaling
            7: v_eta <- v_eta + 0.5*dt*(scaling^2*twoK - gkT)/Q
            8: x <- x + 0.5*dt*v
@@ -202,7 +209,7 @@ class AbstractMiddleIntegrator(CustomIntegrator):
 
     """
 
-    def __init__(self, temperature, step_size, num_rattles, scheme, loops):
+    def __init__(self, temperature, step_size, num_rattles=0, scheme='VV-Middle', loops=[1]):
         if scheme not in ['LF-Middle', 'VV-Middle']:
             raise Exception(f'Invalid value {scheme} for keyword scheme')
         super().__init__(temperature, step_size)
@@ -249,7 +256,10 @@ class AbstractMiddleIntegrator(CustomIntegrator):
             self.endBlock()
 
     def _boost(self, fraction, scale):
-        self.addComputePerDof('v', f'v + {fraction}*dt*f/m')
+        if len(self._respa_loops) > 1:
+            self.addComputePerDof('v', f'v + {fraction}*dt*f{scale}/m')
+        else:
+            self.addComputePerDof('v', f'v + {fraction}*dt*f/m')
         self._num_rattles > 0 and self.addConstrainVelocities()
 
     def _bath(self, fraction):
@@ -450,3 +460,80 @@ class GeodesicLangevinIntegrator(AbstractMiddleIntegrator):
     def _bath(self, fraction):
         expression = f'z*v + sqrt((1 - z*z)*kT/m)*gaussian; z = exp(-friction*{fraction}*dt)'
         self.addComputePerDof('v', expression)
+
+
+class MiddleMassiveNHCIntegrator(AbstractMiddleIntegrator):
+    """
+    A massive, middle-type Nose-Hoover Chain Thermostat solver :cite:`Martyna_1992`
+    with optional multiple time-scale integration via RESPA.
+
+    .. note::
+        To enable RESPA, the forces in OpenMM system must be split into distinct force
+        groups and the keyword ``loop`` (see below) must be a list with multiple entries.
+
+    Parameters
+    ----------
+        temperature : float or unit.Quantity
+            The temperature.
+        time_constant : float or unit.Quantity
+            The characteristic time constant.
+        step_size : float or unit.Quantity
+            The time-step size.
+
+    Keyword Args
+    ------------
+        scheme : str, default='VV-Middle'
+            The integration scheme. Valid options are 'LF-Middle' and 'VV-Middle' (default).
+        num_rattles : int, default=1
+            The number of RATTLE computations. If `rattles=0`, then no constraints are considered.
+
+    Example
+    -------
+        >>> import ufedmm
+        >>> temp, tau, dt = 300*unit.kelvin, 10*unit.femtoseconds, 2*unit.femtoseconds
+        >>> integrator = ufedmm.MiddleMassiveNHCIntegrator(temp, tau, dt)
+        >>> print(integrator)
+        Per-dof variables:
+          kT, Q, invQ, v1, v2
+        Global variables:
+        Computation steps:
+           0: allow forces to update the context state
+           1: v <- v + 0.5*dt*f/m
+           2: x <- x + 0.5*dt*v
+           3: v2 <- v2 + 0.5*dt*(Q*v1^2 - kT)*invQ
+           4: v1 <- (v1*z + 0.5*dt*(m*v^2 - kT)*invQ)*z; z=exp(-0.25*dt*v2)
+           5: v <- v*exp(-1.0*dt*v1)
+           6: v1 <- (v1*z + 0.5*dt*(m*v^2 - kT)*invQ)*z; z=exp(-0.25*dt*v2)
+           7: v2 <- v2 + 0.5*dt*(Q*v1^2 - kT)*invQ
+           8: x <- x + 0.5*dt*v
+           9: v <- v + 0.5*dt*f/m
+
+    """
+
+    def __init__(self, temperature, time_constant, step_size, nchain=2, scheme='VV-Middle', loops=[1]):
+        self._tau = _standardized(time_constant)
+        self._nchain = nchain
+        super().__init__(temperature, step_size, num_rattles=0, scheme=scheme, loops=loops)
+        self.addPerDofVariable('Q', 0)
+        self.addPerDofVariable('invQ', 0)
+        for i in range(nchain):
+            self.addPerDofVariable(f'v{i+1}', 0)
+
+    def update_temperature(self, kT):
+        super().update_temperature(kT)
+        Q = [v*self._tau**2 for v in kT]
+        invQ = [openmm.Vec3(*map(lambda x: 1/x if x > 0.0 else 0.0, q)) for q in Q]
+        self.setPerDofVariableByName('Q', Q)
+        self.setPerDofVariableByName('invQ', invQ)
+
+    def _bath(self, fraction):
+        n = self._nchain
+        def a(i): return f'(Q*v{i-1}^2 - kT)*invQ' if i > 1 else '(m*v^2 - kT)*invQ'
+        def z(i): return f'exp(-{fraction/4}*dt*v{i+1})'
+        self.addComputePerDof(f'v{n}', f'v{n} + {fraction/2}*dt*{a(n)}')
+        for i in reversed(range(1, n)):
+            self.addComputePerDof(f'v{i}', f'(v{i}*z + {fraction/2}*dt*{a(i)})*z; z={z(i)}')
+        self.addComputePerDof('v', f'v*exp(-{fraction}*dt*v1)')
+        for i in range(1, n):
+            self.addComputePerDof(f'v{i}', f'(v{i}*z + {fraction/2}*dt*{a(i)})*z; z={z(i)}')
+        self.addComputePerDof(f'v{n}', f'v{n} + {fraction/2}*dt*{a(n)}')

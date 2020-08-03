@@ -43,25 +43,24 @@ def test_serialization():
 
 
 def test_simulation():
-    model = ufedmm.AlanineDipeptideModel(water='tip3p')
+    model = ufedmm.AlanineDipeptideModel()
     mass = 50*unit.dalton*(unit.nanometer/unit.radians)**2
     Ks = 1000*unit.kilojoules_per_mole/unit.radians**2
     Ts = 1500*unit.kelvin
-    dt = 2*unit.femtoseconds
-    gamma = 10/unit.picoseconds
+    dt = 1*unit.femtoseconds
+    tau = 10*unit.femtoseconds
     limit = 180*unit.degrees
     sigma = 18*unit.degrees
     height = 2*unit.kilojoules_per_mole
     s_phi = ufedmm.DynamicalVariable('s_phi', -limit, limit, mass, Ts, model.phi, Ks, sigma=sigma)
     s_psi = ufedmm.DynamicalVariable('s_psi', -limit, limit, mass, Ts, model.psi, Ks, sigma=sigma)
-    ufed = ufedmm.UnifiedFreeEnergyDynamics([s_phi, s_psi], 300*unit.kelvin, height=0, frequency=1)
-    integrator = ufedmm.GeodesicLangevinIntegrator(300*unit.kelvin, gamma, dt)
+    ufed = ufedmm.UnifiedFreeEnergyDynamics([s_phi, s_psi], 300*unit.kelvin,
+                                            height=height, frequency=1)
+    integrator = ufedmm.MiddleMassiveNHCIntegrator(300*unit.kelvin, tau, dt)
     platform = openmm.Platform.getPlatformByName('Reference')
     simulation = ufed.simulation(model.topology, model.system, integrator, platform)
     simulation.context.setPositions(model.positions)
     simulation.context.setVelocitiesToTemperature(300*unit.kelvin, 1234)
-    simulation.context.getIntegrator().setRandomNumberSeed(1234)
-    # print(simulation.context.getState(getVelocities=True).getVelocities(asNumpy=True))
-    simulation.step(1)
+    simulation.step(100)
     energy = simulation.context.getState(getEnergy=True).getPotentialEnergy()
-    assert energy/energy.unit == pytest.approx(-11691.10734)
+    assert energy/energy.unit == pytest.approx(373.68124)
