@@ -50,13 +50,13 @@ class CustomIntegrator(openmm.CustomIntegrator):
         """
         readable_lines = []
 
-        readable_lines.append('Per-dof variables:')
+        self.getNumPerDofVariables() > 0 and readable_lines.append('Per-dof variables:')
         per_dof = []
         for index in range(self.getNumPerDofVariables()):
             per_dof.append(self.getPerDofVariableName(index))
         readable_lines.append('  ' + ', '.join(per_dof))
 
-        readable_lines.append('Global variables:')
+        self.getNumGlobalVariables() > 0 and readable_lines.append('Global variables:')
         for index in range(self.getNumGlobalVariables()):
             name = self.getGlobalVariableName(index)
             value = self.getGlobalVariable(index)
@@ -92,9 +92,9 @@ class CustomIntegrator(openmm.CustomIntegrator):
         self.setPerDofVariableByName('kT', kT)
 
 
-class AbstractMiddleIntegrator(CustomIntegrator):
+class AbstractMiddleRespaIntegrator(CustomIntegrator):
     """
-    An abstract class for middle-type integrators.
+    An abstract class for middle-type, multiple time-scale integrators.
 
     .. warning::
         This class is meant for inheritance only and does not actually include thermostatting.
@@ -121,15 +121,15 @@ class AbstractMiddleIntegrator(CustomIntegrator):
 
     .. math::
         e^{\\Delta t\\mathcal{L}} =
-            e^{\\frac{\\Delta t}{2}\\mathcal{L}^{[1]}_p}
+            e^{\\frac{\\Delta t}{2}\\mathcal{L}^{[1]}_v}
             \\left[
-                e^{\\frac{\\Delta t}{2 n_0}\\mathcal{L}^{[0]}_p}
+                e^{\\frac{\\Delta t}{2 n_0}\\mathcal{L}^{[0]}_v}
                 e^{\\frac{\\Delta t}{2 n_0}\\mathcal{L}_r}
                 e^{\\frac{\\Delta t}{n_0}\\mathcal{L}_\\mathrm{bath}}
                 e^{\\frac{\\Delta t}{2 n_0}\\mathcal{L}_r}
-                e^{\\frac{\\Delta t}{2 n_0}\\mathcal{L}^{[0]}_p}
+                e^{\\frac{\\Delta t}{2 n_0}\\mathcal{L}^{[0]}_v}
             \\right]^{n_0}
-            e^{\\frac{\\Delta t}{2}\\mathcal{L}^{[1]}_p}
+            e^{\\frac{\\Delta t}{2}\\mathcal{L}^{[1]}_v}
 
     Each exponential operator is the solution of a particular subsystem of equations.
     If `\\mathrm{bath}(T_i, v_i) = 0`, the scheme above is time-reversible, measure-preserving,
@@ -142,9 +142,9 @@ class AbstractMiddleIntegrator(CustomIntegrator):
                 e^{\\frac{\\Delta t}{2 n_0}\\mathcal{L}_r}
                 e^{\\frac{\\Delta t}{n_0}\\mathcal{L}_\\mathrm{bath}}
                 e^{\\frac{\\Delta t}{2 n_0}\\mathcal{L}_r}
-                e^{\\frac{\\Delta t}{n_0}\\mathcal{L}^{[0]}_p}
+                e^{\\frac{\\Delta t}{n_0}\\mathcal{L}^{[0]}_v}
             \\right]^{n_0}
-            e^{\\Delta t\\mathcal{L}^{[1]}_p}
+            e^{\\Delta t\\mathcal{L}^{[1]}_v}
 
     This is referred to as the ``LF-Middle`` scheme :cite:`Zhang_2019`, where LF stands for
     Leap-Frog. In contrast to the previous scheme, it is not time-reversible. However, in single
@@ -174,7 +174,7 @@ class AbstractMiddleIntegrator(CustomIntegrator):
     -------
         >>> from ufedmm import integrators
         >>> from simtk import unit
-        >>> class MiddleNoseHooverIntegrator(integrators.AbstractMiddleIntegrator):
+        >>> class MiddleNoseHooverIntegrator(integrators.AbstractMiddleRespaIntegrator):
         ...     def __init__(self, ndof, tau, temperature, step_size, num_rattles=1):
         ...         super().__init__(temperature, step_size, num_rattles, 'VV-Middle', [1], 1)
         ...         gkT = ndof*unit.MOLAR_GAS_CONSTANT_R*temperature
@@ -409,7 +409,7 @@ class _DoubleTimeScaleRegulatedIntegrator(CustomIntegrator):
         self.addComputePerDof('v', 'v + 0.5*dt*f1/m')
 
 
-class GeodesicLangevinIntegrator(AbstractMiddleIntegrator):
+class GeodesicLangevinIntegrator(AbstractMiddleRespaIntegrator):
     """
     A geodesic Langevin integrator :cite:`Leimkuhler_2016`, which can be integrated by using
     either the LF-Middle or the VV-Middle scheme :cite:`Zhang_2019`.
@@ -429,11 +429,11 @@ class GeodesicLangevinIntegrator(AbstractMiddleIntegrator):
     Keyword Args
     ------------
         num_rattles : int, default=1
-            See :class:`AbstractMiddleIntegrator`.
+            See :class:`AbstractMiddleRespaIntegrator`.
         scheme : str, default='LF-Middle'
-            See :class:`AbstractMiddleIntegrator`.
+            See :class:`AbstractMiddleRespaIntegrator`.
         respa_loops : list(int), default=[1]
-            See :class:`AbstractMiddleIntegrator`.
+            See :class:`AbstractMiddleRespaIntegrator`.
 
     Example
     -------
@@ -477,7 +477,7 @@ class GeodesicLangevinIntegrator(AbstractMiddleIntegrator):
         self.addComputePerDof('v', expression)
 
 
-class MiddleMassiveNHCIntegrator(AbstractMiddleIntegrator):
+class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
     """
     A massive, middle-type Nose-Hoover Chain Thermostat solver :cite:`Martyna_1992`
     with optional multiple time-scale integration via RESPA.
@@ -499,35 +499,47 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleIntegrator):
         nchain : int, default=2
             The number of thermostats in each Nose-Hoover chain.
         scheme : str, default='VV-Middle'
-            See :class:`AbstractMiddleIntegrator`.
+            See :class:`AbstractMiddleRespaIntegrator`.
+        respa_loops : list(int), default=[1]
+            See :class:`AbstractMiddleRespaIntegrator`.
+        bath_loops : int, default=1
+            See :class:`AbstractMiddleRespaIntegrator`.
 
     Example
     -------
         >>> import ufedmm
         >>> temp, tau, dt = 300*unit.kelvin, 10*unit.femtoseconds, 2*unit.femtoseconds
-        >>> integrator = ufedmm.MiddleMassiveNHCIntegrator(temp, tau, dt)
+        >>> integrator = ufedmm.MiddleMassiveNHCIntegrator(temp, tau, dt, respa_loops=[4, 1])
         >>> print(integrator)
         Per-dof variables:
           kT, Q, invQ, v1, v2
         Global variables:
+          irespa0 = 0.0
         Computation steps:
            0: allow forces to update the context state
-           1: v <- v + 0.5*dt*f/m
-           2: x <- x + 0.5*dt*v
-           3: v2 <- v2 + 0.5*dt*(Q*v1^2 - kT)*invQ
-           4: v1 <- (v1*z + 0.5*dt*(m*v^2 - kT)*invQ)*z; z=exp(-0.25*dt*v2)
-           5: v <- v*exp(-1.0*dt*v1)
-           6: v1 <- (v1*z + 0.5*dt*(m*v^2 - kT)*invQ)*z; z=exp(-0.25*dt*v2)
-           7: v2 <- v2 + 0.5*dt*(Q*v1^2 - kT)*invQ
-           8: x <- x + 0.5*dt*v
-           9: v <- v + 0.5*dt*f/m
+           1: v <- v + 0.5*dt*f1/m
+           2: irespa0 <- 0
+           3: while (irespa0 < 4):
+           4:    v <- v + 0.125*dt*f0/m
+           5:    x <- x + 0.125*dt*v
+           6:    v2 <- v2 + 0.125*dt*(Q*v1^2 - kT)*invQ
+           7:    v1 <- (v1*z + 0.125*dt*(m*v^2 - kT)*invQ)*z; z=exp(-0.0625*dt*v2)
+           8:    v <- v*exp(-0.25*dt*v1)
+           9:    v1 <- (v1*z + 0.125*dt*(m*v^2 - kT)*invQ)*z; z=exp(-0.0625*dt*v2)
+          10:    v2 <- v2 + 0.125*dt*(Q*v1^2 - kT)*invQ
+          11:    x <- x + 0.125*dt*v
+          12:    v <- v + 0.125*dt*f0/m
+          13:    irespa0 <- irespa0 + 1
+          14: end
+          15: v <- v + 0.5*dt*f1/m
 
     """
 
-    def __init__(self, temperature, time_constant, step_size, nchain=2, scheme='VV-Middle', respa_loops=[1]):
+    def __init__(self, temperature, time_constant, step_size, nchain=2,
+                 scheme='VV-Middle', respa_loops=[1], bath_loops=1):
         self._tau = _standardized(time_constant)
         self._nchain = nchain
-        super().__init__(temperature, step_size, 0, scheme, respa_loops, 1)
+        super().__init__(temperature, step_size, 0, scheme, respa_loops, bath_loops)
         self.addPerDofVariable('Q', 0)
         self.addPerDofVariable('invQ', 0)
         for i in range(nchain):
@@ -535,7 +547,7 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleIntegrator):
 
     def update_temperature(self, kT):
         super().update_temperature(kT)
-        Q = [v*self._tau**2 for v in kT]
+        Q = [x*self._tau**2 for x in kT]
         invQ = [openmm.Vec3(*map(lambda x: 1/x if x > 0.0 else 0.0, q)) for q in Q]
         self.setPerDofVariableByName('Q', Q)
         self.setPerDofVariableByName('invQ', invQ)
