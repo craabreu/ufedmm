@@ -237,7 +237,7 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
             n = self._respa_loops[scale]
             if n > 1:
                 self.addComputeGlobal(f'irespa{scale}', '0')
-                self.beginWhileBlock(f'irespa{scale} < {n}')
+                self.beginWhileBlock(f'irespa{scale} < {n-1/2}')
             self._boost(fraction/(2*n if self._scheme == 'VV-Middle' else n), scale)
             self._integrate_respa(fraction/n, scale-1)
             self._scheme == 'VV-Middle' and self._boost(fraction/(2*n), scale)
@@ -248,7 +248,7 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
             self._translation(0.5*fraction)
             if self._bath_loops > 1:
                 self.addComputeGlobal('ibath', '0')
-                self.beginWhileBlock(f'ibath < {self._bath_loops}')
+                self.beginWhileBlock(f'ibath < {self._bath_loops-1/2}')
             self._bath(fraction/self._bath_loops)
             self._num_rattles > 0 and self.addConstrainVelocities()
             if self._bath_loops > 1:
@@ -259,7 +259,7 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
     def _translation(self, fraction):
         if self._num_rattles > 1:
             self.addComputeGlobal('irattle', '0')
-            self.beginWhileBlock(f'irattle < {self._num_rattles}')
+            self.beginWhileBlock(f'irattle < {self._num_rattles-1/2}')
         self.addComputePerDof('x', f'x + {fraction/max(1, self._num_rattles)}*dt*v')
         if self._num_rattles > 0:
             self.addComputePerDof('x0', 'x')
@@ -521,7 +521,7 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
            0: allow forces to update the context state
            1: v <- v + 0.5*dt*f1/m
            2: irespa0 <- 0
-           3: while (irespa0 < 4):
+           3: while (irespa0 < 3.5):
            4:    v <- v + 0.125*dt*f0/m
            5:    x <- x + 0.125*dt*v
            6:    v2 <- v2 + 0.125*dt*(Q*v1^2 - kT)*invQ
