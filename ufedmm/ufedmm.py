@@ -835,9 +835,10 @@ class UnifiedFreeEnergyDynamics(object):
         .. warning::
             If the temperature of any driving parameter is different from the particle-system
             temperature, then the passed integrator must be a CustomIntegrator object containing
-            a per-dof variable called `kT`. The content of this variable is the Boltzmann constant
-            times the temperature associated to each degree of freedom. One can employ, for
-            instance, a :class:`~ufedmm.integrators.GeodesicLangevinIntegrator`.
+            a per-dof variable called `temperature`, whose content is the temperature associated
+            to each degree of freedom.
+            This is true for all integrators available in :mod:`ufedmm.integrators`, which are
+            subclass of :class:`ufedmm.integrators.CustomIntegrator`.
 
         Parameters
         ----------
@@ -897,15 +898,14 @@ class UnifiedFreeEnergyDynamics(object):
         if any(v.temperature != self.temperature for v in self.variables):
             simulation.context.setExtendedPositions([openmm.Vec3(0, 0, 0)]*system.getNumParticles())
             try:
-                kT = integrator.getPerDofVariableByName('kT')
+                T = integrator.getPerDofVariableByName('temperature')
             except Exception:
-                raise ValueError('CustomIntegrator with per-dof variable `kT` is required')
-            kB = _standardized(unit.MOLAR_GAS_CONSTANT_R)
+                raise ValueError('CustomIntegrator with per-dof variable `temperature` is required')
             nparticles = system.getNumParticles() - len(self.variables)
             for i in range(nparticles):
-                kT[i] = kB*self.temperature*openmm.Vec3(1, 1, 1)
+                T[i] = self.temperature*openmm.Vec3(1, 1, 1)
             for i, v in enumerate(self.variables):
-                kT[nparticles+i] = kB*v.temperature*openmm.Vec3(1, 0, 0)
-            integrator.update_temperature(kT)
+                T[nparticles+i] = v.temperature*openmm.Vec3(1, 0, 0)
+            integrator.update_temperature(T)
 
         return simulation

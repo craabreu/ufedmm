@@ -81,7 +81,7 @@ class StateDataReporter(app.StateDataReporter):
             If this is `True`, then the current values of all collective variables and
             dynamical variables related to the extended-space simulation will be reported.
         multipleTemperatures : bool, default=False
-            If this is `True`, then the running temperaure estimates will be reported separately
+            If this is `True`, then the running temperature estimates will be reported separately
             for the atoms and for the extended-space dynamical variables.
 
     Example

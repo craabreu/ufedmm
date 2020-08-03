@@ -19,11 +19,11 @@ from ufedmm.ufedmm import _standardized
 
 class CustomIntegrator(openmm.CustomIntegrator):
     """
-    An extension of OpenMM's CustomIntegrator_ class with an extra per-dof variable named `kT`,
-    whose content is the Boltzmann constant multiplied by the system temperature. A per-dof
-    temperature is necessary if the extended-space variables and the physical system are coupled
-    adiabatically to thermostats at different temperatures. Otherwise, any other OpenMM integrator
-    can be used.
+    An extension of OpenMM's CustomIntegrator_ class with an extra per-dof variable named
+    `temperature`, whose content is the temperature of the heat bath associated to each
+    degree of freedom. A per-dof temperature is necessary if the extended-space variables
+    and the physical system are coupled adiabatically to thermostats at different temperatures.
+    Otherwise, any other OpenMM integrator can be used.
 
     Parameters
     ----------
@@ -36,6 +36,7 @@ class CustomIntegrator(openmm.CustomIntegrator):
 
     def __init__(self, temperature, step_size):
         super().__init__(step_size)
+        self.addPerDofVariable('temperature', temperature)
         self.addPerDofVariable('kT', unit.MOLAR_GAS_CONSTANT_R*temperature)
 
     def __repr__(self):
@@ -88,8 +89,9 @@ class CustomIntegrator(openmm.CustomIntegrator):
             readable_lines.append(line)
         return '\n'.join(readable_lines)
 
-    def update_temperature(self, kT):
-        self.setPerDofVariableByName('kT', kT)
+    def update_temperature(self, temperature):
+        self.setPerDofVariableByName('temperature', temperature)
+        self.setPerDofVariableByName('kT', [unit.MOLAR_GAS_CONSTANT_R*T for T in temperature])
 
 
 class AbstractMiddleRespaIntegrator(CustomIntegrator):
@@ -193,7 +195,7 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
         ...                                         1*unit.femtoseconds, num_rattles=0)
         >>> print(integrator)
         Per-dof variables:
-          kT
+          temperature, kT
         Global variables:
           gkT = 1247.1708706830323
           Q = 0.12471708706830327
@@ -443,7 +445,7 @@ class GeodesicLangevinIntegrator(AbstractMiddleRespaIntegrator):
         >>> gamma = 10/unit.picoseconds
         >>> ufedmm.GeodesicLangevinIntegrator(temp, gamma, dt, num_rattles=1, scheme='VV-Middle')
         Per-dof variables:
-          kT, x0
+          temperature, kT, x0
         Global variables:
           friction = 10.0
         Computation steps:
@@ -512,7 +514,7 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
         >>> integrator = ufedmm.MiddleMassiveNHCIntegrator(temp, tau, dt, respa_loops=[4, 1])
         >>> print(integrator)
         Per-dof variables:
-          kT, Q, invQ, v1, v2
+          temperature, kT, Q, invQ, v1, v2
         Global variables:
           irespa0 = 0.0
         Computation steps:
@@ -537,7 +539,7 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
 
     def __init__(self, temperature, time_constant, step_size, nchain=2,
                  scheme='VV-Middle', respa_loops=[1], bath_loops=1):
-        self._tau = _standardized(time_constant)
+        self._tau = time_constant
         self._nchain = nchain
         super().__init__(temperature, step_size, 0, scheme, respa_loops, bath_loops)
         self.addPerDofVariable('Q', 0)
@@ -545,9 +547,10 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
         for i in range(nchain):
             self.addPerDofVariable(f'v{i+1}', 0)
 
-    def update_temperature(self, kT):
-        super().update_temperature(kT)
-        Q = [x*self._tau**2 for x in kT]
+    def update_temperature(self, temperature):
+        super().update_temperature(temperature)
+        kBtauSq = _standardized(unit.MOLAR_GAS_CONSTANT_R*self._tau**2)
+        Q = [kBtauSq*_standardized(T) for T in temperature]
         invQ = [openmm.Vec3(*map(lambda x: 1/x if x > 0.0 else 0.0, q)) for q in Q]
         self.setPerDofVariableByName('Q', Q)
         self.setPerDofVariableByName('invQ', invQ)
