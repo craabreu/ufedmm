@@ -133,8 +133,8 @@ class StateDataReporter(app.StateDataReporter):
         else:
             super()._initializeConstants(simulation)
 
-        if isinstance(simulation, ufedmm.ExtendedSpaceSimulation):
-            self._extended_space = True
+        self._extended_space = isinstance(simulation, ufedmm.ExtendedSpaceSimulation)
+        if self._extended_space:
             force = simulation.driving_force
             self._cv_names = [force.getCollectiveVariableName(i) for i in range(force.getNumCollectiveVariables())]
             self._var_names = [v.id for v in simulation.context.variables]
