@@ -36,7 +36,6 @@ class CustomIntegrator(openmm.CustomIntegrator):
 
     def __init__(self, temperature, step_size):
         super().__init__(step_size)
-        self.addPerDofVariable('temperature', temperature)
         self.addPerDofVariable('kT', unit.MOLAR_GAS_CONSTANT_R*temperature)
 
     def __repr__(self):
@@ -89,9 +88,11 @@ class CustomIntegrator(openmm.CustomIntegrator):
             readable_lines.append(line)
         return '\n'.join(readable_lines)
 
-    def update_temperature(self, temperature):
-        self.setPerDofVariableByName('temperature', temperature)
-        self.setPerDofVariableByName('kT', [unit.MOLAR_GAS_CONSTANT_R*T for T in temperature])
+    def update_temperatures(self, system_temperature, extended_space_temperatures):
+        nparticles = len(self.getPerDofVariableByName('kT')) - len(extended_space_temperatures)
+        temperatures = [system_temperature]*nparticles + extended_space_temperatures
+        kT = [unit.MOLAR_GAS_CONSTANT_R*T*openmm.Vec3(1, 1, 1) for T in temperatures]
+        self.setPerDofVariableByName('kT', kT)
 
 
 class AbstractMiddleRespaIntegrator(CustomIntegrator):
@@ -195,7 +196,7 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
         ...                                         1*unit.femtoseconds, num_rattles=0)
         >>> print(integrator)
         Per-dof variables:
-          temperature, kT
+          kT
         Global variables:
           gkT = 1247.1708706830323
           Q = 0.12471708706830327
@@ -445,7 +446,7 @@ class GeodesicLangevinIntegrator(AbstractMiddleRespaIntegrator):
         >>> gamma = 10/unit.picoseconds
         >>> ufedmm.GeodesicLangevinIntegrator(temp, gamma, dt, num_rattles=1, scheme='VV-Middle')
         Per-dof variables:
-          temperature, kT, x0
+          kT, x0
         Global variables:
           friction = 10.0
         Computation steps:
@@ -514,7 +515,7 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
         >>> integrator = ufedmm.MiddleMassiveNHCIntegrator(temp, tau, dt, respa_loops=[4, 1])
         >>> print(integrator)
         Per-dof variables:
-          temperature, kT, Q, invQ, v1, v2
+          kT, Q, v1, v2
         Global variables:
           irespa0 = 0.0
         Computation steps:
@@ -524,11 +525,11 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
            3: while (irespa0 < 3.5):
            4:    v <- v + 0.125*dt*f0/m
            5:    x <- x + 0.125*dt*v
-           6:    v2 <- v2 + 0.125*dt*(Q*v1^2 - kT)*invQ
-           7:    v1 <- (v1*z + 0.125*dt*(m*v^2 - kT)*invQ)*z; z=exp(-0.0625*dt*v2)
+           6:    v2 <- v2 + 0.125*dt*(Q*v1^2 - kT)/Q
+           7:    v1 <- (v1*z + 0.125*dt*(m*v^2 - kT)/Q)*z; z=exp(-0.0625*dt*v2)
            8:    v <- v*exp(-0.25*dt*v1)
-           9:    v1 <- (v1*z + 0.125*dt*(m*v^2 - kT)*invQ)*z; z=exp(-0.0625*dt*v2)
-          10:    v2 <- v2 + 0.125*dt*(Q*v1^2 - kT)*invQ
+           9:    v1 <- (v1*z + 0.125*dt*(m*v^2 - kT)/Q)*z; z=exp(-0.0625*dt*v2)
+          10:    v2 <- v2 + 0.125*dt*(Q*v1^2 - kT)/Q
           11:    x <- x + 0.125*dt*v
           12:    v <- v + 0.125*dt*f0/m
           13:    irespa0 <- irespa0 + 1
@@ -539,25 +540,22 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
 
     def __init__(self, temperature, time_constant, step_size, nchain=2,
                  scheme='VV-Middle', respa_loops=[1], bath_loops=1):
-        self._tau = time_constant
+        self._tau = _standardized(time_constant)
         self._nchain = nchain
         super().__init__(temperature, step_size, 0, scheme, respa_loops, bath_loops)
         self.addPerDofVariable('Q', 0)
-        self.addPerDofVariable('invQ', 0)
         for i in range(nchain):
             self.addPerDofVariable(f'v{i+1}', 0)
 
-    def update_temperature(self, temperature):
-        super().update_temperature(temperature)
-        kBtauSq = _standardized(unit.MOLAR_GAS_CONSTANT_R*self._tau**2)
-        Q = [kBtauSq*_standardized(T) for T in temperature]
-        invQ = [openmm.Vec3(*map(lambda x: 1/x if x > 0.0 else 0.0, q)) for q in Q]
+    def update_temperatures(self, system_temperature, extended_space_temperatures):
+        super().update_temperatures(system_temperature, extended_space_temperatures)
+        Q = [self._tau**2*kT for kT in self.getPerDofVariableByName('kT')]
         self.setPerDofVariableByName('Q', Q)
-        self.setPerDofVariableByName('invQ', invQ)
+        print(self.getPerDofVariableByName('Q'))
 
     def _bath(self, fraction):
         n = self._nchain
-        def a(i): return f'(Q*v{i-1}^2 - kT)*invQ' if i > 1 else '(m*v^2 - kT)*invQ'
+        def a(i): return f'(Q*v{i-1}^2 - kT)/Q' if i > 1 else '(m*v^2 - kT)/Q'
         def z(i): return f'exp(-{fraction/4}*dt*v{i+1})'
         self.addComputePerDof(f'v{n}', f'v{n} + {fraction/2}*dt*{a(n)}')
         for i in reversed(range(1, n)):
@@ -671,8 +669,8 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
         self.addPerDofVariable('v_eta', 0)
         self.addGlobalVariable('friction', friction_coefficient)
 
-    def update_temperatures(self, temperature):
-        super().update_temperatures(temperature)
+    def update_temperaturess(self, temperature):
+        super().update_temperaturess(temperature)
         kBtauSq = _standardized(unit.MOLAR_GAS_CONSTANT_R*self._tau**2)
         Q = [kBtauSq*_standardized(T) for T in temperature]
         invQ = [openmm.Vec3(*map(lambda x: 1/x if x > 0.0 else 0.0, q)) for q in Q]
@@ -685,7 +683,7 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
     def _bath(self, fraction):
         n = self._n
         boost = f'v_eta + G*{0.5*fraction}*dt'
-        boost += f'; G=({(n+1)/n}*m*(c*tanh(v/c))^2 - kT)*invQ'
+        boost += f'; G=({(n+1)/n}*m*(c*tanh(v/c))^2 - kT)/Q'
         boost += f'; c=sqrt({n}*kT/m)'
 
         scaling = 'c*asinhz'

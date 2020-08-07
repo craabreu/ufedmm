@@ -830,13 +830,13 @@ class UnifiedFreeEnergyDynamics(object):
 
     def simulation(self, topology, system, integrator, platform=None, platformProperties=None):
         """
-        Returns a Simulation object.
+        Returns a ExtendedSpaceSimulation object.
 
         .. warning::
             If the temperature of any driving parameter is different from the particle-system
-            temperature, then the passed integrator must be a CustomIntegrator object containing
-            a per-dof variable called `temperature`, whose content is the temperature associated
-            to each degree of freedom.
+            temperature, then the passed integrator must be a CustomIntegrator_ object
+            containing a per-dof variable `kT` whose content is the Boltzmann constant times
+            the temperature associated to each degree of freedom.
             This is true for all integrators available in :mod:`ufedmm.integrators`, which are
             subclass of :class:`ufedmm.integrators.CustomIntegrator`.
 
@@ -896,16 +896,14 @@ class UnifiedFreeEnergyDynamics(object):
             )
 
         if any(v.temperature != self.temperature for v in self.variables):
-            simulation.context.setExtendedPositions([openmm.Vec3(0, 0, 0)]*system.getNumParticles())
+            ntotal = system.getNumParticles()
+            simulation.context.setExtendedPositions([openmm.Vec3(0, 0, 0)]*ntotal)
+            vartemps = [v.temperature for v in self.variables]
             try:
-                T = integrator.getPerDofVariableByName('temperature')
+                integrator.update_temperatures(self.temperature, vartemps)
             except Exception:
-                raise ValueError('CustomIntegrator with per-dof variable `temperature` is required')
-            nparticles = system.getNumParticles() - len(self.variables)
-            for i in range(nparticles):
-                T[i] = self.temperature*openmm.Vec3(1, 1, 1)
-            for i, v in enumerate(self.variables):
-                T[nparticles+i] = v.temperature*openmm.Vec3(1, 0, 0)
-            integrator.update_temperature(T)
+                temperatures = [self.temperature]*(ntotal - len(vartemps)) + vartemps
+                kT = [unit.MOLAR_GAS_CONSTANT_R*T*openmm.Vec3(1, 1, 1) for T in temperatures]
+                integrator.setPerDofVariableByName('kT', kT)
 
         return simulation
