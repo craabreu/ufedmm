@@ -566,3 +566,138 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
         for i in range(1, n):
             self.addComputePerDof(f'v{i}', f'(v{i}*z + {fraction/2}*dt*{a(i)})*z; z={z(i)}')
         self.addComputePerDof(f'v{n}', f'v{n} + {fraction/2}*dt*{a(n)}')
+
+
+class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
+    """
+    A regulated version of the massive Nose-Hoover-Langevin :cite:`Samoletov_2007,Leimkuhler_2009`
+    method. Regulation means that velocities are modified so as to remain below a
+    temperature-dependent speed limit. This method is closely related to the SIN(R) method
+    :cite:`Leimkuhler_2013` and allows multiple time-scale integration without resonance.
+
+    The following :term:`SDE` system is solved for every degree of freedom in the system:
+
+    .. math::
+        & dr_i = v_i dt \\\\
+        & dp_i = F_i dt - v_{\\eta_i} m_i v_i dt \\\\
+        & dv_{\\eta_i} = \\frac{1}{Q}\\left(\\frac{n+1}{n} m_i v_i^2 - k_B T\\right) dt
+                - \\gamma v_{\\eta_i} dt + \\sqrt{\\frac{2\\gamma k_B T}{Q}} dW_i,
+
+    where:
+
+    .. math::
+        v_i = c_i \\tanh\\left(\\frac{p_i}{m_i c_i}\\right).
+
+    Here, :math:`c_i = \\sqrt{\\frac{n k T}{m_i}}` is speed limit for such degree of freedom.
+    As usual, the inertial parameter :math:`Q` is defined as :math:`Q = k_B T \\tau^2`, with
+    :math:`\\tau` being a relaxation time :cite:`Tuckerman_1992`. An approximate solution is
+    obtained by applying the Trotter-Suzuki splitting formula:
+
+    .. math::
+        e^{\\Delta t\\mathcal{L}} =
+        e^{\\frac{\\Delta t}{2}\\mathcal{L}^1_p}
+        \\left[e^{\\frac{\\delta t}{2}\\mathcal{L}^0_p}
+        e^{\\frac{\\delta t}{2}\\mathcal{L}_r}
+        e^{\\delta t \\mathcal{L}_\\mathrm{bath}}
+        e^{\\frac{\\delta t}{2}\\mathcal{L}_r}
+        e^{\\frac{\\delta t}{2}\\mathcal{L}^0_p}\\right]^m
+        e^{\\frac{\\Delta t}{2}\\mathcal{L}^1_p}
+
+    where :math:`\\delta t = \\frac{\\Delta t}{m}`. Each exponential operator above is the solution
+    of a differential equation.
+
+    The exact solution for the physical-system part is:
+
+    .. math::
+        r_i(t) = r_i^0 + c_i \\mathrm{tanh}\\left(\\frac{p_i}{m c_i}\\right) t
+
+    .. math::
+        p_i(t) = p_i^0 + F_i t
+
+    The bath propagator is further split as:
+
+    .. math::
+        e^{\\delta t \\mathcal{L}_\\mathrm{bath}} =
+        e^{\\frac{\\delta t}{2m}\\mathcal{L}_B}
+        e^{\\frac{\\delta t}{2m}\\mathcal{L}_S}
+        e^{\\frac{\\delta t}{m}\\mathcal{L}_O}
+        e^{\\frac{\\delta t}{2m}\\mathcal{L}_S}
+        e^{\\frac{\\delta t}{2m}\\mathcal{L}_B}
+
+    Part 'B' is a boost, whose solution is:
+
+    .. math::
+        v_{\\eta_i}(t) = v_{\\eta_i}^0 +
+                         \\frac{1}{Q}\\left(\\frac{n+1}{n} m_i v_i^2 - k_B T\\right) t
+
+    Part 'S' is a scaling, whose solution is:
+
+    .. math::
+        p_i(t) = m_i c_i \\mathrm{arcsinh}\\left[
+                    \\sinh\\left(\\frac{p_i}{m_i c_i}\\right) e^{- v_{\\eta_i} t}
+                 \\right]
+
+    Part 'O' is an Ornstein–Uhlenbeck process, whose solution is:
+
+    .. math::
+        v_{\\eta_i}(t) = v_{\\eta_i}^0 e^{-\\gamma t}
+                   + \\sqrt{\\frac{k_B T}{Q}(1-e^{-2\\gamma t})} R_N
+
+    where :math:`R_N` is a normally distributed random number.
+
+    Parameters
+    ----------
+        step_size : float or unit.Quantity
+            The outer step size with which to integrate the equations of motion.
+        loops : int
+            The number of internal substeps at each time step.
+        temperature : unit.Quantity
+            The temperature of the heat bath.
+        time_scale : unit.Quantity (time)
+            The relaxation time (:math:`\\tau`) of the Nose-Hoover thermostat.
+        friction_coefficient : unit.Quantity (1/time)
+            The friction coefficient (:math:`\\gamma`) of the Langevin thermostat.
+        n : int or float
+            The regulation parameter.
+
+    """
+
+    def __init__(self, temperature, time_constant, friction_coefficient, step_size, n=1,
+                 scheme='VV-Middle', respa_loops=[1], bath_loops=1):
+        self._tau = time_constant
+        self._n = n
+        super().__init__(temperature, step_size, 0, scheme, respa_loops, bath_loops)
+        self.addPerDofVariable('invQ', 0)
+        self.addPerDofVariable('v_eta', 0)
+        self.addGlobalVariable('friction', friction_coefficient)
+
+    def update_temperatures(self, temperature):
+        super().update_temperatures(temperature)
+        kBtauSq = _standardized(unit.MOLAR_GAS_CONSTANT_R*self._tau**2)
+        Q = [kBtauSq*_standardized(T) for T in temperature]
+        invQ = [openmm.Vec3(*map(lambda x: 1/x if x > 0.0 else 0.0, q)) for q in Q]
+        self.setPerDofVariableByName('invQ', invQ)
+
+    def _translation(self, fraction):
+        self.setKineticEnergyExpression(f'0.5*m*(c*tanh(v/c))^2; c=sqrt({self._n}*kT/m)')
+        self.addComputePerDof('x', f'x + c*tanh(v/c)*{fraction}*dt; c=sqrt({self._n}*kT/m)')
+
+    def _bath(self, fraction):
+        n = self._n
+        boost = f'v_eta + G*{0.5*fraction}*dt'
+        boost += f'; G=({(n+1)/n}*m*(c*tanh(v/c))^2 - kT)*invQ'
+        boost += f'; c=sqrt({n}*kT/m)'
+
+        scaling = 'c*asinhz'
+        scaling += '; asinhz=(2*step(z)-1)*log(select(step(za-1E8),2*za,za+sqrt(1+z*z))); za=abs(z)'
+        scaling += f'; z=sinh(v/c)*exp(-v_eta*{0.5*fraction}*dt)'
+        scaling += f'; c=sqrt({n}*kT/m)'
+
+        Ornstein_Uhlenbeck = 'v_eta*z + omega*sqrt(1-z^2)*gaussian'
+        Ornstein_Uhlenbeck += f'; z=exp(-friction*{fraction}*dt)'
+
+        self.addComputePerDof('v_eta', boost)
+        self.addComputePerDof('v', scaling)
+        self.addComputePerDof('v_eta', Ornstein_Uhlenbeck)
+        self.addComputePerDof('v', scaling)
+        self.addComputePerDof('v_eta', boost)
