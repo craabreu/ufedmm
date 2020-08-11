@@ -584,6 +584,12 @@ class _ExtendedSpaceContext(openmm.Context):
             raise ValueError('Only orthorhombic boxes are allowed')
         self.setParameter('Lx', a.x)
         super().setPeriodicBoxVectors(a, b, c)
+        system = self.getSystem()
+        ntotal = system.getNumParticles()
+        nvars = len(self.variables)
+        for i, v in enumerate(self.variables):
+            system.setParticleMass(ntotal - nvars + i, v._particle_mass(a.x))
+        self.reinitialize(preserveState=True)
 
     def setPositions(self, positions):
         """
@@ -710,9 +716,8 @@ class ExtendedSpaceSimulation(app.Simulation):
         np = system.getNumParticles()
         nb_forces = [f for f in system.getForces()
                      if isinstance(f, (openmm.NonbondedForce, openmm.CustomNonbondedForce))]
-        Vx, _, _ = box_vectors
         for i, v in enumerate(self.variables):
-            system.addParticle(v._particle_mass(_standardized(Vx.x)))
+            system.addParticle(0.0)
             for nb_force in nb_forces:
                 if isinstance(nb_force, openmm.NonbondedForce):
                     nb_force.addParticle(0.0, 1.0, 0.0)
