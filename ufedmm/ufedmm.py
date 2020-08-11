@@ -558,11 +558,32 @@ class _ExtendedSpaceContext(openmm.Context):
     def __init__(self, variables, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.variables = variables
-        Vx, _, _ = self.getState().getPeriodicBoxVectors()
-        self.setParameter('Lx', Vx.x)
+        self.setPeriodicBoxVectors(*self.getState().getPeriodicBoxVectors())
 
     def getState(self, **kwargs):
         return _ExtendedSpaceState(self.variables, super().getState(**kwargs))
+
+    def setPeriodicBoxVectors(self, a, b, c):
+        """
+        Set the vectors defining the axes of the periodic box.
+
+        Parameters
+        ----------
+            a : openmm.Vec3
+                The vector defining the first edge of the periodic box.
+            b : openmm.Vec3
+                The vector defining the second edge of the periodic box.
+            c : openmm.Vec3
+                The vector defining the third edge of the periodic box.
+
+        """
+        a = openmm.Vec3(*map(_standardized, a))
+        b = openmm.Vec3(*map(_standardized, b))
+        c = openmm.Vec3(*map(_standardized, c))
+        if not (a.y == a.z == b.x == b.z == c.x == c.y == 0.0):
+            raise ValueError('Only orthorhombic boxes are allowed')
+        self.setParameter('Lx', a.x)
+        super().setPeriodicBoxVectors(a, b, c)
 
     def setPositions(self, positions):
         """
@@ -575,10 +596,10 @@ class _ExtendedSpaceContext(openmm.Context):
                 The positions of all particles.
 
         """
-        Vx, Vy, _ = self.getState().getPeriodicBoxVectors()
+        a, b, _ = self.getState().getPeriodicBoxVectors()
         nvars = len(self.variables)
         particle_positions = positions.value_in_unit(unit.nanometers)
-        extra_positions = [openmm.Vec3(0, Vy.y*(i + 1)/(nvars + 2), 0) for i in range(nvars)]
+        extra_positions = [openmm.Vec3(0, b.y*(i + 1)/(nvars + 2), 0) for i in range(nvars)]
         minisystem = openmm.System()
         expression = self.variables.get_energy_function()
         for i, v in enumerate(self.variables):
@@ -587,9 +608,9 @@ class _ExtendedSpaceContext(openmm.Context):
         force.addBond(range(nvars), [])
         for name, value in self.variables.get_parameters().items():
             force.addGlobalParameter(name, value)
-        force.addGlobalParameter('Lx', Vx.x)
+        force.addGlobalParameter('Lx', a.x)
         for v in self.variables:
-            minisystem.addParticle(v._particle_mass(Vx.x))
+            minisystem.addParticle(v._particle_mass(a.x))
             for cv in v.colvars:
                 value = cv.evaluate(self.getSystem(), particle_positions + extra_positions)
                 force.addGlobalParameter(cv.id, value)
@@ -671,12 +692,6 @@ class ExtendedSpaceSimulation(app.Simulation):
         box_vectors = topology.getPeriodicBoxVectors()
         if box_vectors is None:
             raise Exception('UFED: system must be confined in a simulation box')
-        Vx, Vy, Vz = box_vectors
-        Vx = openmm.Vec3(*map(_standardized, Vx))
-        Vy = openmm.Vec3(*map(_standardized, Vy))
-        Vz = openmm.Vec3(*map(_standardized, Vz))
-        if not (Vx.y == Vx.z == Vy.x == Vy.z == Vz.x == Vz.y == 0.0):
-            raise ValueError('UFED: only orthorhombic boxes are allowed')
 
         self.driving_force = openmm.CustomCVForce(self.variables.get_energy_function())
         for name, value in self.variables.get_parameters().items():
@@ -695,8 +710,9 @@ class ExtendedSpaceSimulation(app.Simulation):
         np = system.getNumParticles()
         nb_forces = [f for f in system.getForces()
                      if isinstance(f, (openmm.NonbondedForce, openmm.CustomNonbondedForce))]
+        Vx, _, _ = box_vectors
         for i, v in enumerate(self.variables):
-            system.addParticle(v._particle_mass(Vx.x))
+            system.addParticle(v._particle_mass(_standardized(Vx.x)))
             for nb_force in nb_forces:
                 if isinstance(nb_force, openmm.NonbondedForce):
                     nb_force.addParticle(0.0, 1.0, 0.0)
