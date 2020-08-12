@@ -55,6 +55,7 @@ def test_variables():
     assert cvs[0] == pytest.approx(xvars[0])
     assert cvs[2] == pytest.approx(xvars[1])
     state = simulation.context.getState(getPositions=True)
+    print(type(state.getPositions(asNumpy=False)))
     simulation.context.setPositions(*state.getPositions(extended=True))
     xvars = simulation.context.getState(getPositions=True).getDynamicalVariables()
     assert cvs[0] == pytest.approx(xvars[0])

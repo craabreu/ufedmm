@@ -533,16 +533,17 @@ class _Metadynamics(PeriodicTask):
             self.force.updateParametersInContext(simulation.context)
 
 
-class _ExtendedSpaceState(openmm.State):
+class ExtendedSpaceState(openmm.State):
     """
     An extension of OpenMM's State_ class.
 
     """
-    def __init__(self, variables, Lx, state):
+    def __init__(self, variables, state):
         self.__class__ = type(state.__class__.__name__, (self.__class__, state.__class__), {})
         self.__dict__ = state.__dict__
         self._variables = variables
-        self._Lx = Lx
+        a, _, _ = self.getPeriodicBoxVectors()
+        self._Lx = a.x
 
     def _split(self, vector, asNumpy=False):
         np = (vector.shape[0] if asNumpy else len(vector)) - len(self._variables)
@@ -551,16 +552,100 @@ class _ExtendedSpaceState(openmm.State):
         return particles_contribution, variables_contribution
 
     def getPositions(self, asNumpy=False, extended=False):
+        """
+        Gets the positions of all physical particles and optionally also gets the positions
+        of the extra particles from which the extended-space dynamical variables are computed.
+
+        Keyword Args
+        ------------
+            asNumpy : bool, default=False
+                Whether to return Numpy arrays instead of lists of openmm.Vec3.
+            extended : bool, default=False
+                Whether to include the positions of the extra particles from which the
+                extended-space dynamical variables are computed.
+
+        Returns
+        -------
+            list(openmm.Vec3)
+                If `asNumpy=False` and `extended=False`.
+            numpy.ndarray
+                If `asNumpy=True` and `extended=False`.
+            list(openmm.Vec3), list(float)
+                If `asNumpy=False` and `extended=True`.
+            numpy.ndarray, numpy.ndarray
+                If `asNumpy=True` and `extended=True`.
+
+        Raises
+        ------
+            Exception
+                If positions were not requested in the ``context.getState()`` call.
+
+        """
         positions, xvars = self._split(super().getPositions(asNumpy), asNumpy)
         return (positions, xvars) if extended else positions
 
     def getVelocities(self, asNumpy=False, extended=False):
+        """
+        Gets the velocities of all physical particles and optionally also gets the velocities
+        of the extra particles associated to the extended-space dynamical variables.
+
+        Keyword Args
+        ------------
+            asNumpy : bool, default=False
+                Whether to return Numpy arrays instead of lists of openmm.Vec3.
+            extended : bool, default=False
+                Whether to include the velocities of the extra particles.
+
+        Returns
+        -------
+            list(openmm.Vec3)
+                If `asNumpy=False` and `extended=False`.
+            numpy.ndarray
+                If `asNumpy=True` and `extended=False`.
+            list(openmm.Vec3), list(float)
+                If `asNumpy=False` and `extended=True`.
+            numpy.ndarray, numpy.ndarray
+                If `asNumpy=True` and `extended=True`.
+
+        Raises
+        ------
+            Exception
+                If velocities were not requested in the ``context.getState()`` call.
+
+        """
         velocities = super().getVelocities(asNumpy)
         if not extended:
             velocities, _ = self._split(velocities, asNumpy)
         return velocities
 
     def getDynamicalVariables(self):
+        """
+        Gets the values of the extended-space dynamical variables.
+
+        Returns
+        -------
+            list(float)
+
+        Raises
+        ------
+            Exception
+                If positions were not requested in the ``context.getState()`` call.
+
+        Example
+        -------
+            >>> import ufedmm
+            >>> import numpy as np
+            >>> model = ufedmm.AlanineDipeptideModel()
+            >>> integrator = ufedmm.CustomIntegrator(300, 0.001)
+            >>> args = [-np.pi, np.pi, 50, 1500, model.phi, 1000]
+            >>> s_phi = ufedmm.DynamicalVariable('s_phi', *args)
+            >>> s_psi = ufedmm.DynamicalVariable('s_psi', *args)
+            >>> context = ufedmm.ExtendedSpaceContext([s_phi, s_psi], model.system, integrator)
+            >>> context.setPositions(model.positions)
+            >>> context.getState(getPositions=True).getDynamicalVariables()
+            [-3.141592653589793, -3.141592653589793]
+
+        """
         _, xvars = self._split(super().getPositions())
         return [v.evaluate(x, self._Lx) for v, x in zip(self._variables, xvars)]
 
@@ -594,7 +679,7 @@ class ExtendedSpaceContext(openmm.Context):
     """
     def __init__(self, variables, system, *args, **kwargs):
         driving_force = openmm.CustomCVForce(_get_energy_function(variables))
-        for name, value in variables.get_parameters().items():
+        for name, value in _get_parameters(variables).items():
             driving_force.addGlobalParameter(name, value)
         for v in variables:
             driving_force.addCollectiveVariable(v.id, deepcopy(v.force))
@@ -621,9 +706,36 @@ class ExtendedSpaceContext(openmm.Context):
         self.driving_force = driving_force
 
     def getState(self, **kwargs):
-        return _ExtendedSpaceState(self.variables, self.getParameter('Lx'), super().getState(**kwargs))
+        """
+        Returns a :class:`ExtendedSpaceState` object.
+
+        .. _getState: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.Context.html#simtk.openmm.openmm.Context.getState  # noqa: E501
+
+        Keyword Args
+        ------------
+            **kwargs
+                See getState_.
+
+        """
+        return ExtendedSpaceState(self.variables, super().getState(**kwargs))
 
     def setPeriodicBoxVectors(self, a, b, c):
+        """
+        Set the vectors defining the axes of the periodic box.
+
+        .. warning::
+            Only orthorhombic boxes are allowed.
+
+        Parameters
+        ----------
+            a : openmm.Vec3
+                The vector defining the first edge of the periodic box.
+            b : openmm.Vec3
+                The vector defining the second edge of the periodic box.
+            c : openmm.Vec3
+                The vector defining the third edge of the periodic box.
+
+        """
         a = openmm.Vec3(*map(_standardized, a))
         b = openmm.Vec3(*map(_standardized, b))
         c = openmm.Vec3(*map(_standardized, c))
@@ -661,12 +773,12 @@ class ExtendedSpaceContext(openmm.Context):
         if extended_positions is None:
             extra_positions = [openmm.Vec3(0, b.y*(i + 1)/(nvars + 2), 0) for i in range(nvars)]
             minisystem = openmm.System()
-            expression = self.variables.get_energy_function()
+            expression = _get_energy_function(self.variables)
             for i, v in enumerate(self.variables):
                 expression += f'; {v.id}={v._get_energy_function(index=i+1)}'
             force = openmm.CustomCompoundBondForce(nvars, expression)
             force.addBond(range(nvars), [])
-            for name, value in self.variables.get_parameters().items():
+            for name, value in _get_parameters(self.variables).items():
                 force.addGlobalParameter(name, value)
             force.addGlobalParameter('Lx', a.x)
             for v in self.variables:
