@@ -56,7 +56,7 @@ def test_variables():
     assert cvs[2] == pytest.approx(xvars[1])
 
 
-def test_simulation():
+def test_NHC_integrator():
     model = ufedmm.AlanineDipeptideModel()
     mass = 50*unit.dalton*(unit.nanometer/unit.radians)**2
     Ks = 1000*unit.kilojoules_per_mole/unit.radians**2
@@ -78,3 +78,15 @@ def test_simulation():
     simulation.step(100)
     energy = simulation.context.getState(getEnergy=True).getPotentialEnergy()
     assert energy/energy.unit == pytest.approx(373.68124)
+
+
+def test_GGMT_integrator():
+    model, ufed = ufed_model()
+    integrator = ufedmm.MiddleMassiveGGMTIntegrator(300*unit.kelvin, 10*unit.femtoseconds, 1*unit.femtoseconds)
+    platform = openmm.Platform.getPlatformByName('Reference')
+    simulation = ufed.simulation(model.topology, model.system, integrator, platform)
+    simulation.context.setPositions(model.positions)
+    simulation.context.setVelocitiesToTemperature(300*unit.kelvin, 11234)
+    simulation.step(100)
+    energy = simulation.context.getState(getEnergy=True).getPotentialEnergy()
+    assert energy/energy.unit == pytest.approx(26.876837)

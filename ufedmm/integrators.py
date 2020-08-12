@@ -551,7 +551,6 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
         super().update_temperatures(system_temperature, extended_space_temperatures)
         Q = [self._tau**2*kT for kT in self.getPerDofVariableByName('kT')]
         self.setPerDofVariableByName('Q', Q)
-        print(self.getPerDofVariableByName('Q'))
 
     def _bath(self, fraction):
         n = self._nchain
@@ -564,6 +563,77 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
         for i in range(1, n):
             self.addComputePerDof(f'v{i}', f'(v{i}*z + {fraction/2}*dt*{a(i)})*z; z={z(i)}')
         self.addComputePerDof(f'v{n}', f'v{n} + {fraction/2}*dt*{a(n)}')
+
+
+class MiddleMassiveGGMTIntegrator(AbstractMiddleRespaIntegrator):
+    """
+    A massive, middle-type Generalized Gaussian Moment Thermostat :cite:`Liu_2000`
+    solver with optional multiple time-scale integration via RESPA.
+
+    To enable RESPA, the forces in OpenMM system must be split into distinct force
+    groups and the keyword ``respa_loop`` (see below) must be a list with multiple entries.
+
+    Parameters
+    ----------
+        temperature : float or unit.Quantity
+            The temperature.
+        time_constant : float or unit.Quantity
+            The characteristic time constant.
+        step_size : float or unit.Quantity
+            The time-step size.
+
+    Keyword Args
+    ------------
+        scheme : str, default='VV-Middle'
+            See :class:`AbstractMiddleRespaIntegrator`.
+        respa_loops : list(int), default=[1]
+            See :class:`AbstractMiddleRespaIntegrator`.
+        bath_loops : int, default=1
+            See :class:`AbstractMiddleRespaIntegrator`.
+
+    Example
+    -------
+        >>> import ufedmm
+        >>> temp, tau, dt = 300*unit.kelvin, 10*unit.femtoseconds, 2*unit.femtoseconds
+        >>> integrator = ufedmm.MiddleMassiveGGMTIntegrator(temp, tau, dt)
+        >>> print(integrator)
+        Per-dof variables:
+          kT, Q1, Q2, v1, v2
+        Computation steps:
+           0: allow forces to update the context state
+           1: v <- v + 0.5*dt*f/m
+           2: x <- x + 0.5*dt*v
+           3: v1 <- v1 + 0.5*dt*(m*v^2 - kT)/Q1
+           4: v2 <- v2 + 0.5*dt*(m^2*v^4/3 - kT^2)/Q2
+           5: v <- v*exp(-1.0*dt*(v1 + kT*v2))/sqrt(1 + 2.0*dt*m*v^2*v2/3)
+           6: v1 <- v1 + 0.5*dt*(m*v^2 - kT)/Q1
+           7: v2 <- v2 + 0.5*dt*(m^2*v^4/3 - kT^2)/Q2
+           8: x <- x + 0.5*dt*v
+           9: v <- v + 0.5*dt*f/m
+
+    """
+    def __init__(self, temperature, time_constant, step_size,
+                 scheme='VV-Middle', respa_loops=[1], bath_loops=1):
+        self._tau = _standardized(time_constant)
+        super().__init__(temperature, step_size, 0, scheme, respa_loops, bath_loops)
+        self.addPerDofVariable('Q1', 0)
+        self.addPerDofVariable('Q2', 0)
+        self.addPerDofVariable('v1', 0)
+        self.addPerDofVariable('v2', 0)
+
+    def update_temperatures(self, system_temperature, extended_space_temperatures):
+        super().update_temperatures(system_temperature, extended_space_temperatures)
+        kT_vectors = self.getPerDofVariableByName('kT')
+        kT3_vectors = [openmm.Vec3(kT.x**3, kT.y**3, kT.z**3) for kT in kT_vectors]
+        self.setPerDofVariableByName('Q1', [kT*self._tau**2 for kT in kT_vectors])
+        self.setPerDofVariableByName('Q2', [8/3*kT3*self._tau**2 for kT3 in kT3_vectors])
+
+    def _bath(self, fraction):
+        self.addComputePerDof('v1', f'v1 + {fraction/2}*dt*(m*v^2 - kT)/Q1')
+        self.addComputePerDof('v2', f'v2 + {fraction/2}*dt*(m^2*v^4/3 - kT^2)/Q2')
+        self.addComputePerDof('v', f'v*exp(-{fraction}*dt*(v1 + kT*v2))/sqrt(1 + {2*fraction}*dt*m*v^2*v2/3)')
+        self.addComputePerDof('v1', f'v1 + {fraction/2}*dt*(m*v^2 - kT)/Q1')
+        self.addComputePerDof('v2', f'v2 + {fraction/2}*dt*(m^2*v^4/3 - kT^2)/Q2')
 
 
 class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
