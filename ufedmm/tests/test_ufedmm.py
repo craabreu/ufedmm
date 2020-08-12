@@ -42,6 +42,20 @@ def test_serialization():
         assert var1.__repr__() == var2.__repr__()
 
 
+def test_variables():
+    model, ufed = ufed_model()
+    integrator = ufedmm.MiddleMassiveNHCIntegrator(300*unit.kelvin, 10*unit.femtoseconds, 1*unit.femtoseconds)
+    platform = openmm.Platform.getPlatformByName('Reference')
+    simulation = ufed.simulation(model.topology, model.system, integrator, platform)
+    simulation.context.setPositions(model.positions)
+    simulation.context.setVelocitiesToTemperature(300*unit.kelvin, 11234)
+    simulation.step(20)
+    cvs = simulation.driving_force.getCollectiveVariableValues(simulation.context)
+    xvars = simulation.context.getState(getPositions=True).getDynamicalVariables()
+    assert cvs[0] == pytest.approx(xvars[0])
+    assert cvs[2] == pytest.approx(xvars[1])
+
+
 def test_simulation():
     model = ufedmm.AlanineDipeptideModel()
     mass = 50*unit.dalton*(unit.nanometer/unit.radians)**2

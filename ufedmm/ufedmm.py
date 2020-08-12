@@ -23,6 +23,8 @@ import numpy as np
 from simtk import openmm, unit
 from simtk.openmm import app
 
+import ufedmm
+
 
 def _standardized(quantity):
     """
@@ -528,10 +530,11 @@ class _ExtendedSpaceState(openmm.State):
     An extension of OpenMM's State_ class.
 
     """
-    def __init__(self, variables, state):
+    def __init__(self, variables, Lx, state):
         self.__class__ = type(state.__class__.__name__, (self.__class__, state.__class__), {})
         self.__dict__ = state.__dict__
         self._variables = variables
+        self._Lx = Lx
 
     def _split(self, vector, asNumpy=False):
         np = (vector.shape[0] if asNumpy else len(vector)) - len(self._variables)
@@ -549,6 +552,10 @@ class _ExtendedSpaceState(openmm.State):
             velocities, _ = self._split(velocities, asNumpy)
         return velocities
 
+    def getDynamicalVariables(self):
+        _, xvars = self._split(super().getPositions())
+        return [v.evaluate(x, self._Lx) for v, x in zip(self._variables, xvars)]
+
 
 class _ExtendedSpaceContext(openmm.Context):
     """
@@ -561,7 +568,7 @@ class _ExtendedSpaceContext(openmm.Context):
         self.setPeriodicBoxVectors(*self.getState().getPeriodicBoxVectors())
 
     def getState(self, **kwargs):
-        return _ExtendedSpaceState(self.variables, super().getState(**kwargs))
+        return _ExtendedSpaceState(self.variables, self.getParameter('Lx'), super().getState(**kwargs))
 
     def setPeriodicBoxVectors(self, a, b, c):
         """
@@ -920,9 +927,9 @@ class UnifiedFreeEnergyDynamics(object):
             ntotal = system.getNumParticles()
             simulation.context.setExtendedPositions([openmm.Vec3(0, 0, 0)]*ntotal)
             vartemps = [v.temperature for v in self.variables]
-            try:
+            if isinstance(integrator, ufedmm.integrators.CustomIntegrator):
                 integrator.update_temperatures(self.temperature, vartemps)
-            except Exception:
+            else:
                 temperatures = [self.temperature]*(ntotal - len(vartemps)) + vartemps
                 kT = [unit.MOLAR_GAS_CONSTANT_R*T*openmm.Vec3(1, 1, 1) for T in temperatures]
                 integrator.setPerDofVariableByName('kT', kT)
