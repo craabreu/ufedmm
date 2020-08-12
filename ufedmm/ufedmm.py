@@ -391,8 +391,7 @@ class _Metadynamics(PeriodicTask):
             Enforce gridless metadynamics even for 1D to 3D problems.
 
     """
-    def __init__(self, variables, height, frequency, buffer_size=100, grid_expansion=20,
-                 enforce_gridless=False):
+    def __init__(self, variables, height, frequency, buffer_size=100, grid_expansion=20, enforce_gridless=False):
         super().__init__(frequency)
         self.bias_indices = [i for i, v in enumerate(variables) if v.sigma is not None]
         self.bias_variables = [variables[i] for i in self.bias_indices]
@@ -400,10 +399,7 @@ class _Metadynamics(PeriodicTask):
         self.buffer_size = buffer_size
         self.grid_expansion = grid_expansion
         self._use_grid = len(self.bias_variables) < 4 and not enforce_gridless
-        if self._use_grid:
-            self.force = self._interpolation_grid_force()
-        else:
-            self.force = self._hills_force()
+        self.force = self._interpolation_grid_force() if self._use_grid else self._hills_force()
 
     def _interpolation_grid_force(self):
         self._widths = []
@@ -495,9 +491,7 @@ class _Metadynamics(PeriodicTask):
             self._add_buffer(simulation)
 
     def report(self, simulation, state):
-        _, xvars = state.getPositions(extended=True)
-        Lx = simulation.context.getParameter('Lx')
-        centers = [v.evaluate(x, Lx) for (v, x) in zip(simulation.variables, xvars)]
+        centers = state.getDynamicalVariables()
         if self._use_grid:
             hills = []
             for i, v in enumerate(self.bias_variables):
