@@ -347,14 +347,6 @@ def _get_parameters(variables):
     return parameters
 
 
-class _DynamicalVariableTuple(tuple):
-    def get_energy_function(self):
-        return _get_energy_function(self)
-
-    def get_parameters(self):
-        return _get_parameters(self)
-
-
 class PeriodicTask(object):
     def __init__(self, frequency):
         self.frequency = frequency
@@ -403,7 +395,7 @@ class _Metadynamics(PeriodicTask):
                  enforce_gridless=False):
         super().__init__(frequency)
         self.bias_indices = [i for i, v in enumerate(variables) if v.sigma is not None]
-        self.bias_variables = _DynamicalVariableTuple(variables[i] for i in self.bias_indices)
+        self.bias_variables = [variables[i] for i in self.bias_indices]
         self.height = _standardized(height)
         self.buffer_size = buffer_size
         self.grid_expansion = grid_expansion
@@ -853,7 +845,7 @@ class ExtendedSpaceSimulation(app.Simulation):
 
     """
     def __init__(self, variables, topology, system, integrator, platform=None, platformProperties=None):
-        self.variables = _DynamicalVariableTuple(variables)
+        self.variables = variables
         self._periodic_tasks = []
 
         for force in system.getForces():
@@ -957,7 +949,7 @@ class UnifiedFreeEnergyDynamics(object):
     """
     def __init__(self, variables, temperature, height=None, frequency=None,
                  grid_expansion=20, enforce_gridless=False, buffer_size=100):
-        self.variables = _DynamicalVariableTuple(variables)
+        self.variables = variables
         self.temperature = _standardized(temperature)
         self.height = _standardized(height)
         self.frequency = frequency

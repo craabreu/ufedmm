@@ -11,7 +11,7 @@ import numpy as np
 
 from scipy import stats
 from simtk import openmm
-from ufedmm.ufedmm import _standardized
+from ufedmm.ufedmm import _standardized, _get_energy_function, _get_parameters
 
 
 class Analyzer(object):
@@ -52,8 +52,8 @@ class Analyzer(object):
         extended_variables = [v.id for v in ufed.variables]
         all_variables = collective_variables + extended_variables
 
-        force = openmm.CustomCVForce(ufed.variables.get_energy_function())
-        for key, value in ufed.variables.get_parameters().items():
+        force = openmm.CustomCVForce(_get_energy_function(ufed.variables))
+        for key, value in _get_parameters(ufed.variables).items():
             force.addGlobalParameter(key, value)
         for variable in all_variables:
             force.addGlobalParameter(variable, 0)
