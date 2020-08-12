@@ -598,42 +598,52 @@ class _ExtendedSpaceContext(openmm.Context):
             system.setParticleMass(ntotal - nvars + i, v._particle_mass(a.x))
         self.reinitialize(preserveState=True)
 
-    def setPositions(self, positions):
+    def setPositions(self, positions, extended_positions=None):
         """
-        Sets the positions of all particles in this context and, from these positions, determines
-        and sets suitable values for all extended-space variables.
+        Sets the positions of all particles and extended-space variables in
+        this context. If the latter are not provided, then suitable values
+        are automatically determined from the particle positions.
 
         Parameters
         ----------
             positions : list of openmm.Vec3
-                The positions of all particles.
+                The positions of physical particles.
+
+        Keyword Args
+        ------------
+            extended_positions : list of float or unit.Quantity
+                The positions of extended-space particles.
 
         """
         a, b, _ = self.getState().getPeriodicBoxVectors()
         nvars = len(self.variables)
         particle_positions = positions.value_in_unit(unit.nanometers)
-        extra_positions = [openmm.Vec3(0, b.y*(i + 1)/(nvars + 2), 0) for i in range(nvars)]
-        minisystem = openmm.System()
-        expression = self.variables.get_energy_function()
-        for i, v in enumerate(self.variables):
-            expression += f'; {v.id}={v._get_energy_function(index=i+1)}'
-        force = openmm.CustomCompoundBondForce(nvars, expression)
-        force.addBond(range(nvars), [])
-        for name, value in self.variables.get_parameters().items():
-            force.addGlobalParameter(name, value)
-        force.addGlobalParameter('Lx', a.x)
-        for v in self.variables:
-            minisystem.addParticle(v._particle_mass(a.x))
-            for cv in v.colvars:
-                value = cv.evaluate(self.getSystem(), particle_positions + extra_positions)
-                force.addGlobalParameter(cv.id, value)
-        minisystem.addForce(force)
-        minicontext = openmm.Context(minisystem, openmm.CustomIntegrator(0),
-                                     openmm.Platform.getPlatformByName('Reference'))
-        minicontext.setPositions(extra_positions)
-        openmm.LocalEnergyMinimizer.minimize(minicontext, 1*unit.kilojoules_per_mole, 0)
-        ministate = minicontext.getState(getPositions=True)
-        extra_positions = ministate.getPositions().value_in_unit(unit.nanometers)
+        if extended_positions is None:
+            extra_positions = [openmm.Vec3(0, b.y*(i + 1)/(nvars + 2), 0) for i in range(nvars)]
+            minisystem = openmm.System()
+            expression = self.variables.get_energy_function()
+            for i, v in enumerate(self.variables):
+                expression += f'; {v.id}={v._get_energy_function(index=i+1)}'
+            force = openmm.CustomCompoundBondForce(nvars, expression)
+            force.addBond(range(nvars), [])
+            for name, value in self.variables.get_parameters().items():
+                force.addGlobalParameter(name, value)
+            force.addGlobalParameter('Lx', a.x)
+            for v in self.variables:
+                minisystem.addParticle(v._particle_mass(a.x))
+                for cv in v.colvars:
+                    value = cv.evaluate(self.getSystem(), particle_positions + extra_positions)
+                    force.addGlobalParameter(cv.id, value)
+            minisystem.addForce(force)
+            minicontext = openmm.Context(minisystem, openmm.CustomIntegrator(0),
+                                         openmm.Platform.getPlatformByName('Reference'))
+            minicontext.setPositions(extra_positions)
+            openmm.LocalEnergyMinimizer.minimize(minicontext, 1*unit.kilojoules_per_mole, 0)
+            ministate = minicontext.getState(getPositions=True)
+            extra_positions = ministate.getPositions().value_in_unit(unit.nanometers)
+        else:
+            extra_positions = [openmm.Vec3(x, b.y*(i + 1)/(nvars + 2), 0)
+                               for i, x in enumerate(extended_positions)]
         super().setPositions(particle_positions + extra_positions)
 
     def setVelocitiesToTemperature(self, temperature, randomSeed=None):

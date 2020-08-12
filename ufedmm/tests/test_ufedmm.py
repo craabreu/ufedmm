@@ -54,6 +54,11 @@ def test_variables():
     xvars = simulation.context.getState(getPositions=True).getDynamicalVariables()
     assert cvs[0] == pytest.approx(xvars[0])
     assert cvs[2] == pytest.approx(xvars[1])
+    state = simulation.context.getState(getPositions=True)
+    simulation.context.setPositions(*state.getPositions(extended=True))
+    xvars = simulation.context.getState(getPositions=True).getDynamicalVariables()
+    assert cvs[0] == pytest.approx(xvars[0])
+    assert cvs[2] == pytest.approx(xvars[1])
 
 
 def test_NHC_integrator():
