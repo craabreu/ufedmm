@@ -135,7 +135,7 @@ class StateDataReporter(app.StateDataReporter):
 
         self._extended_space = isinstance(simulation, ufedmm.ExtendedSpaceSimulation)
         if self._extended_space:
-            force = simulation.driving_force
+            force = simulation.context.driving_force
             self._cv_names = [force.getCollectiveVariableName(i) for i in range(force.getNumCollectiveVariables())]
             self._var_names = [v.id for v in simulation.context.variables]
 
@@ -167,7 +167,7 @@ class StateDataReporter(app.StateDataReporter):
                 for twoKE in double_kinetic_energies:
                     self._add_item(values, twoKE/kB)
             if self._variables:
-                for cv in simulation.driving_force.getCollectiveVariableValues(simulation.context):
+                for cv in simulation.context.driving_force.getCollectiveVariableValues(simulation.context):
                     self._add_item(values, cv)
         return values
 

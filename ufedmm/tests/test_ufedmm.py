@@ -50,7 +50,7 @@ def test_variables():
     simulation.context.setPositions(model.positions)
     simulation.context.setVelocitiesToTemperature(300*unit.kelvin, 11234)
     simulation.step(20)
-    cvs = simulation.driving_force.getCollectiveVariableValues(simulation.context)
+    cvs = simulation.context.driving_force.getCollectiveVariableValues(simulation.context)
     xvars = simulation.context.getState(getPositions=True).getDynamicalVariables()
     assert cvs[0] == pytest.approx(xvars[0])
     assert cvs[2] == pytest.approx(xvars[1])
