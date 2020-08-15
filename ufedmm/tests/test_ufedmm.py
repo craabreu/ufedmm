@@ -4,7 +4,6 @@ Unit and regression test for the ufedmm package.
 
 # Import package, test suite, and other packages as needed
 import ufedmm
-import copy
 import pytest
 import sys
 import io
@@ -14,14 +13,14 @@ from simtk import unit
 
 
 def ufed_model(
-    temp = 300*unit.kelvin,
-    mass = 50*unit.dalton*(unit.nanometer/unit.radians)**2,
-    Ks = 1000*unit.kilojoules_per_mole/unit.radians**2,
-    Ts = 1500*unit.kelvin,
-    limit = 180*unit.degrees,
-    sigma = 18*unit.degrees,
+    temp=300*unit.kelvin,
+    mass=50*unit.dalton*(unit.nanometer/unit.radians)**2,
+    Ks=1000*unit.kilojoules_per_mole/unit.radians**2,
+    Ts=1500*unit.kelvin,
+    limit=180*unit.degrees,
+    sigma=18*unit.degrees,
     height=0.0,
-    frequency = 10,
+    frequency=10,
     enforce_gridless=False,
 ):
     model = ufedmm.AlanineDipeptideModel()
