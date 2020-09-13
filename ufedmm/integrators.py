@@ -135,27 +135,31 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
             e^{\\frac{\\Delta t}{2}\\mathcal{L}^{[1]}_v}
             \\left[
                 e^{\\frac{\\Delta t}{2 n_0}\\mathcal{L}^{[0]}_v}
-                e^{\\frac{\\Delta t}{2 n_0}\\mathcal{L}_r}
-                e^{\\frac{\\Delta t}{n_0}\\mathcal{L}_\\mathrm{bath}}
-                e^{\\frac{\\Delta t}{2 n_0}\\mathcal{L}_r}
+                \\left(
+                    e^{\\frac{\\Delta t}{2 n_0 n_b}\\mathcal{L}_r}
+                    e^{\\frac{\\Delta t}{n_0 n_b}\\mathcal{L}_\\mathrm{bath}}
+                    e^{\\frac{\\Delta t}{2 n_0 n_b}\\mathcal{L}_r}
+                \\right)^{n_b}
                 e^{\\frac{\\Delta t}{2 n_0}\\mathcal{L}^{[0]}_v}
             \\right]^{n_0}
             e^{\\frac{\\Delta t}{2}\\mathcal{L}^{[1]}_v}
 
     Each exponential operator is the solution of a particular subsystem of equations.
-    If `\\mathrm{bath}(T_i, v_i) = 0`, the scheme above is time-reversible, measure-preserving,
+    If :math:`\\mathrm{bath}(T_i, v_i) = 0`, the scheme above is time-reversible, measure-preserving,
     and symplectic. It is referred to as the ``VV-Middle`` scheme :cite:`Zhang_2019`, where VV
     stands for Velocity Verlet. An alternative approach is also available, which is:
 
     .. math::
         e^{\\Delta t\\mathcal{L}} =
             \\left[
-                e^{\\frac{\\Delta t}{2 n_0}\\mathcal{L}_r}
-                e^{\\frac{\\Delta t}{n_0}\\mathcal{L}_\\mathrm{bath}}
-                e^{\\frac{\\Delta t}{2 n_0}\\mathcal{L}_r}
+                \\left(
+                    e^{\\frac{\\Delta t}{2 n_0 n_b}\\mathcal{L}_r}
+                    e^{\\frac{\\Delta t}{n_0 n_b}\\mathcal{L}_\\mathrm{bath}}
+                    e^{\\frac{\\Delta t}{2 n_0 n_b}\\mathcal{L}_r}
+                \\right)^{n_b}
                 e^{\\frac{\\Delta t}{n_0}\\mathcal{L}^{[0]}_v}
             \\right]^{n_0}
-            e^{\\Delta t\\mathcal{L}^{[1]}_v}
+            e^{\\Delta t \\mathcal{L}^{[1]}_v}
 
     This is referred to as the ``LF-Middle`` scheme :cite:`Zhang_2019`, where LF stands for
     Leap-Frog. In contrast to the previous scheme, it is not time-reversible. However, in single
@@ -276,16 +280,17 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
                 self.addComputeGlobal(f'irespa{scale}', f'irespa{scale} + 1')
                 self.endBlock()
         else:
-            self._translation(0.5*fraction)
-            if self._bath_loops > 1:
+            n = self._bath_loops
+            if n > 1:
                 self.addComputeGlobal('ibath', '0')
-                self.beginWhileBlock(f'ibath < {self._bath_loops-1/2}')
-            self._bath(fraction/self._bath_loops)
+                self.beginWhileBlock(f'ibath < {n-1/2}')
+            self._translation(0.5*fraction/n)
+            self._bath(fraction/n)
             self._num_rattles > 0 and self.addConstrainVelocities()
-            if self._bath_loops > 1:
+            self._translation(0.5*fraction/n)
+            if n > 1:
                 self.addComputeGlobal('ibath', 'ibath + 1')
                 self.endBlock()
-            self._translation(0.5*fraction)
 
     def _integrate_respa_unrolled(self, fraction, scale):
         if scale >= 0:
@@ -295,11 +300,12 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
                 self._integrate_respa_unrolled(fraction/n, scale-1)
                 self._scheme == 'VV-Middle' and i == n-1 and self._boost(fraction/(2*n), scale)
         else:
-            self._translation(0.5*fraction)
-            for i in range(self._bath_loops):
-                self._bath(fraction/self._bath_loops)
+            n = self._bath_loops
+            for i in range(n):
+                self._translation(fraction/(2*n if i == 0 else n))
+                self._bath(fraction/n)
                 self._num_rattles > 0 and self.addConstrainVelocities()
-            self._translation(0.5*fraction)
+                i == n-1 and self._translation(fraction/(2*n))
 
     def _translation(self, fraction):
         if self._num_rattles > 1:
