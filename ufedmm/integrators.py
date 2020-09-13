@@ -173,6 +173,13 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
             The number of iterations of the bath operator per each step at time scale `0`. This
             is useful when the bath operator is not exact, but derived from a splitting solution.
 
+    Keyword Args
+    ------------
+        subtractive_groups : list(int), default=[]
+            A list of integers containing each force group whose contribution is already
+            incorporated in its immediately superior group, meaning that such contribution
+            must be properly subtracted during the integration.
+
     Example
     -------
         >>> from ufedmm import integrators
@@ -217,7 +224,8 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
 
     """
 
-    def __init__(self, temperature, step_size, num_rattles, scheme, respa_loops, bath_loops):
+    def __init__(self, temperature, step_size, num_rattles, scheme, respa_loops, bath_loops,
+                 subtractive_groups=[]):
         if scheme not in ['LF-Middle', 'VV-Middle']:
             raise Exception(f'Invalid value {scheme} for keyword scheme')
         super().__init__(temperature, step_size)
@@ -225,11 +233,18 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
         self._scheme = scheme
         self._respa_loops = respa_loops
         self._bath_loops = bath_loops
+        self._subtractive_groups = subtractive_groups
         num_rattles > 0 and self.addPerDofVariable('x0', 0)
         num_rattles > 1 and self.addGlobalVariable('irattle', 0)
         for scale, n in enumerate(respa_loops):
             n > 1 and self.addGlobalVariable(f'irespa{scale}', 0)
         bath_loops > 1 and self.addGlobalVariable('ibath', 0)
+        if subtractive_groups:
+            self.addPerDofVariable('fs', 0)
+        if openmm.__version__ >= '7.5':
+            integration_groups = set(range(len(respa_loops))) - set(subtractive_groups)
+            self.setIntegrationForceGroups(integration_groups)
+
         self.addUpdateContextState()
         self._integrate_respa(1, len(respa_loops)-1)
 
@@ -273,7 +288,11 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
 
     def _boost(self, fraction, scale):
         if len(self._respa_loops) > 1:
-            self.addComputePerDof('v', f'v + {fraction}*dt*f{scale}/m')
+            if scale-1 in self._subtractive_groups:
+                self.addComputePerDof('fs', f'f{scale-1}')
+                self.addComputePerDof('v', f'v + {fraction}*dt*(f{scale}-fs)/m')
+            else:
+                self.addComputePerDof('v', f'v + {fraction}*dt*f{scale}/m')
         else:
             self.addComputePerDof('v', f'v + {fraction}*dt*f/m')
         self._num_rattles > 0 and self.addConstrainVelocities()
@@ -539,10 +558,10 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
     """
 
     def __init__(self, temperature, time_constant, step_size, nchain=2,
-                 scheme='VV-Middle', respa_loops=[1], bath_loops=1):
+                 scheme='VV-Middle', respa_loops=[1], bath_loops=1, subtractive_groups=[]):
         self._tau = _standardized(time_constant)
         self._nchain = nchain
-        super().__init__(temperature, step_size, 0, scheme, respa_loops, bath_loops)
+        super().__init__(temperature, step_size, 0, scheme, respa_loops, bath_loops, subtractive_groups=subtractive_groups)
         self.addPerDofVariable('Q', 0)
         for i in range(nchain):
             self.addPerDofVariable(f'v{i+1}', 0)
