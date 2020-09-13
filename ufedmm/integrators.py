@@ -36,7 +36,9 @@ class CustomIntegrator(openmm.CustomIntegrator):
 
     def __init__(self, temperature, step_size):
         super().__init__(step_size)
+        self.temperature = temperature
         self.addPerDofVariable('kT', unit.MOLAR_GAS_CONSTANT_R*temperature)
+        self._up_to_date = False
 
     def __repr__(self):
         """
@@ -93,6 +95,12 @@ class CustomIntegrator(openmm.CustomIntegrator):
         temperatures = [system_temperature]*nparticles + extended_space_temperatures
         kT = [unit.MOLAR_GAS_CONSTANT_R*T*openmm.Vec3(1, 1, 1) for T in temperatures]
         self.setPerDofVariableByName('kT', kT)
+        self._up_to_date = True
+
+    def step(self, steps):
+        if not self._up_to_date:
+            self.update_temperatures(self.temperature, [])
+        super().step(steps)
 
 
 class AbstractMiddleRespaIntegrator(CustomIntegrator):
@@ -628,11 +636,13 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
         self.addPerDofVariable('invQ', 0)
         self.addPerDofVariable('v_eta', 0)
         self.addGlobalVariable('friction', friction_coefficient)
+        self.addGlobalVariable('omega', 1/time_constant)
 
-    def update_temperaturess(self, temperature):
-        super().update_temperaturess(temperature)
-        kBtauSq = _standardized(unit.MOLAR_GAS_CONSTANT_R*self._tau**2)
-        Q = [kBtauSq*_standardized(T) for T in temperature]
+    def update_temperatures(self, system_temperature, extended_space_temperatures):
+        super().update_temperatures(system_temperature, extended_space_temperatures)
+        kT_vectors = self.getPerDofVariableByName('kT')
+        tauSq = _standardized(self._tau)**2
+        Q = [tauSq*kT for kT in kT_vectors]
         invQ = [openmm.Vec3(*map(lambda x: 1/x if x > 0.0 else 0.0, q)) for q in Q]
         self.setPerDofVariableByName('invQ', invQ)
 
@@ -643,7 +653,7 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
     def _bath(self, fraction):
         n = self._n
         boost = f'v_eta + G*{0.5*fraction}*dt'
-        boost += f'; G=({(n+1)/n}*m*(c*tanh(v/c))^2 - kT)/Q'
+        boost += f'; G=({(n+1)/n}*m*(c*tanh(v/c))^2 - kT)*invQ'
         boost += f'; c=sqrt({n}*kT/m)'
 
         scaling = 'c*asinhz'
