@@ -687,13 +687,14 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
         self.setPerDofVariableByName('invQ', invQ)
 
     def _step_initialization(self):
-        self.addComputePerDof('c', f'sqrt({self._n}*kT/m)' if self._n > 1 else 'sqrt(kT/m)')
+        self.addComputePerDof('c', f'sqrt({self._n}*kT/m)')
         n = np.prod(self._respa_loops)*self._bath_loops
         self.addComputeGlobal('aa', f'exp(-friction*dt/{n})')
-        self.addComputeGlobal('bb', f'omega*sqrt(1-aa^2)')
+        self.addComputeGlobal('bb', 'omega*sqrt(1-aa^2)')
 
     def _translation(self, fraction):
-        self.setKineticEnergyExpression(f'0.5*m*(c*tanh(v/c))^2; c=sqrt({self._n}*kT/m)')
+        n = self._n
+        self.setKineticEnergyExpression(f'{0.5*(n+1)/n}*m*(c*tanh(v/c))^2; c=sqrt({n}*kT/m)')
         self.addComputePerDof('x', f'x + c*tanh(v/c)*{fraction}*dt')
 
     def _bath(self, fraction):
