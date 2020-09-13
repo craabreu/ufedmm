@@ -13,6 +13,8 @@
 
 """
 
+import numpy as np
+
 from simtk import openmm, unit
 from ufedmm.ufedmm import _standardized
 
@@ -262,10 +264,14 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
             self.setIntegrationForceGroups(integration_groups)
 
         self.addUpdateContextState()
+        self._step_initialization()
         if unroll_loops:
             self._integrate_respa_unrolled(1, len(respa_loops)-1)
         else:
             self._integrate_respa(1, len(respa_loops)-1)
+
+    def _step_initialization(self):
+        pass
 
     def _integrate_respa(self, fraction, scale):
         if scale >= 0:
@@ -666,8 +672,11 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
         super().__init__(temperature, step_size, **kwargs)
         self.addPerDofVariable('invQ', 0)
         self.addPerDofVariable('v_eta', 0)
+        self.addPerDofVariable('c', 0)
         self.addGlobalVariable('friction', friction_coefficient)
         self.addGlobalVariable('omega', 1/time_constant)
+        self.addGlobalVariable('aa', 0)
+        self.addGlobalVariable('bb', 0)
 
     def update_temperatures(self, system_temperature, extended_space_temperatures):
         super().update_temperatures(system_temperature, extended_space_temperatures)
@@ -677,29 +686,31 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
         invQ = [openmm.Vec3(*map(lambda x: 1/x if x > 0.0 else 0.0, q)) for q in Q]
         self.setPerDofVariableByName('invQ', invQ)
 
+    def _step_initialization(self):
+        self.addComputePerDof('c', f'sqrt({self._n}*kT/m)' if self._n > 1 else 'sqrt(kT/m)')
+        n = np.prod(self._respa_loops)*self._bath_loops
+        self.addComputeGlobal('aa', f'exp(-friction*dt/{n})')
+        self.addComputeGlobal('bb', f'omega*sqrt(1-aa^2)')
+
     def _translation(self, fraction):
         self.setKineticEnergyExpression(f'0.5*m*(c*tanh(v/c))^2; c=sqrt({self._n}*kT/m)')
-        self.addComputePerDof('x', f'x + c*tanh(v/c)*{fraction}*dt; c=sqrt({self._n}*kT/m)')
+        self.addComputePerDof('x', f'x + c*tanh(v/c)*{fraction}*dt')
 
     def _bath(self, fraction):
         n = self._n
         if self._split:
             boost = f'v_eta + G*{0.5*fraction}*dt'
             boost += f'; G=({(n+1)/n}*m*(c*tanh(v/c))^2 - kT)*invQ'
-            boost += f'; c=sqrt({n}*kT/m)'
 
         scaling = 'c*asinhz'
         scaling += '; asinhz=(2*step(z)-1)*log(select(step(za-1E8),2*za,za+sqrt(1+z*z))); za=abs(z)'
         scaling += f'; z=sinh(v/c)*exp(-v_eta*{0.5*fraction}*dt)'
-        scaling += f'; c=sqrt({n}*kT/m)'
 
         if self._split:
-            Ornstein_Uhlenbeck = 'v_eta*z + omega*sqrt(1-z^2)*gaussian'
+            Ornstein_Uhlenbeck = 'v_eta*aa + bb*gaussian'
         else:
-            Ornstein_Uhlenbeck = 'v_eta*z + G*(1-z)/friction + omega*sqrt(1-z^2)*gaussian'
+            Ornstein_Uhlenbeck = 'v_eta*aa + G*(1-aa)/friction + bb*gaussian'
             Ornstein_Uhlenbeck += f'; G=({(n+1)/n}*m*(c*tanh(v/c))^2 - kT)*invQ'
-            Ornstein_Uhlenbeck += f'; c=sqrt({n}*kT/m)'
-        Ornstein_Uhlenbeck += f'; z=exp(-friction*{fraction}*dt)'
 
         self._split and self.addComputePerDof('v_eta', boost)
         self.addComputePerDof('v', scaling)
