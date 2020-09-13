@@ -187,6 +187,9 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
             A list of integers containing each force group whose contribution is already
             incorporated in its immediately superior group, meaning that such contribution
             must be properly subtracted during the integration.
+        unroll_loops : bool, default=True
+            Whether the integrator loops are to be unrolled for improved efficiency. Using
+            ``unroll_loops=False`` can be useful for printing the integrator steps.
 
     Example
     -------
@@ -233,7 +236,7 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
     """
 
     def __init__(self, temperature, step_size, num_rattles=0, scheme='VV-Middle',
-                 respa_loops=[1], bath_loops=1, subtractive_groups=[]):
+                 respa_loops=[1], bath_loops=1, subtractive_groups=[], unroll_loops=True):
         if scheme not in ['LF-Middle', 'VV-Middle']:
             raise Exception(f'Invalid value {scheme} for keyword scheme')
         super().__init__(temperature, step_size)
@@ -244,9 +247,10 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
         self._subtractive_groups = subtractive_groups
         num_rattles > 0 and self.addPerDofVariable('x0', 0)
         num_rattles > 1 and self.addGlobalVariable('irattle', 0)
-        for scale, n in enumerate(respa_loops):
-            n > 1 and self.addGlobalVariable(f'irespa{scale}', 0)
-        bath_loops > 1 and self.addGlobalVariable('ibath', 0)
+        if not unroll_loops:
+            for scale, n in enumerate(respa_loops):
+                n > 1 and self.addGlobalVariable(f'irespa{scale}', 0)
+            bath_loops > 1 and self.addGlobalVariable('ibath', 0)
         if subtractive_groups:
             self.addPerDofVariable('fs', 0)
         if openmm.__version__ >= '7.5':
@@ -254,7 +258,10 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
             self.setIntegrationForceGroups(integration_groups)
 
         self.addUpdateContextState()
-        self._integrate_respa(1, len(respa_loops)-1)
+        if unroll_loops:
+            self._integrate_respa_unrolled(1, len(respa_loops)-1)
+        else:
+            self._integrate_respa(1, len(respa_loops)-1)
 
     def _integrate_respa(self, fraction, scale):
         if scale >= 0:
@@ -278,6 +285,20 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
             if self._bath_loops > 1:
                 self.addComputeGlobal('ibath', 'ibath + 1')
                 self.endBlock()
+            self._translation(0.5*fraction)
+
+    def _integrate_respa_unrolled(self, fraction, scale):
+        if scale >= 0:
+            n = self._respa_loops[scale]
+            for i in range(n):
+                self._boost(fraction/(2*n if self._scheme == 'VV-Middle' and i == 0 else n), scale)
+                self._integrate_respa_unrolled(fraction/n, scale-1)
+                self._scheme == 'VV-Middle' and i == n-1 and self._boost(fraction/(2*n), scale)
+        else:
+            self._translation(0.5*fraction)
+            for i in range(self._bath_loops):
+                self._bath(fraction/self._bath_loops)
+                self._num_rattles > 0 and self.addConstrainVelocities()
             self._translation(0.5*fraction)
 
     def _translation(self, fraction):
@@ -406,7 +427,7 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
     -------
         >>> import ufedmm
         >>> temp, tau, dt = 300*unit.kelvin, 10*unit.femtoseconds, 2*unit.femtoseconds
-        >>> integrator = ufedmm.MiddleMassiveNHCIntegrator(temp, tau, dt, respa_loops=[4, 1])
+        >>> integrator = ufedmm.MiddleMassiveNHCIntegrator(temp, tau, dt, respa_loops=[4, 1], unroll_loops=False)
         >>> print(integrator)
         Per-dof variables:
           kT, Q, v1, v2
