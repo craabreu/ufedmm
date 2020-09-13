@@ -161,20 +161,20 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
             The temperature of the heat bath.
         step_size : float or unit.Quantity
             The outer step size with which to integrate the equations of motion.
-        num_rattles : int
-            The number of RATTLE computations for geodesic integration :cite:`Leimkuhler_2016`.
-            If ``num_rattles=0``, then no constraints are considered at all.
-        scheme : str
-            Which splitting scheme will be used. Valid options are 'VV-Middle' and 'LF-Middle'.
-        respa_loops : list(int)
-            A list of `m` integers, where `respa_loops[k]` determines how many substeps with
-            force group `k` are internally executed for every step with force group `k+1`.
-        bath_loops : int
-            The number of iterations of the bath operator per each step at time scale `0`. This
-            is useful when the bath operator is not exact, but derived from a splitting solution.
 
     Keyword Args
     ------------
+        num_rattles : int, default=0
+            The number of RATTLE computations for geodesic integration :cite:`Leimkuhler_2016`.
+            If ``num_rattles=0``, then no constraints are considered at all.
+        scheme : str, default='VV-Middle'
+            Which splitting scheme will be used. Valid options are 'VV-Middle' and 'LF-Middle'.
+        respa_loops : list(int), default=[1]
+            A list of `m` integers, where `respa_loops[k]` determines how many substeps with
+            force group `k` are internally executed for every step with force group `k+1`.
+        bath_loops : int, default=1
+            The number of iterations of the bath operator per each step at time scale `0`. This
+            is useful when the bath operator is not exact, but derived from a splitting solution.
         subtractive_groups : list(int), default=[]
             A list of integers containing each force group whose contribution is already
             incorporated in its immediately superior group, meaning that such contribution
@@ -224,8 +224,8 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
 
     """
 
-    def __init__(self, temperature, step_size, num_rattles, scheme, respa_loops, bath_loops,
-                 subtractive_groups=[]):
+    def __init__(self, temperature, step_size, num_rattles=0, scheme='VV-Middle',
+                 respa_loops=[1], bath_loops=1, subtractive_groups=[]):
         if scheme not in ['LF-Middle', 'VV-Middle']:
             raise Exception(f'Invalid value {scheme} for keyword scheme')
         super().__init__(temperature, step_size)
@@ -321,11 +321,12 @@ class GeodesicLangevinIntegrator(AbstractMiddleRespaIntegrator):
     Keyword Args
     ------------
         num_rattles : int, default=1
-            See :class:`AbstractMiddleRespaIntegrator`.
+            The number of RATTLE computations for geodesic integration :cite:`Leimkuhler_2016`.
+            If ``num_rattles=0``, then no constraints are considered at all.
         scheme : str, default='LF-Middle'
-            See :class:`AbstractMiddleRespaIntegrator`.
-        respa_loops : list(int), default=[1]
-            See :class:`AbstractMiddleRespaIntegrator`.
+            Which splitting scheme will be used. Valid options are 'VV-Middle' and 'LF-Middle'.
+        **kwargs
+            All other keyword arguments in :class:`AbstractMiddleRespaIntegrator`.
 
     Example
     -------
@@ -360,8 +361,8 @@ class GeodesicLangevinIntegrator(AbstractMiddleRespaIntegrator):
     """
 
     def __init__(self, temperature, friction_coefficient, step_size,
-                 num_rattles=1, scheme='LF-Middle', respa_loops=[1]):
-        super().__init__(temperature, step_size, num_rattles, scheme, respa_loops, 1)
+                 num_rattles=1, scheme='LF-Middle', **kwargs):
+        super().__init__(temperature, step_size, num_rattles=num_rattles, scheme=scheme, **kwargs)
         self.addGlobalVariable('friction', friction_coefficient)
 
     def _bath(self, fraction):
@@ -390,12 +391,8 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
     ------------
         nchain : int, default=2
             The number of thermostats in each Nose-Hoover chain.
-        scheme : str, default='VV-Middle'
-            See :class:`AbstractMiddleRespaIntegrator`.
-        respa_loops : list(int), default=[1]
-            See :class:`AbstractMiddleRespaIntegrator`.
-        bath_loops : int, default=1
-            See :class:`AbstractMiddleRespaIntegrator`.
+        **kwargs
+            All keyword arguments in :class:`AbstractMiddleRespaIntegrator`, except ``num_rattles``.
 
     Example
     -------
@@ -427,11 +424,12 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
 
     """
 
-    def __init__(self, temperature, time_constant, step_size, nchain=2,
-                 scheme='VV-Middle', respa_loops=[1], bath_loops=1, subtractive_groups=[]):
+    def __init__(self, temperature, time_constant, step_size, nchain=2, **kwargs):
+        if 'num_rattles' in kwargs.keys() and kwargs['num_rattles'] != 0:
+            raise ValueError(f'{self.__class__.__name__} cannot handle constraints')
         self._tau = _standardized(time_constant)
         self._nchain = nchain
-        super().__init__(temperature, step_size, 0, scheme, respa_loops, bath_loops, subtractive_groups=subtractive_groups)
+        super().__init__(temperature, step_size, **kwargs)
         self.addPerDofVariable('Q', 0)
         for i in range(nchain):
             self.addPerDofVariable(f'v{i+1}', 0)
@@ -473,12 +471,8 @@ class MiddleMassiveGGMTIntegrator(AbstractMiddleRespaIntegrator):
 
     Keyword Args
     ------------
-        scheme : str, default='VV-Middle'
-            See :class:`AbstractMiddleRespaIntegrator`.
-        respa_loops : list(int), default=[1]
-            See :class:`AbstractMiddleRespaIntegrator`.
-        bath_loops : int, default=1
-            See :class:`AbstractMiddleRespaIntegrator`.
+        **kwargs
+            All keyword arguments in :class:`AbstractMiddleRespaIntegrator`, except ``num_rattles``.
 
     Example
     -------
@@ -501,10 +495,11 @@ class MiddleMassiveGGMTIntegrator(AbstractMiddleRespaIntegrator):
            9: v <- v + 0.5*dt*f/m
 
     """
-    def __init__(self, temperature, time_constant, step_size,
-                 scheme='VV-Middle', respa_loops=[1], bath_loops=1):
+    def __init__(self, temperature, time_constant, step_size, **kwargs):
+        if 'num_rattles' in kwargs.keys() and kwargs['num_rattles'] != 0:
+            raise ValueError(f'{self.__class__.__name__} cannot handle constraints')
         self._tau = _standardized(time_constant)
-        super().__init__(temperature, step_size, 0, scheme, respa_loops, bath_loops)
+        super().__init__(temperature, step_size, **kwargs)
         self.addPerDofVariable('Q1', 0)
         self.addPerDofVariable('Q2', 0)
         self.addPerDofVariable('v1', 0)
@@ -617,13 +612,19 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
         n : int or float
             The regulation parameter.
 
+    Keyword Args
+    ------------
+        **kwargs
+            All keyword arguments in :class:`AbstractMiddleRespaIntegrator`, except ``num_rattles``.
+
     """
 
-    def __init__(self, temperature, time_constant, friction_coefficient, step_size, n=1,
-                 scheme='VV-Middle', respa_loops=[1], bath_loops=1):
+    def __init__(self, temperature, time_constant, friction_coefficient, step_size, n=1, **kwargs):
+        if 'num_rattles' in kwargs.keys() and kwargs['num_rattles'] != 0:
+            raise ValueError(f'{self.__class__.__name__} cannot handle constraints')
         self._tau = time_constant
         self._n = n
-        super().__init__(temperature, step_size, 0, scheme, respa_loops, bath_loops)
+        super().__init__(temperature, step_size, **kwargs)
         self.addPerDofVariable('invQ', 0)
         self.addPerDofVariable('v_eta', 0)
         self.addGlobalVariable('friction', friction_coefficient)
