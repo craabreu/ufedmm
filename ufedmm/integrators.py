@@ -644,21 +644,25 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
             The relaxation time (:math:`\\tau`) of the Nose-Hoover thermostat.
         friction_coefficient : unit.Quantity (1/time)
             The friction coefficient (:math:`\\gamma`) of the Langevin thermostat.
-        n : int or float
-            The regulation parameter.
 
     Keyword Args
     ------------
+        regulation_parameter : int or float
+            The regulation parameter n.
+        split_ornstein_uhlenbeck : bool, default=False
+            Whether to split the drifted Ornstein-Uhlenbeck operator.
         **kwargs
             All keyword arguments in :class:`AbstractMiddleRespaIntegrator`, except ``num_rattles``.
 
     """
 
-    def __init__(self, temperature, time_constant, friction_coefficient, step_size, n=1, **kwargs):
+    def __init__(self, temperature, time_constant, friction_coefficient, step_size,
+                 regulation_parameter=1, split_ornstein_uhlenbeck=False, **kwargs):
         if 'num_rattles' in kwargs.keys() and kwargs['num_rattles'] != 0:
             raise ValueError(f'{self.__class__.__name__} cannot handle constraints')
         self._tau = time_constant
-        self._n = n
+        self._n = regulation_parameter
+        self._split = split_ornstein_uhlenbeck
         super().__init__(temperature, step_size, **kwargs)
         self.addPerDofVariable('invQ', 0)
         self.addPerDofVariable('v_eta', 0)
@@ -679,20 +683,26 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
 
     def _bath(self, fraction):
         n = self._n
-        boost = f'v_eta + G*{0.5*fraction}*dt'
-        boost += f'; G=({(n+1)/n}*m*(c*tanh(v/c))^2 - kT)*invQ'
-        boost += f'; c=sqrt({n}*kT/m)'
+        if self._split:
+            boost = f'v_eta + G*{0.5*fraction}*dt'
+            boost += f'; G=({(n+1)/n}*m*(c*tanh(v/c))^2 - kT)*invQ'
+            boost += f'; c=sqrt({n}*kT/m)'
 
         scaling = 'c*asinhz'
         scaling += '; asinhz=(2*step(z)-1)*log(select(step(za-1E8),2*za,za+sqrt(1+z*z))); za=abs(z)'
         scaling += f'; z=sinh(v/c)*exp(-v_eta*{0.5*fraction}*dt)'
         scaling += f'; c=sqrt({n}*kT/m)'
 
-        Ornstein_Uhlenbeck = 'v_eta*z + omega*sqrt(1-z^2)*gaussian'
+        if self._split:
+            Ornstein_Uhlenbeck = 'v_eta*z + omega*sqrt(1-z^2)*gaussian'
+        else:
+            Ornstein_Uhlenbeck = 'v_eta*z + G*(1-z)/friction + omega*sqrt(1-z^2)*gaussian'
+            Ornstein_Uhlenbeck += f'; G=({(n+1)/n}*m*(c*tanh(v/c))^2 - kT)*invQ'
+            Ornstein_Uhlenbeck += f'; c=sqrt({n}*kT/m)'
         Ornstein_Uhlenbeck += f'; z=exp(-friction*{fraction}*dt)'
 
-        self.addComputePerDof('v_eta', boost)
+        self._split and self.addComputePerDof('v_eta', boost)
         self.addComputePerDof('v', scaling)
         self.addComputePerDof('v_eta', Ornstein_Uhlenbeck)
         self.addComputePerDof('v', scaling)
-        self.addComputePerDof('v_eta', boost)
+        self._split and self.addComputePerDof('v_eta', boost)
