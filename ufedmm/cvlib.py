@@ -9,13 +9,16 @@
 .. _CustomCVForce: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.CustomCVForce.html
 .. _CustomIntegrator: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.CustomIntegrator.html
 .. _Force: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.Force.html
+.. _NonbondedForce: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.NonbondedForce.html
 .. _System: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.System.html
 
 """
 
 import re
+import math
 
 from simtk import openmm, unit
+from ufedmm.ufedmm import _standardized
 
 
 class SquareRadiusOfGyration(openmm.CustomBondForce):
@@ -300,3 +303,100 @@ class HelixRamachandranContent(openmm.CustomTorsionForce):
             i, j, k, l, parameters = self.getTorsionParameters(index + N)
             psi_indices.append((i, j, k, l))
         return phi_indices, psi_indices
+
+
+class InnerNonbondedForce(openmm.NonbondedForce):
+    """
+    The short-range contribution of a RESPA2 splitting scheme :cite:`Morrone_2010`.
+
+    
+    a NonbondedForce_ object.
+
+    Parameters
+    ----------
+        nonbonded_force : openmm.NonbondedForce
+            The original nonbonded force.
+        inner_switch : float or unit.Quantity
+            The inner switching distance.
+        inner_cutoff : float or unit.Quantity
+            The inner cutoff distance.
+
+    """
+    def __init__(self, nonbonded_force, inner_switch, inner_cutoff):
+        periodic = nonbonded_force.usesPeriodicBoundaryConditions()
+        super().__init__()
+        self.setNonbondedMethod(self.CutoffPeriodic if periodic else self.CutoffNonPeriodic)
+        self.setCutoffDistance(inner_cutoff)
+        self.setUseSwitchingFunction(True)
+        self.setSwitchingDistance(inner_switch)
+        self.getUseDispersionCorrection(False)
+        self.setReactionFieldDielectric(1.0)
+        for index in range(nonbonded_force.getNumParticles()):
+            self.addParticle(*nonbonded_force.getParticleParameters(index))
+        for index in range(nonbonded_force.getNumExceptions()):
+            self.addException(*nonbonded_force.getExceptionParameters(index))
+        for index in range(nonbonded_force.getNumParticleParameterOffsets()):
+            self.addParticleParameterOffset(*nonbonded_force.getParticleParameterOffset(index))
+        for index in range(nonbonded_force.getNumExceptionParameterOffsets()):
+            self.addExceptionParameterOffset(*nonbonded_force.getExceptionParameterOffset(index))
+
+    def force_switching_corrections(self):
+        """
+        Returns a pair of forces for computing the force-switching correction.
+
+        Raises
+        ------
+            Exception : 
+                Description
+
+        Returns
+        -------
+            force : openmm.CustomNonbondedForce
+                Description
+            exceptions : openmm.CustomBondForce or None
+                Description
+
+        """
+        if self.getNumParticleParameterOffsets() > 0 or self.getNumExceptionParameterOffsets() > 0:
+            raise Exception("Force switching correction not supported with parameter offsets")
+        rs = _standardized(self.getSwitchingDistance())
+        rc = _standardized(self.getCutoffDistance())
+        a = rc+rs
+        b = rc*rs
+        f12 = f'-{1/7}*r^5+{a/4}*r^4-{(a**2+2*b)/9}*r^3+{a*b/5}*r^2-{b**2/11}*r'
+        f6 = f'-r^5+{a}*r^4-{(a**2+2*b)/3}*r^3+{a*b/2}*r^2-{b**2/5}*r'
+        f1 = f'{1/4}*r^5-{2*a/3}*r^4+{(a**2+2*b)/2}*r^3-{2*a*b}*r^2+{b**2}*log(r)'
+        f0 = f'{1/5}*r^5-{a/2}*r^4+{(a**2+2*b)/3}*r^3-{a*b}*r^2+{b**2}*r'
+        ONE_4PI_EPS0 = 138.93545764438198
+        LennardJones = f'4*epsilon*(({f12})*(sigma/r)^12-({f6})*(sigma/r)^6)'
+        Coulomb = f'{ONE_4PI_EPS0}*chargeprod*(({f1})/r-({f0})/{rc})'
+        G = f'{LennardJones} + {Coulomb}'
+        Gs = eval(G.replace('^', '**').replace('log', 'math.log'), dict(r=rs))
+        Gc = eval(G.replace('^', '**').replace('log', 'math.log'), dict(r=rc))
+        potential = f'{30/(rc-rs)**5}*step(r-{rs})*({G}-{Gs}) + {30*(Gs-Gc)/(rc-rs)**5}'
+        definitions = '; chargeprod=charge1*charge2'
+        definitions += '; sigma=0.5*(sigma1+sigma2)'
+        definitions += '; epsilon=sqrt(epsilon1*epsilon2)'
+
+        force = openmm.CustomNonbondedForce(potential + definitions)
+        force.setCutoffDistance(rc)
+        force.setUseSwitchingFunction(False)
+        force.getUseLongRangeCorrection(False)
+        for parameter in ['charge', 'sigma', 'epsilon']:
+            force.addPerParticleParameter(parameter)
+        for index in range(self.getNumParticles()):
+            force.addParticle(self.getParticleParameters(index))
+
+        num_exceptions = self.getNumExceptions()
+        if num_exceptions > 0:
+            exceptions = openmm.CustomBondForce(f'step({rc}-r)*({potential})')
+            for parameter in ['chargeprod', 'sigma', 'epsilon']:
+                exceptions.addPerBondParameter(parameter)
+            for index in range(num_exceptions):
+                i, j, chargeprod, sigma, epsilon = self.getExceptionParameters(index)
+                force.addExclusion(i, j)
+                exceptions.addBond([chargeprod, sigma, epsilon])
+        else:
+            exceptions = None
+
+        return force, exceptions
