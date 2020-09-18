@@ -19,6 +19,76 @@ from simtk import openmm, unit
 from ufedmm.ufedmm import _standardized
 
 
+def add_inner_nonbonded_force(system, inner_switch, inner_cutoff, force_group):
+    """
+    The short-range contribution of a NonbondedForce_ object.
+
+    Parameters
+    ----------
+        system : openmm.System
+            The system the inner force will be added to, which must contain a NonbondedForce_.
+        inner_switch : float or unit.Quantity
+            The inner switching distance.
+        inner_cutoff : float or unit.Quantity
+            The inner cutoff distance.
+        force_group : int
+            The force group the new interactions will belong to.
+
+    """
+    if openmm.__version__ < '7.5':
+        raise Exception("add_inner_nonbonded_force requires OpenMM version >= 7.5")
+    try:
+        nonbonded_force = next(filter(lambda f: isinstance(f, openmm.NonbondedForce), system.getForces()))
+    except StopIteration:
+        raise Exception("add_inner_nonbonded_force requires system with NonbondedForce")
+    if nonbonded_force.getNumParticleParameterOffsets() > 0 or nonbonded_force.getNumExceptionParameterOffsets() > 0:
+        raise Exception("add_inner_nonbonded_force does not support parameter offsets")
+    periodic = nonbonded_force.usesPeriodicBoundaryConditions()
+    rs = _standardized(inner_switch)
+    rc = _standardized(inner_cutoff)
+    a = rc+rs
+    b = rc*rs
+    c = (30/(rc-rs)**5)*np.array([b**2, -2*a*b, a**2 + 2*b, -2*a, 1])
+    f0s = sum([c[n]*rs**(n+1)/(n+1) for n in range(5)])
+    coeff = lambda n, m: c[m-1] if m == n else c[m-1]/(m-n)
+    func = lambda n, m: '*log(r)' if m == n else (f'*r^{m-n}' if m > n else f'/r^{n-m}')
+    val = lambda n, m: f0s if m == 0 else (coeff(n, m) - coeff(0, m) if n != m else coeff(n, m))
+    sgn = lambda n, m: '+' if m > 0 and val(n, m) >= 0 else ''
+    S = lambda n: ''.join(f'{sgn(n, m)}{val(n, m)}{func(n, m)}' for m in range(6))
+    potential = f'eps4*((sigma/r)^12-(sigma/r)^6)+Qprod/r'
+    potential += f'+step(r-{rs})*(eps4*(sigma^12*({S(12)})-sigma^6*({S(6)}))+Qprod*({S(1)}))'
+    mixing_rules = '; Qprod=Q1*Q2'
+    mixing_rules += '; sigma=halfsig1+halfsig2'
+    mixing_rules += '; eps4=sqrt4eps1*sqrt4eps2'
+    force = openmm.CustomNonbondedForce(potential + mixing_rules)
+    for parameter in ['Q', 'halfsig', 'sqrt4eps']:
+        force.addPerParticleParameter(parameter)
+    force.setNonbondedMethod(force.CutoffPeriodic if periodic else force.CutoffNonPeriodic)
+    force.setCutoffDistance(inner_cutoff)
+    force.setUseLongRangeCorrection(False)
+    ONE_4PI_EPS0 = 138.93545764438198
+    for index in range(nonbonded_force.getNumParticles()):
+        charge, sigma, epsilon = map(_standardized, nonbonded_force.getParticleParameters(index))
+        force.addParticle([charge*np.sqrt(ONE_4PI_EPS0), sigma/2, np.sqrt(4*epsilon)])
+    non_exclusion_exceptions = []
+    for index in range(nonbonded_force.getNumExceptions()):
+        i, j, q1q2, sigma, epsilon = nonbonded_force.getExceptionParameters(index)
+        q1q2, sigma, epsilon = map(_standardized, [q1q2, sigma, epsilon])
+        force.addExclusion(i, j)
+        if chargeprod._value != 0.0 or epsilon._value != 0.0:
+            non_exclusion_exceptions.append((i, j, q1q2*ONE_4PI_EPS0, sigma, 4*epsilon))
+    force.setForceGroup(force_group)
+    system.addForce(force)
+    if non_exclusion_exceptions:
+        exceptions = openmm.CustomBondForce(f'step({rc}-r)*({potential})')
+        for parameter in ['Qprod', 'sigma', 'eps4']:
+            exceptions.addPerBondParameter(parameter)
+        for i, j, Qprod, sigma, eps4 in non_exclusion_exceptions:
+            exceptions.addBond(i, j, [Qprod, sigma, eps4])
+        exceptions.setForceGroup(force_group)
+        system.addForce(exceptions)
+
+
 class CustomIntegrator(openmm.CustomIntegrator):
     """
     An extension of OpenMM's CustomIntegrator_ class with an extra per-dof variable named
