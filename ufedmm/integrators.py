@@ -673,7 +673,12 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
     A regulated version of the massive Nose-Hoover-Langevin :cite:`Samoletov_2007,Leimkuhler_2009`
     method. Regulation means that velocities are modified so as to remain below a
     temperature-dependent speed limit. This method is closely related to the SIN(R) method
-    :cite:`Leimkuhler_2013` and allows multiple time-scale integration without resonance.
+    :cite:`Leimkuhler_2013` and allows multiple time-scale integration with very large outer
+    time steps, without resonance.
+
+    .. info:
+        If `regulation_parameter=1`, this method is completely equivalent to SIN(R) with a
+        single thermostat per degree of freedom (that is, `L=1`).
 
     The following :term:`SDE` system is solved for every degree of freedom in the system:
 
@@ -688,7 +693,8 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
     .. math::
         v_i = c_i \\tanh\\left(\\frac{p_i}{m_i c_i}\\right).
 
-    Here, :math:`c_i = \\sqrt{\\frac{n k T}{m_i}}` is speed limit for such degree of freedom.
+    Here, :math:`n` is the regulation parameter and :math:`c_i = \\sqrt{\\frac{n k T}{m_i}}` is
+    the speed limit for degree of freedom `i`.
     As usual, the inertial parameter :math:`Q` is defined as :math:`Q = k_B T \\tau^2`, with
     :math:`\\tau` being a relaxation time :cite:`Tuckerman_1992`. An approximate solution is
     obtained by applying the Trotter-Suzuki splitting formula:
@@ -810,8 +816,8 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
             boost = f'v_eta + G*{0.5*fraction}*dt'
             boost += f'; G=({(n+1)/n}*m*(c*tanh(v/c))^2 - kT)*invQ'
 
-        scaling = 'c*asinhz'
-        scaling += '; asinhz=(2*step(z)-1)*log(select(step(za-1E8),2*za,za+sqrt(1+z*z))); za=abs(z)'
+        scaling = 'c*asinh_z'
+        scaling += '; asinh_z=(2*step(z)-1)*log(select(step(za-1E8),2*za,za+sqrt(1+z*z))); za=abs(z)'
         scaling += f'; z=sinh(v/c)*exp(-v_eta*{0.5*fraction}*dt)'
 
         if self._split:
