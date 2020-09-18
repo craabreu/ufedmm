@@ -49,12 +49,12 @@ def test_inner_exceptions():
     nbforce = next(filter(lambda f: isinstance(f, openmm.NonbondedForce), model.system.getForces()))
     rs = 0.2
     rc = 0.4
-    ufedmm.add_inner_nonbonded_force(model.system, rs, rc, 0)
-    model.system.getForce(model.system.getNumForces()-1).setForceGroup(1)
+    ufedmm.add_inner_nonbonded_force(model.system, rs, rc, 1)
+    model.system.getForce(model.system.getNumForces()-1).setForceGroup(3)
     platform = openmm.Platform.getPlatformByName('Reference')
     context = openmm.Context(model.system, openmm.CustomIntegrator(0), platform)
     context.setPositions(model.positions)
-    forces1 = _standardized(context.getState(getForces=True, groups={1}).getForces())
+    forces1 = _standardized(context.getState(getForces=True, groups={3}).getForces())
     forces2 = [0*f for f in forces1]
     ONE_4PI_EPS0 = 138.93545764438198
     for index in range(nbforce.getNumExceptions()):

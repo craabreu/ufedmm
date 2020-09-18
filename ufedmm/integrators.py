@@ -20,20 +20,52 @@ from simtk import openmm, unit
 from ufedmm.ufedmm import _standardized
 
 
-def add_inner_nonbonded_force(system, inner_switch, inner_cutoff, force_group):
+def add_inner_nonbonded_force(system, inner_switch, inner_cutoff, force_group_index):
     """
-    The short-range contribution of a NonbondedForce_ object.
+    To a given OpenMM System_ containing a NonbondedForce_ object, this function adds a new force
+    group with the purpose of performing multiple time-scale integration according to the RESPA2
+    splitting scheme of Morrone, Zhou, and Berne :cite:`Morrone_2010`. Besides, it assigns the
+    provided `force_group_index` to this new group and `force_group_index+1` to the original
+    NonbondedForce_. The new force group must be identified as embodied when using any instance
+    of :class:`AbstractMiddleRespaIntegrator`.
+
+    .. warning:
+        The new force group is not intended to contribute to the system energy. Its sole purpose
+        is to provide a smooth short-range contribution for intermediary force calculation in
+        multiple time-scale integration.
 
     Parameters
     ----------
         system : openmm.System
             The system the inner force will be added to, which must contain a NonbondedForce_.
         inner_switch : float or unit.Quantity
-            The inner switching distance.
+            The inner switching distance, where the interaction of an atom pair begins to switch
+            off to zero.
         inner_cutoff : float or unit.Quantity
-            The inner cutoff distance.
-        force_group : int
-            The force group the new interactions will belong to.
+            The inner cutoff distance, where the interaction of an atom pairs completely switches
+            off.
+        force_group_index : int
+            The force group the new interactions will belong to. The old NonbondedForce_ will be
+            automatically assigned to `force_group_index+1`.
+
+    Example
+    -------
+        >>> import ufedmm
+        >>> from simtk import unit
+        >>> dt = 2*unit.femtoseconds
+        >>> temp = 300*unit.kelvin
+        >>> tau = 10*unit.femtoseconds
+        >>> gamma = 10/unit.picoseconds
+        >>> model = ufedmm.AlanineDipeptideModel()
+        >>> add_inner_nonbonded_force(model.system, 5*unit.angstroms, 8*unit.angstroms, 1)
+        >>> for force in model.system.getForces():
+        ...     print(force.__class__.__name__, force.getForceGroup())
+        HarmonicBondForce 0
+        HarmonicAngleForce 0
+        PeriodicTorsionForce 0
+        NonbondedForce 2
+        CustomNonbondedForce 1
+        CustomBondForce 1
 
     """
     if openmm.__version__ < '7.5':
@@ -78,7 +110,7 @@ def add_inner_nonbonded_force(system, inner_switch, inner_cutoff, force_group):
         force.addExclusion(i, j)
         if q1q2 != 0.0 or epsilon != 0.0:
             non_exclusion_exceptions.append((i, j, q1q2*ONE_4PI_EPS0, sigma, 4*epsilon))
-    force.setForceGroup(force_group)
+    force.setForceGroup(force_group_index)
     system.addForce(force)
     if non_exclusion_exceptions:
         exceptions = openmm.CustomBondForce(f'step({rc}-r)*({potential})')
@@ -86,8 +118,9 @@ def add_inner_nonbonded_force(system, inner_switch, inner_cutoff, force_group):
             exceptions.addPerBondParameter(parameter)
         for i, j, Qprod, sigma, eps4 in non_exclusion_exceptions:
             exceptions.addBond(i, j, [Qprod, sigma, eps4])
-        exceptions.setForceGroup(force_group)
+        exceptions.setForceGroup(force_group_index)
         system.addForce(exceptions)
+    nonbonded_force.setForceGroup(force_group_index+1)
 
 
 class CustomIntegrator(openmm.CustomIntegrator):
@@ -260,12 +293,13 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
         bath_loops : int, default=1
             The number of iterations of the bath operator per each step at time scale `0`. This
             is useful when the bath operator is not exact, but derived from a splitting solution.
-        subtractive_groups : list(int), default=[]
-            A list of integers containing each force group whose contribution is already
-            incorporated in its immediately superior group, meaning that such contribution
-            must be properly subtracted during the integration.
+        embodied_force_groups : list(int), default=[]
+            A list of indices of force groups. The presence of an index `i` is this list means that
+            the contribution of force group `i` is embodied in force group `i+1`. Therefore, such
+            contribution must be properly subtracted during the integration at time scale `i+1`.
+            This feature requires OpenMM 7.5 or a newer version.
         unroll_loops : bool, default=True
-            Whether the integrator loops are to be unrolled for improved efficiency. Using
+            Whether the integrator loops should be unrolled for improving efficiency. Using
             ``unroll_loops=False`` can be useful for printing the integrator steps.
 
     Example
@@ -314,7 +348,7 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
     """
 
     def __init__(self, temperature, step_size, num_rattles=0, scheme='VV-Middle',
-                 respa_loops=[1], bath_loops=1, subtractive_groups=[], unroll_loops=True):
+                 respa_loops=[1], bath_loops=1, embodied_force_groups=[], unroll_loops=True):
         if scheme not in ['LF-Middle', 'VV-Middle']:
             raise Exception(f'Invalid value {scheme} for keyword scheme')
         super().__init__(temperature, step_size)
@@ -322,17 +356,18 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
         self._scheme = scheme
         self._respa_loops = respa_loops
         self._bath_loops = bath_loops
-        self._subtractive_groups = subtractive_groups
+        self._subtractive_groups = embodied_force_groups
         num_rattles > 0 and self.addPerDofVariable('x0', 0)
         num_rattles > 1 and self.addGlobalVariable('irattle', 0)
         if not unroll_loops:
             for scale, n in enumerate(respa_loops):
                 n > 1 and self.addGlobalVariable(f'irespa{scale}', 0)
             bath_loops > 1 and self.addGlobalVariable('ibath', 0)
-        if subtractive_groups:
-            self.addPerDofVariable('fs', 0)
-        if openmm.__version__ >= '7.5':
-            integration_groups = set(range(len(respa_loops))) - set(subtractive_groups)
+        if embodied_force_groups:
+            if openmm.__version__ < '7.5':
+                raise Exception('Use of `embodied_force_groups` option requires OpenMM >= 7.5')
+            self.addPerDofVariable('f_emb', 0)
+            integration_groups = set(range(len(respa_loops))) - set(embodied_force_groups)
             self.setIntegrationForceGroups(integration_groups)
 
         self.addUpdateContextState()
@@ -402,8 +437,8 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
     def _boost(self, fraction, scale):
         if len(self._respa_loops) > 1:
             if scale-1 in self._subtractive_groups:
-                self.addComputePerDof('fs', f'f{scale-1}')
-                self.addComputePerDof('v', f'v + {fraction}*dt*(f{scale}-fs)/m')
+                self.addComputePerDof('f_emb', f'f{scale-1}')
+                self.addComputePerDof('v', f'v + {fraction}*dt*(f{scale}-f_emb)/m')
             else:
                 self.addComputePerDof('v', f'v + {fraction}*dt*f{scale}/m')
         else:
