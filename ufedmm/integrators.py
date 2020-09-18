@@ -9,6 +9,7 @@
 .. _CustomCVForce: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.CustomCVForce.html
 .. _CustomIntegrator: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.CustomIntegrator.html
 .. _Force: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.Force.html
+.. _NonbondedForce: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.NonbondedForce.html
 .. _System: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.System.html
 
 """
@@ -50,12 +51,12 @@ def add_inner_nonbonded_force(system, inner_switch, inner_cutoff, force_group):
     b = rc*rs
     c = (30/(rc-rs)**5)*np.array([b**2, -2*a*b, a**2 + 2*b, -2*a, 1])
     f0s = sum([c[n]*rs**(n+1)/(n+1) for n in range(5)])
-    coeff = lambda n, m: c[m-1] if m == n else c[m-1]/(m-n)
-    func = lambda n, m: '*log(r)' if m == n else (f'*r^{m-n}' if m > n else f'/r^{n-m}')
-    val = lambda n, m: f0s if m == 0 else (coeff(n, m) - coeff(0, m) if n != m else coeff(n, m))
-    sgn = lambda n, m: '+' if m > 0 and val(n, m) >= 0 else ''
-    S = lambda n: ''.join(f'{sgn(n, m)}{val(n, m)}{func(n, m)}' for m in range(6))
-    potential = f'eps4*((sigma/r)^12-(sigma/r)^6)+Qprod/r'
+    def coeff(n, m): return c[m-1] if m == n else c[m-1]/(m-n)
+    def func(n, m): return '*log(r)' if m == n else (f'*r^{m-n}' if m > n else f'/r^{n-m}')
+    def val(n, m): return f0s if m == 0 else (coeff(n, m) - coeff(0, m) if n != m else coeff(n, m))
+    def sgn(n, m): return '+' if m > 0 and val(n, m) >= 0 else ''
+    def S(n): return ''.join(f'{sgn(n, m)}{val(n, m)}{func(n, m)}' for m in range(6))
+    potential = 'eps4*((sigma/r)^12-(sigma/r)^6)+Qprod/r'
     potential += f'+step(r-{rs})*(eps4*(sigma^12*({S(12)})-sigma^6*({S(6)}))+Qprod*({S(1)}))'
     mixing_rules = '; Qprod=Q1*Q2'
     mixing_rules += '; sigma=halfsig1+halfsig2'
@@ -75,7 +76,7 @@ def add_inner_nonbonded_force(system, inner_switch, inner_cutoff, force_group):
         i, j, q1q2, sigma, epsilon = nonbonded_force.getExceptionParameters(index)
         q1q2, sigma, epsilon = map(_standardized, [q1q2, sigma, epsilon])
         force.addExclusion(i, j)
-        if chargeprod._value != 0.0 or epsilon._value != 0.0:
+        if q1q2 != 0.0 or epsilon != 0.0:
             non_exclusion_exceptions.append((i, j, q1q2*ONE_4PI_EPS0, sigma, 4*epsilon))
     force.setForceGroup(force_group)
     system.addForce(force)
@@ -274,6 +275,7 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
         >>> class MiddleNoseHooverIntegrator(integrators.AbstractMiddleRespaIntegrator):
         ...     def __init__(self, ndof, tau, temperature, step_size, num_rattles=1):
         ...         super().__init__(temperature, step_size, num_rattles, 'VV-Middle', [1], 1)
+        ...         kB = 8.3144626E-3*unit.kilojoules_per_mole/unit.kelvin
         ...         gkT = ndof*unit.MOLAR_GAS_CONSTANT_R*temperature
         ...         self.addGlobalVariable('gkT', gkT)
         ...         self.addGlobalVariable('Q', gkT*tau**2)
@@ -292,8 +294,8 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
         Per-dof variables:
           kT
         Global variables:
-          gkT = 1247.1708706830323
-          Q = 0.12471708706830327
+          gkT = 1247.1693927229858
+          Q = 0.1247169392722986
           v_eta = 0.0
           twoK = 0.0
           scaling = 1.0

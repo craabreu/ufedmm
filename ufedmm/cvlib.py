@@ -16,7 +16,6 @@
 import re
 
 from simtk import openmm, unit
-from ufedmm.ufedmm import _standardized
 
 
 class SquareRadiusOfGyration(openmm.CustomBondForce):

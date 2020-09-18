@@ -1,9 +1,8 @@
 import numpy as np
 import pytest
-import ufedmm
 
 from ufedmm import integrators
-from simtk import openmm, unit
+from simtk import openmm
 
 
 def perform_test(sigma, epsilon, charge0, charge1, rs, rc):
@@ -25,13 +24,13 @@ def perform_test(sigma, epsilon, charge0, charge1, rs, rc):
         force = state.getForces()[1].x
         z = (r - rs)/(rc - rs)
         S = 1 - 10*z**3 + 15*z**4 - 6*z**5 if z > 0 else 1
-        Sp = -30*z**2*(1 - z)**2 if z > 0 else 0
-        zp = 1.0/(rc - rs)
         F = 24*epsilon*(2*(sigma/r)**12 - (sigma/r)**6)/r + ONE_4PI_EPS0*charge0*charge1/r**2
         assert force == pytest.approx(F*S)
 
+
 def test_inner_lennard_jones():
     perform_test(1.0, 1.0, 0, 0, 2.0, 2.5)
+
 
 def test_inner_coulomb():
     perform_test(1.0, 0.0, -1.0, 1.0, 2.0, 2.5)
