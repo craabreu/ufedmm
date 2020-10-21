@@ -26,13 +26,14 @@ def add_inner_nonbonded_force(system, inner_switch, inner_cutoff, force_group_in
     group with the purpose of performing multiple time-scale integration according to the RESPA2
     splitting scheme of Morrone, Zhou, and Berne :cite:`Morrone_2010`. Besides, it assigns the
     provided `force_group_index` to this new group and `force_group_index+1` to the original
-    NonbondedForce_. The new force group must be identified as embodied when using any instance
-    of :class:`AbstractMiddleRespaIntegrator`.
+    NonbondedForce_. When used in any instance of :class:`AbstractMiddleRespaIntegrator`, the new
+    force group must be identified as being embodied by the NonbondedForce_ as opposed to being
+    complimentary to it.
 
     .. warning:
         The new force group is not intended to contribute to the system energy. Its sole purpose
-        is to provide a smooth short-range contribution for intermediary force calculation in
-        multiple time-scale integration.
+        is to provide a smooth, short-range force calculator for some intermediary time scale in
+        a RESPA-type integration.
 
     Parameters
     ----------
@@ -57,7 +58,7 @@ def add_inner_nonbonded_force(system, inner_switch, inner_cutoff, force_group_in
         >>> tau = 10*unit.femtoseconds
         >>> gamma = 10/unit.picoseconds
         >>> model = ufedmm.AlanineDipeptideModel()
-        >>> add_inner_nonbonded_force(model.system, 5*unit.angstroms, 8*unit.angstroms, 1)
+        >>> ufedmm.add_inner_nonbonded_force(model.system, 5*unit.angstroms, 8*unit.angstroms, 1)
         >>> for force in model.system.getForces():
         ...     print(force.__class__.__name__, force.getForceGroup())
         HarmonicBondForce 0
