@@ -488,9 +488,9 @@ class _Metadynamics(PeriodicTask):
                 self.force.getCollectiveVariable(i).setParticleParameters(0, particle, [])
         else:
             self._num_hills = 0
-        freeGroups = set(range(32)) - set(f.getForceGroup() for f in simulation.system.getForces())
-        self.force.setForceGroup(max(freeGroups))
-        self.group_set = {max(freeGroups)}
+        free_groups = set(range(32)) - set(f.getForceGroup() for f in simulation.system.getForces())
+        self.force.setForceGroup(max(free_groups))
+        self.group_set = {max(free_groups)}
         simulation.system.addForce(self.force)
         context.reinitialize(preserveState=True)
 
@@ -508,7 +508,7 @@ class _Metadynamics(PeriodicTask):
         centers = state.getDynamicalVariables()
         if self.well_tempered:
             energy = simulation.context.getState(getEnergy=True, groups=self.group_set).getPotentialEnergy()
-            height = self.height*np.exp(-energy/self.delta_T)
+            height = self.height*np.exp(-energy/self.delta_kT)
         else:
             height = self.height
         if self._use_grid:
