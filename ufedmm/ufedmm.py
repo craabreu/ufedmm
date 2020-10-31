@@ -909,9 +909,9 @@ class ExtendedSpaceSimulation(app.Simulation):
         if self._periodic_tasks:
             for task in self._periodic_tasks:
                 task.update(self, steps)
-                self.reporters.append(task)
+            self.reporters = self._periodic_tasks + self.reporters
             self._simulate(endStep=self.currentStep+steps)
-            self.reporters = self.reporters[:-len(self._periodic_tasks)]
+            self.reporters = self.reporters[len(self._periodic_tasks):]
         else:
             self._simulate(endStep=self.currentStep+steps)
 
@@ -1003,7 +1003,7 @@ class UnifiedFreeEnergyDynamics(object):
             containing a per-dof variable `kT` whose content is the Boltzmann constant times
             the temperature associated to each degree of freedom.
             This is true for all integrators available in :mod:`ufedmm.integrators`, which are
-            subclass of :class:`ufedmm.integrators.CustomIntegrator`.
+            subclasses of :class:`ufedmm.integrators.CustomIntegrator`.
 
         Parameters
         ----------
