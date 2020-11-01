@@ -401,6 +401,7 @@ class _Metadynamics(PeriodicTask):
         super().__init__(frequency)
         self.bias_indices = [i for i, v in enumerate(variables) if v.sigma is not None]
         self.bias_variables = [variables[i] for i in self.bias_indices]
+        self.initial_height = _standardized(height)
         self.height = _standardized(height)
         self.well_tempered = bias_factor is not None
         if self.well_tempered:
@@ -508,9 +509,9 @@ class _Metadynamics(PeriodicTask):
         centers = state.getDynamicalVariables()
         if self.well_tempered:
             energy = simulation.context.getState(getEnergy=True, groups=self.group_set).getPotentialEnergy()
-            height = self.height*np.exp(-energy/self.delta_kT)
+            self.height = self.initial_height*np.exp(-energy/self.delta_kT)
         else:
-            height = self.height
+            self.height = self.initial_height
         if self._use_grid:
             hills = []
             for i, v in enumerate(self.bias_variables):
@@ -520,7 +521,7 @@ class _Metadynamics(PeriodicTask):
                     exponents = (np.cos(2*np.pi*dist)-1)/(4*np.pi*np.pi*v._scaled_variance)
                 else:  # Gauss
                     exponents = -0.5*dist*dist/v._scaled_variance
-                hills.append(height*np.exp(exponents))
+                hills.append(self.height*np.exp(exponents))
             ndim = len(self.bias_variables)
             bias = hills[0] if ndim == 1 else functools.reduce(np.multiply.outer, reversed(hills))
             for axis, v in enumerate(self.bias_variables):
@@ -533,7 +534,7 @@ class _Metadynamics(PeriodicTask):
         else:
             if self._num_hills == self.force.getNumBonds():
                 self._add_buffer(simulation)
-            self.force.setBondParameters(self._num_hills, self.particles, [height] + centers)
+            self.force.setBondParameters(self._num_hills, self.particles, [self.height] + centers)
             self._num_hills += 1
             self.force.updateParametersInContext(simulation.context)
 

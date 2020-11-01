@@ -16,6 +16,7 @@ import ufedmm
 
 from simtk import unit
 from simtk.openmm import app
+from ufedmm.ufedmm import _Metadynamics
 
 
 class Tee:
@@ -83,6 +84,9 @@ class StateDataReporter(app.StateDataReporter):
         multipleTemperatures : bool, default=False
             If this is `True`, then the running temperature estimates will be reported separately
             for the atoms and for the extended-space dynamical variables.
+        hillHeights : bool, default=False
+            If this is `True`, then the height of the latest deposited metadynamics hill will be
+            reported.
 
     Example
     -------
@@ -114,6 +118,7 @@ class StateDataReporter(app.StateDataReporter):
     def __init__(self, file, report_interval, **kwargs):
         self._variables = kwargs.pop('variables', False)
         self._multitemps = kwargs.pop('multipleTemperatures', False)
+        self._hill_heights = kwargs.pop('hillHeights', False)
         super().__init__(file, report_interval, **kwargs)
         self._backSteps = -sum([self._volume, self._density, self._speed, self._elapsedTime, self._remainingTime])
         if self._multitemps:
@@ -138,6 +143,12 @@ class StateDataReporter(app.StateDataReporter):
             force = simulation.context.driving_force
             self._cv_names = [force.getCollectiveVariableName(i) for i in range(force.getNumCollectiveVariables())]
             self._var_names = [v.id for v in simulation.context.variables]
+            if self._hill_heights:
+                try:
+                    tasks = simulation._periodic_tasks
+                    self._metadynamics = next(filter(lambda x: isinstance(x, _Metadynamics), tasks))
+                except StopIteration:
+                    self._metadynamics = None
 
     def _constructHeaders(self):
         headers = super()._constructHeaders()
@@ -149,6 +160,8 @@ class StateDataReporter(app.StateDataReporter):
             if self._variables:
                 for cv in self._cv_names:
                     self._add_item(headers, cv)
+            if self._hill_heights:
+                self._add_item(headers, 'Height (kJ/mole)')
         return headers
 
     def _constructReportValues(self, simulation, state):
@@ -169,6 +182,8 @@ class StateDataReporter(app.StateDataReporter):
             if self._variables:
                 for cv in simulation.context.driving_force.getCollectiveVariableValues(simulation.context):
                     self._add_item(values, cv)
+            if self._hill_heights:
+                self._add_item(values, self._metadynamics.height if self._metadynamics is not None else 0.0)
         return values
 
 
