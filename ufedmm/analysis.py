@@ -7,11 +7,12 @@
 
 """
 
+import itertools
 import numpy as np
 
 from scipy import stats
 from simtk import openmm
-from ufedmm.ufedmm import _standardize
+from ufedmm.ufedmm import _standardized, _get_energy_function, _get_parameters
 
 
 class Analyzer(object):
@@ -24,9 +25,19 @@ class Analyzer(object):
             The UFED object.
         dataframe : pandas.DataFrame
             A data frame containing sampled sets of collective variables and driver parameters.
+        bins : int or list(int)
+            The number of bins in each direction.
+
+    Keyword Args
+    ------------
+        min_count : int, default=1
+            The miminum number of hits for a given bin to be considered in the analysis.
+        adjust_centers : bool, default=False
+            Whether to consider the center of a bin as the mean value of the its sampled
+            internal points istead of its geometric center.
 
     """
-    def __init__(self, ufed, dataframe, bins):
+    def __init__(self, ufed, dataframe, bins, min_count=1, adjust_centers=False):
         self._ufed = ufed
         try:
             self._bins = [bin for bin in bins]
@@ -38,22 +49,27 @@ class Analyzer(object):
         ranges = [(v.min_value, v.max_value) for v in ufed.variables]
 
         counts = stats.binned_statistic_dd(sample, [], statistic='count', bins=self._bins, range=ranges)
-        means = stats.binned_statistic_dd(sample, sample + forces, bins=self._bins, range=ranges)
-        histogram = counts.statistic.flatten()
-        index = np.where(histogram > 0)
+        index = np.where(counts.statistic.flatten() >= min_count)
 
-        self.histogram = histogram[index]
         n = len(ufed.variables)
-        self.centers = [means.statistic[i].flatten()[index] for i in range(n)]
-        self.mean_forces = [means.statistic[n+i].flatten()[index] for i in range(n)]
+        if adjust_centers:
+            means = stats.binned_statistic_dd(sample, sample + forces, bins=self._bins, range=ranges)
+            self.centers = [means.statistic[i].flatten()[index] for i in range(n)]
+            self.mean_forces = [means.statistic[n+i].flatten()[index] for i in range(n)]
+        else:
+            means = stats.binned_statistic_dd(sample, forces, bins=self._bins, range=ranges)
+            bin_centers = [0.5*(edges[1:] + edges[:-1]) for edges in counts.bin_edges]
+            center_points = np.stack([np.array(point) for point in itertools.product(*bin_centers)])
+            self.centers = [center_points[:, i][index] for i in range(n)]
+            self.mean_forces = [statistic.flatten()[index] for statistic in means.statistic]
 
     def _compute_forces(self, ufed, dataframe):
-        collective_variables = [v.colvar.id for v in ufed.variables]
+        collective_variables = [colvar.id for v in ufed.variables for colvar in v.colvars]
         extended_variables = [v.id for v in ufed.variables]
         all_variables = collective_variables + extended_variables
 
-        force = openmm.CustomCVForce(ufed.variables.get_energy_function())
-        for key, value in ufed.variables.get_parameters().items():
+        force = openmm.CustomCVForce(_get_energy_function(ufed.variables))
+        for key, value in _get_parameters(ufed.variables).items():
             force.addGlobalParameter(key, value)
         for variable in all_variables:
             force.addGlobalParameter(variable, 0)
@@ -78,7 +94,7 @@ class Analyzer(object):
                 forces[i][j] = -derivatives[xv]
         return forces
 
-    def free_energy_functions(self, sigma=None):
+    def free_energy_functions(self, sigma=None, factor=8):
         """
         Returns Python functions for evaluating the potential of mean force and their originating
         mean forces as a function of the collective variables.
@@ -88,6 +104,9 @@ class Analyzer(object):
             sigma : float or unit.Quantity, default=None
                 The standard deviation of kernels. If this is `None`, then values will be
                 determined from the distances between nodes.
+            factor : float, default=8
+                If ``sigma`` is not explicitly provided, then it will be computed as
+                ``sigma = factor*range/bins`` for each direction.
 
         Returns
         -------
@@ -102,12 +121,12 @@ class Analyzer(object):
 
         """
         if sigma is None:
-            variances = [(v._range/self._bins[i])**2 for i, v in enumerate(self._ufed.variables)]
+            variances = [(factor*v._range/self._bins[i])**2 for i, v in enumerate(self._ufed.variables)]
         else:
             try:
-                variances = [_standardize(value)**2 for value in sigma]
+                variances = [_standardized(value)**2 for value in sigma]
             except TypeError:
-                variances = [_standardize(sigma)**2]*len(self._ufed.variables)
+                variances = [_standardized(sigma)**2]*len(self._ufed.variables)
 
         exponent = []
         derivative = []

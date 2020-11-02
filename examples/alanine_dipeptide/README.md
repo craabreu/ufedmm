@@ -23,10 +23,11 @@ To perform post-processing:
 python analysis.py
 ``` 
 
-To simulate a molecule of alanine dipeptide in explicit water:
+To simulate a molecule of alanine dipeptide in explicit water using
+OpenMM's `CUDA` platform:
 
 ```
-python alanine_dipeptide.py --water tip3p
+python alanine_dipeptide.py --water tip3p --platform CUDA
 ```
 
 Note: other available water models are `spce`, `tip4pew`, and `tip5p`.

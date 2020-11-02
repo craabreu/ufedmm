@@ -11,6 +11,8 @@ from simtk import unit
 ufed = ufedmm.deserialize('ufed_object.yml')
 df = pd.read_csv('output.csv')
 
+print(df[['T[atoms] (K)'] + [f'T[{v.id}] (K)' for v in ufed.variables]].mean())
+
 bins = (20, 20)
 analyzer = ufedmm.Analyzer(ufed, df, bins)
 potential, mean_force = analyzer.free_energy_functions()

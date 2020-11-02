@@ -12,11 +12,13 @@
 
 import sys
 import yaml
+import ufedmm
 
+from simtk import unit
 from simtk.openmm import app
 
 
-class MultipleFiles:
+class Tee:
     """
     Allows the use of multiple outputs in an OpenMM Reporter.
 
@@ -30,7 +32,7 @@ class MultipleFiles:
         >>> import tempfile
         >>> from sys import stdout
         >>> file = tempfile.TemporaryFile(mode='w+t')
-        >>> print('test', file=ufedmm.MultipleFiles(stdout, file))
+        >>> print('test', file=ufedmm.Tee(stdout, file))
         test
 
     """
@@ -61,18 +63,26 @@ class StateDataReporter(app.StateDataReporter):
 
     All original functionalities of StateDataReporter_ are preserved.
 
-    Besides, it is possible to report the current values of all collective variables, driver
-    parameters, and other properties associated to a passed AFED integrator.
+    Besides, if it is added to an :class:`~ufedmm.ufedmm.ExtendedSpaceSimulation` object, e.g. one
+    created through the :func:`~ufedmm.ufedmm.UnifiedFreeEnergyDynamics.simulation` method, then a
+    new set of keywords are available.
 
     Parameters
     ----------
-        file : str or stream or afed.MultipleFiles
+        file : str or stream or afed.temperature
             The file to write to, specified as a file name, file object, or
-            :class:`~afed.output.MultipleFiles` object.
+            :class:`~ufedmm.io.Tee` object.
         report_interval : int
             The interval (in time steps) at which to report state data.
-        cv_force : openmm.CustomCVForce
-            The UFED object force.
+
+    Keyword Args
+    ------------
+        variables : bool, default=False
+            If this is `True`, then the current values of all collective variables and
+            dynamical variables related to the extended-space simulation will be reported.
+        multipleTemperatures : bool, default=False
+            If this is `True`, then the running temperature estimates will be reported separately
+            for the atoms and for the extended-space dynamical variables.
 
     Example
     -------
@@ -90,20 +100,24 @@ class StateDataReporter(app.StateDataReporter):
         >>> s_phi = ufedmm.DynamicalVariable('s_phi', -limit, limit, mass, Ts, model.phi, Ks)
         >>> s_psi = ufedmm.DynamicalVariable('s_psi', -limit, limit, mass, Ts, model.psi, Ks)
         >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([s_phi, s_psi], T)
-        >>> integrator = ufedmm.GeodesicBAOABIntegrator(dt, T, gamma)
+        >>> integrator = ufedmm.GeodesicLangevinIntegrator(dt, T, gamma)
         >>> platform = openmm.Platform.getPlatformByName('Reference')
         >>> simulation = ufed.simulation(model.topology, model.system, integrator, platform)
-        >>> simulation.set_positions(model.positions)
-        >>> reporter = ufedmm.StateDataReporter(stdout, 1, simulation.driving_force, step=True)
+        >>> simulation.context.setPositions(model.positions)
+        >>> simulation.context.setVelocitiesToTemperature(300*unit.kelvin, 1234)
+        >>> reporter = ufedmm.StateDataReporter(stdout, 1, variables=True)
         >>> reporter.report(simulation, simulation.context.getState())
-        #"Step","s_phi","phi","s_psi","psi"
-        0,-3.141592653589793,3.141592653589793,-3.141592653589793,3.141592653589793
+        #"s_phi","phi","s_psi","psi"
+        -3.141592653589793,3.141592653589793,-3.141592653589793,3.141592653589793
 
     """
-    def __init__(self, file, report_interval, cv_force, **kwargs):
+    def __init__(self, file, report_interval, **kwargs):
+        self._variables = kwargs.pop('variables', False)
+        self._multitemps = kwargs.pop('multipleTemperatures', False)
         super().__init__(file, report_interval, **kwargs)
-        self._cv_force = cv_force
-        self._backSteps = -sum([self._speed, self._elapsedTime, self._remainingTime])
+        self._backSteps = -sum([self._volume, self._density, self._speed, self._elapsedTime, self._remainingTime])
+        if self._multitemps:
+            self._needsVelocities = self._needEnergy = True
 
     def _add_item(self, lst, item):
         if self._backSteps == 0:
@@ -111,17 +125,50 @@ class StateDataReporter(app.StateDataReporter):
         else:
             lst.insert(self._backSteps, item)
 
+    def _initializeConstants(self, simulation):
+        if self._multitemps and not self._temperature:
+            self._temperature = True
+            super()._initializeConstants(simulation)
+            self._temperature = False
+        else:
+            super()._initializeConstants(simulation)
+
+        self._extended_space = isinstance(simulation, ufedmm.ExtendedSpaceSimulation)
+        if self._extended_space:
+            force = simulation.context.driving_force
+            self._cv_names = [force.getCollectiveVariableName(i) for i in range(force.getNumCollectiveVariables())]
+            self._var_names = [v.id for v in simulation.context.variables]
+
     def _constructHeaders(self):
         headers = super()._constructHeaders()
-        for index in range(self._cv_force.getNumCollectiveVariables()):
-            cv = self._cv_force.getCollectiveVariableName(index)
-            self._add_item(headers, cv)
+        if self._extended_space:
+            if self._multitemps:
+                self._add_item(headers, 'T[atoms] (K)')
+                for var in self._var_names:
+                    self._add_item(headers, f'T[{var}] (K)')
+            if self._variables:
+                for cv in self._cv_names:
+                    self._add_item(headers, cv)
         return headers
 
     def _constructReportValues(self, simulation, state):
         values = super()._constructReportValues(simulation, state)
-        for cv in self._cv_force.getCollectiveVariableValues(simulation.context):
-            self._add_item(values, cv)
+        if self._extended_space:
+            if self._multitemps:
+                system = simulation.context.getSystem()
+                Nt = system.getNumParticles()
+                Nv = len(simulation.context.variables)
+                masses = [system.getParticleMass(i)/unit.dalton for i in range(Nt-Nv, Nt)]
+                velocities = [v.x for v in state.getVelocities(extended=True)[Nt-Nv: Nt]]
+                double_kinetic_energies = [m*v*v for m, v in zip(masses, velocities)]
+                TotalKE = state.getKineticEnergy().value_in_unit(unit.kilojoules_per_mole)
+                kB = unit.MOLAR_GAS_CONSTANT_R.value_in_unit(unit.kilojoules_per_mole/unit.kelvin)
+                self._add_item(values, (2*TotalKE-sum(double_kinetic_energies))/((self._dof-Nv)*kB))
+                for twoKE in double_kinetic_energies:
+                    self._add_item(values, twoKE/kB)
+            if self._variables:
+                for cv in simulation.context.driving_force.getCollectiveVariableValues(simulation.context):
+                    self._add_item(values, cv)
         return values
 
 

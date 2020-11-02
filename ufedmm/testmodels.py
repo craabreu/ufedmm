@@ -31,6 +31,13 @@ class AlanineDipeptideModel(object):
             Available options are "spce", "tip3p", "tip4pew", and "tip5p".
         box_length : unit.Quantity, default=25*unit.angstroms
             The size of the simulation box. This is only effective if water is not `None`.
+        constraints : object, default=None
+            Specifies which bonds and angles should be implemented with constraints. Allowed
+            values are `None`, `openmm.app.HBonds`, `openmm.app.AllBonds`, or
+            `openmm.app.HAngles`.
+        rigidWater : bool, boolean=True
+            Whether water molecules will be fully rigid regardless of the value passed for the
+            constraints argument.
 
     Attributes
     ----------
@@ -47,7 +54,8 @@ class AlanineDipeptideModel(object):
 
     """
 
-    def __init__(self, force_field='amber03', water=None, box_length=25*unit.angstroms):
+    def __init__(self, force_field='amber03', water=None, box_length=25*unit.angstroms,
+                 constraints=openmm.app.HBonds, rigidWater=True):
         pdb = app.PDBFile(os.path.join(ufedmm.__path__[0], 'data', 'alanine-dipeptide.pdb'))
         if water is None:
             force_field = app.ForceField(f'{force_field}.xml')
@@ -65,8 +73,8 @@ class AlanineDipeptideModel(object):
         self.system = force_field.createSystem(
             self.topology,
             nonbondedMethod=app.NoCutoff if water is None else app.PME,
-            constraints=app.HBonds,
-            rigidWater=True,
+            constraints=constraints,
+            rigidWater=rigidWater,
             removeCMMotion=False,
         )
         atoms = [(a.name, a.residue.name) for a in self.topology.atoms()]
