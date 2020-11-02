@@ -21,12 +21,13 @@ def ufed_model(
     sigma=18*unit.degrees,
     height=0.0,
     frequency=10,
+    bias_factor=None,
     enforce_gridless=False,
 ):
     model = ufedmm.AlanineDipeptideModel()
     s_phi = ufedmm.DynamicalVariable('s_phi', -limit, limit, mass, Ts, model.phi, Ks, sigma=sigma)
     s_psi = ufedmm.DynamicalVariable('s_psi', -limit, limit, mass, Ts, model.psi, Ks, sigma=sigma)
-    return model, ufedmm.UnifiedFreeEnergyDynamics([s_phi, s_psi], temp, height, frequency,
+    return model, ufedmm.UnifiedFreeEnergyDynamics([s_phi, s_psi], temp, height, frequency, bias_factor,
                                                    enforce_gridless=enforce_gridless)
 
 
@@ -112,3 +113,15 @@ def test_gridded_metadynamics():
 #     simulation.step(100)
 #     energy = simulation.context.getState(getEnergy=True).getPotentialEnergy()
 #     assert energy/energy.unit == pytest.approx(59.74040)
+
+
+def test_well_tempered_metadynamics():
+    model, ufed = ufed_model(height=2.0*unit.kilocalorie_per_mole, bias_factor=10)
+    integrator = ufedmm.MiddleMassiveNHCIntegrator(300*unit.kelvin, 10*unit.femtoseconds, 1*unit.femtoseconds)
+    platform = openmm.Platform.getPlatformByName('Reference')
+    simulation = ufed.simulation(model.topology, model.system, integrator, platform)
+    simulation.context.setPositions(model.positions)
+    simulation.context.setVelocitiesToTemperature(300*unit.kelvin, 1234)
+    simulation.step(100)
+    energy = simulation.context.getState(getEnergy=True).getPotentialEnergy()
+    assert energy/energy.unit == pytest.approx(129.77, abs=0.1)

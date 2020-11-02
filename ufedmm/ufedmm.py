@@ -382,6 +382,11 @@ class _Metadynamics(PeriodicTask):
 
     Keyword Args
     ------------
+        bias_factor : float, default=None
+            Scales the height of the hills added to the bias potential. If it is `None`, then the
+            hills will have a constant height over time. For a bias factor to be applicable, all
+            bias variables must be at the same temperature T. The extended-space dynamical
+            variables are sampled as if the effective temperature were T*bias_factor.
         buffer_size : int, default=100
             The buffer size.
         grid_expansion : int, default=20
@@ -391,11 +396,19 @@ class _Metadynamics(PeriodicTask):
             Enforce gridless metadynamics even for 1D to 3D problems.
 
     """
-    def __init__(self, variables, height, frequency, buffer_size=100, grid_expansion=20, enforce_gridless=False):
+    def __init__(self, variables, height, frequency, bias_factor=None,
+                 buffer_size=100, grid_expansion=20, enforce_gridless=False):
         super().__init__(frequency)
         self.bias_indices = [i for i, v in enumerate(variables) if v.sigma is not None]
         self.bias_variables = [variables[i] for i in self.bias_indices]
+        self.initial_height = _standardized(height)
         self.height = _standardized(height)
+        self.well_tempered = bias_factor is not None
+        if self.well_tempered:
+            temperature = self.bias_variables[0].temperature
+            if any(v.temperature != temperature for v in self.bias_variables):
+                raise ValueError("Well-Tempered Metadynamics requires bias variables at same temperature")
+            self.delta_kT = (bias_factor - 1)*unit.MOLAR_GAS_CONSTANT_R*temperature*unit.kelvin
         self.buffer_size = buffer_size
         self.grid_expansion = grid_expansion
         self._use_grid = len(self.bias_variables) < 4 and not enforce_gridless
@@ -466,7 +479,7 @@ class _Metadynamics(PeriodicTask):
                 self._table.setFunctionParameters(*self._widths, self._bias, *self._bounds)
             self.force.updateParametersInContext(simulation.context)
 
-    def initialize(self, simulation, force_group):
+    def initialize(self, simulation):
         context = simulation.context
         np = context.getSystem().getNumParticles() - len(context.variables)
         self.particles = [np + index for index in self.bias_indices]
@@ -476,7 +489,9 @@ class _Metadynamics(PeriodicTask):
                 self.force.getCollectiveVariable(i).setParticleParameters(0, particle, [])
         else:
             self._num_hills = 0
-        self.force.setForceGroup(force_group)
+        free_groups = set(range(32)) - set(f.getForceGroup() for f in simulation.system.getForces())
+        self.force.setForceGroup(max(free_groups))
+        self.group_set = {max(free_groups)}
         simulation.system.addForce(self.force)
         context.reinitialize(preserveState=True)
 
@@ -492,6 +507,11 @@ class _Metadynamics(PeriodicTask):
 
     def report(self, simulation, state):
         centers = state.getDynamicalVariables()
+        if self.well_tempered:
+            energy = simulation.context.getState(getEnergy=True, groups=self.group_set).getPotentialEnergy()
+            self.height = self.initial_height*np.exp(-energy/self.delta_kT)
+        else:
+            self.height = self.initial_height
         if self._use_grid:
             hills = []
             for i, v in enumerate(self.bias_variables):
@@ -873,13 +893,8 @@ class ExtendedSpaceSimulation(app.Simulation):
             task : PeriodicTask
                 A :class:`~ufedmm.ufedmm.PeriodicTask` object.
 
-        Keyword Args
-        ------------
-            force_group : int, default=0
-                The force group to add new forces to.
-
         """
-        task.initialize(self, force_group)
+        task.initialize(self)
         self._periodic_tasks.append(task)
 
     def step(self, steps):
@@ -895,9 +910,9 @@ class ExtendedSpaceSimulation(app.Simulation):
         if self._periodic_tasks:
             for task in self._periodic_tasks:
                 task.update(self, steps)
-                self.reporters.append(task)
+            self.reporters = self._periodic_tasks + self.reporters
             self._simulate(endStep=self.currentStep+steps)
-            self.reporters = self.reporters[:-len(self._periodic_tasks)]
+            self.reporters = self.reporters[len(self._periodic_tasks):]
         else:
             self._simulate(endStep=self.currentStep+steps)
 
@@ -919,6 +934,11 @@ class UnifiedFreeEnergyDynamics(object):
             The height.
         frequency : int, default=None
             The frequency.
+        bias_factor : float, default=None
+            Scales the height of the hills added to the metadynamics bias potential. If it is
+            `None`, then the hills will have a constant height over time. For a bias factor to be
+            applicable, all bias variables must be at the same temperature T. The extended-space
+            dynamical variables are sampled as if the effective temperature were T*bias_factor.
         grid_expansion : int, default=20
             The grid expansion.
         enforce_gridless : bool, default=False
@@ -941,12 +961,13 @@ class UnifiedFreeEnergyDynamics(object):
         <variables=[s_phi, s_psi], temperature=300, height=None, frequency=None>
 
     """
-    def __init__(self, variables, temperature, height=None, frequency=None,
+    def __init__(self, variables, temperature, height=None, frequency=None, bias_factor=None,
                  grid_expansion=20, enforce_gridless=False, buffer_size=100):
         self.variables = variables
         self.temperature = _standardized(temperature)
         self.height = _standardized(height)
         self.frequency = frequency
+        self.bias_factor = bias_factor
         self.grid_expansion = grid_expansion
         self.enforce_gridless = enforce_gridless
         self.buffer_size = buffer_size
@@ -964,6 +985,7 @@ class UnifiedFreeEnergyDynamics(object):
             temperature=self.temperature,
             height=self.height,
             frequency=self.frequency,
+            bias_factor=self.bias_factor,
             grid_expansion=self.grid_expansion,
             enforce_gridless=self.enforce_gridless,
             buffer_size=self.buffer_size,
@@ -982,7 +1004,7 @@ class UnifiedFreeEnergyDynamics(object):
             containing a per-dof variable `kT` whose content is the Boltzmann constant times
             the temperature associated to each degree of freedom.
             This is true for all integrators available in :mod:`ufedmm.integrators`, which are
-            subclass of :class:`ufedmm.integrators.CustomIntegrator`.
+            subclasses of :class:`ufedmm.integrators.CustomIntegrator`.
 
         Parameters
         ----------
@@ -1033,6 +1055,7 @@ class UnifiedFreeEnergyDynamics(object):
                     self.variables,
                     self.height,
                     self.frequency,
+                    bias_factor=self.bias_factor,
                     buffer_size=self.buffer_size,
                     grid_expansion=self.grid_expansion,
                     enforce_gridless=self.enforce_gridless,
