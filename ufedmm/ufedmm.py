@@ -41,7 +41,7 @@ def _standardized(quantity):
 
 class CollectiveVariable(object):
     """
-    A function of particle coordinates, evaluated by means of an OpenMM Force_ object.
+    A function of the particle coordinates, evaluated by means of an OpenMM Force_ object.
 
     Quoting OpenMM's CustomCVForce_ manual entry:
 
@@ -167,6 +167,14 @@ class DynamicalVariable(object):
     The coupling occurs in the form of a potential energy term involving this dynamical variable
     and its associated collective variables.
 
+    The default potential is a harmonic driving of the type:
+
+    .. math::
+        V(s, \\mathbf r) = \\frac{\\kappa}{2} [s - q(\\mathbf r)]^2
+
+    where :math:`s` is the new dynamical variable, :math:`q(\\mathbf r)` is its associated collective
+    variable, and :math:`kappa` is a force constant.
+
     Parameters
     ----------
         id : str
@@ -184,7 +192,7 @@ class DynamicalVariable(object):
         colvars : :class:`~ufedmm.ufedmm.CollectiveVariable` or list thereof
             Either a single colective variable or a list.
         potential : float or unit.Quantity or str
-            Either the value of the force constant of a harmonic driving force or an algebraic
+            Either the value of the force constant of a harmonic driving potential or an algebraic
             expression giving the energy of the system as a function of this dynamical variable and
             its associated collective variable. Such expression can also contain a set of global
             parameters, whose values must be passed as keyword arguments (see below).
