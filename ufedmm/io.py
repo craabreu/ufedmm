@@ -144,11 +144,13 @@ class StateDataReporter(app.StateDataReporter):
             self._cv_names = [force.getCollectiveVariableName(i) for i in range(force.getNumCollectiveVariables())]
             self._var_names = [v.id for v in simulation.context.variables]
             if self._hill_heights:
+                metadynamics_tasks = filter(lambda x: isinstance(x, _Metadynamics), simulation._periodic_tasks)
                 try:
-                    tasks = simulation._periodic_tasks
-                    self._metadynamics = next(filter(lambda x: isinstance(x, _Metadynamics), tasks))
+                    self._metadynamics = next(metadynamics_tasks)
                 except StopIteration:
-                    self._metadynamics = None
+                    raise Exception("hillHeights keyword involked for simulation w/o metadynamics bias")
+                bias_factor = self._metadynamics.bias_factor
+                self._height_scaling = 1 if bias_factor is None else bias_factor/(bias_factor - 1)
 
     def _constructHeaders(self):
         headers = super()._constructHeaders()
@@ -183,7 +185,7 @@ class StateDataReporter(app.StateDataReporter):
                 for cv in simulation.context.driving_force.getCollectiveVariableValues(simulation.context):
                     self._add_item(values, cv)
             if self._hill_heights:
-                self._add_item(values, self._metadynamics.height if self._metadynamics is not None else 0.0)
+                self._add_item(values, self._metadynamics.height*self._height_scaling)
         return values
 
 

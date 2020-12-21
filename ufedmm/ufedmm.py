@@ -371,14 +371,14 @@ class _Metadynamics(PeriodicTask):
 
     Parameters
     ----------
-        variables : list of DynamicalVariable
-            The variables.
-        temperature : float or unit.Quantity
-            The temperature.
-        height : float or unit.Quantity, default=None
-            The height.
-        frequency : int, default=None
-            The frequency.
+        variables : list of :class:`DynamicalVariable`
+            A list of extended-space dynamical variables to which the metadynamics bias must be
+            applied. In fact, dynamical variables with `sigma = None` will not be considered.
+        height : float or unit.Quantity
+            The height of the Gaussian potential hills to be deposited. If the `bias_factor` keyword
+            is defined (see below), then this is the unscaled height.
+        frequency : int
+            The frequency of Gaussian hill deposition.
 
     Keyword Args
     ------------
@@ -401,13 +401,12 @@ class _Metadynamics(PeriodicTask):
         super().__init__(frequency)
         self.bias_indices = [i for i, v in enumerate(variables) if v.sigma is not None]
         self.bias_variables = [variables[i] for i in self.bias_indices]
-        self.initial_height = _standardized(height)
-        self.height = _standardized(height)
-        self.well_tempered = bias_factor is not None
-        if self.well_tempered:
+        self.initial_height = self.height = _standardized(height)
+        self.bias_factor = bias_factor
+        if bias_factor is not None:
             temperature = self.bias_variables[0].temperature
             if any(v.temperature != temperature for v in self.bias_variables):
-                raise ValueError("Well-Tempered Metadynamics requires bias variables at same temperature")
+                raise ValueError("Well-tempered metadynamics requires all variables at the same temperature")
             self.delta_kT = (bias_factor - 1)*unit.MOLAR_GAS_CONSTANT_R*temperature*unit.kelvin
         self.buffer_size = buffer_size
         self.grid_expansion = grid_expansion
@@ -507,11 +506,11 @@ class _Metadynamics(PeriodicTask):
 
     def report(self, simulation, state):
         centers = state.getDynamicalVariables()
-        if self.well_tempered:
+        if self.bias_factor is None:
+            self.height = self.initial_height
+        else:
             energy = simulation.context.getState(getEnergy=True, groups=self.group_set).getPotentialEnergy()
             self.height = self.initial_height*np.exp(-energy/self.delta_kT)
-        else:
-            self.height = self.initial_height
         if self._use_grid:
             hills = []
             for i, v in enumerate(self.bias_variables):
