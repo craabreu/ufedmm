@@ -10,12 +10,58 @@
 import itertools
 import numpy as np
 
+from collections import namedtuple
 from scipy import stats
 from simtk import openmm
 from ufedmm.ufedmm import _standardized, _get_energy_function, _get_parameters
 
 
-class Analyzer(object):
+class FreeEnergyCalculator(object):
+    """
+    Calculate free energy landscapes from UFED simulation results.
+
+    Parameters
+    ----------
+        ufed : :class:`~ufedmm.ufedmm.UnifiedFreeEnergyDynamics`
+            The UFED object.
+        dataframe : pandas.DataFrame
+            A data frame containing sampled sets of collective variables and driver parameters.
+
+    """
+    def __init__(self, ufed, dataframe):
+        self._ufed = ufed
+        self._dataframe = dataframe
+        self._bias_variables = filter(lambda v: v.sigma is not None, self._ufed.variables)
+
+    def metadynamics_bias_free_energy(self):
+        Variable = namedtuple('Variable', 'sigma factor periodic centers')
+        variables = [
+            Variable(
+                v.sigma,
+                2*np.pi/v._range,
+                v.periodic,
+                self._dataframe[v.id].values,
+            )
+            for v in self._bias_variables
+        ]
+        try:
+            heights = self._dataframe['Height (kJ/mole)'].values
+        except KeyError:
+            heights = self._ufed.height
+
+        def free_energy(position):
+            exponents = 0.0
+            for v, x in zip(variables, position):
+                if v.periodic:
+                    exponents += (np.cos(v.factor*(v.centers - x)) - 1.0)/(v.factor*v.sigma)**2
+                else:
+                    exponents += -0.5*((v.centers - x)/v.sigma)**2
+            return -np.sum(heights*np.exp(exponents))
+
+        return free_energy
+
+
+class Analyzer(FreeEnergyCalculator):
     """
     UFED Analyzer.
 
@@ -38,7 +84,7 @@ class Analyzer(object):
 
     """
     def __init__(self, ufed, dataframe, bins, min_count=1, adjust_centers=False):
-        self._ufed = ufed
+        super().__init__(ufed, dataframe)
         try:
             self._bins = [bin for bin in bins]
         except TypeError:
