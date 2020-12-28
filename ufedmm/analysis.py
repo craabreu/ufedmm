@@ -16,7 +16,7 @@ from simtk import openmm
 from ufedmm.ufedmm import _standardized, _get_energy_function, _get_parameters
 
 
-class FreeEnergyCalculator(object):
+class FreeEnergyAnalyzer(object):
     """
     Calculate free energy landscapes from UFED simulation results.
 
@@ -34,14 +34,19 @@ class FreeEnergyCalculator(object):
         self._bias_variables = filter(lambda v: v.sigma is not None, self._ufed.variables)
 
     def metadynamics_bias_free_energy(self):
+        """
+        Returns a callable object that estimates the free energy of the system as a function of
+        the extended phase-space variable values.
+
+        Returns
+        -------
+            function
+                The free energy function.
+
+        """
         Variable = namedtuple('Variable', 'sigma factor periodic centers')
         variables = [
-            Variable(
-                v.sigma,
-                2*np.pi/v._range,
-                v.periodic,
-                self._dataframe[v.id].values,
-            )
+            Variable(v.sigma, 2*np.pi/v._range, v.periodic, self._dataframe[v.id].values)
             for v in self._bias_variables
         ]
         try:
@@ -49,7 +54,7 @@ class FreeEnergyCalculator(object):
         except KeyError:
             heights = self._ufed.height
 
-        def free_energy(position):
+        def free_energy(*position):
             exponents = 0.0
             for v, x in zip(variables, position):
                 if v.periodic:
@@ -58,10 +63,88 @@ class FreeEnergyCalculator(object):
                     exponents += -0.5*((v.centers - x)/v.sigma)**2
             return -np.sum(heights*np.exp(exponents))
 
-        return free_energy
+        return np.vectorize(free_energy)
+
+    def centers_and_mean_forces(self, bins, min_count=1, adjust_centers=False):
+        """
+        Performs binned statistics of the UFED simulation data.
+
+        Parameters
+        ----------
+            bins : int or list(int)
+                The number of bins in each direction.
+
+        Keyword Args
+        ------------
+            min_count : int, default=1
+                The miminum number of hits for a given bin to be considered in the analysis.
+            adjust_centers : bool, default=False
+                Whether to consider the center of a bin as the mean value of the its sampled
+                internal points istead of its geometric center.
+
+        Returns
+        -------
+            centers : list(numpy.array)
+                The bin centers.
+            mean_forces : list(numpy.array)
+                The mean forces.
+
+        """
+        variables = self._ufed.variables
+        sample = [self._dataframe[v.id] for v in variables]
+        forces = self._compute_forces()
+        ranges = [(v.min_value, v.max_value) for v in variables]
+
+        counts = stats.binned_statistic_dd(sample, [], statistic='count', bins=bins, range=ranges)
+        index = np.where(counts.statistic.flatten() >= min_count)
+
+        n = len(variables)
+        if adjust_centers:
+            means = stats.binned_statistic_dd(sample, sample + forces, bins=bins, range=ranges)
+            centers = [means.statistic[i].flatten()[index] for i in range(n)]
+            mean_forces = [means.statistic[n+i].flatten()[index] for i in range(n)]
+        else:
+            means = stats.binned_statistic_dd(sample, forces, bins=bins, range=ranges)
+            bin_centers = [0.5*(edges[1:] + edges[:-1]) for edges in counts.bin_edges]
+            center_points = np.stack([np.array(point) for point in itertools.product(*bin_centers)])
+            centers = [center_points[:, i][index] for i in range(n)]
+            mean_forces = [statistic.flatten()[index] for statistic in means.statistic]
+        return centers, mean_forces
+
+    def _compute_forces(self):
+        variables = self._ufed.variables
+        collective_variables = [colvar.id for v in variables for colvar in v.colvars]
+        extended_variables = [v.id for v in variables]
+        all_variables = collective_variables + extended_variables
+
+        force = openmm.CustomCVForce(_get_energy_function(variables))
+        for key, value in _get_parameters(variables).items():
+            force.addGlobalParameter(key, value)
+        for variable in all_variables:
+            force.addGlobalParameter(variable, 0)
+        for xv in extended_variables:
+            force.addEnergyParameterDerivative(xv)
+
+        system = openmm.System()
+        system.addForce(force)
+        system.addParticle(0)
+        platform = openmm.Platform.getPlatformByName('Reference')
+        context = openmm.Context(system, openmm.CustomIntegrator(0), platform)
+        context.setPositions([openmm.Vec3(0, 0, 0)])
+
+        n = len(self._dataframe.index)
+        forces = [np.empty(n) for xv in extended_variables]
+        for j, row in self._dataframe.iterrows():
+            for variable in all_variables:
+                context.setParameter(variable, row[variable])
+            state = context.getState(getParameterDerivatives=True)
+            derivatives = state.getEnergyParameterDerivatives()
+            for i, xv in enumerate(extended_variables):
+                forces[i][j] = -derivatives[xv]
+        return forces
 
 
-class Analyzer(FreeEnergyCalculator):
+class Analyzer(FreeEnergyAnalyzer):
     """
     UFED Analyzer.
 
@@ -89,56 +172,8 @@ class Analyzer(FreeEnergyCalculator):
             self._bins = [bin for bin in bins]
         except TypeError:
             self._bins = [bins]*len(ufed.variables)
-
-        sample = [dataframe[v.id] for v in ufed.variables]
-        forces = self._compute_forces(ufed, dataframe)
-        ranges = [(v.min_value, v.max_value) for v in ufed.variables]
-
-        counts = stats.binned_statistic_dd(sample, [], statistic='count', bins=self._bins, range=ranges)
-        index = np.where(counts.statistic.flatten() >= min_count)
-
-        n = len(ufed.variables)
-        if adjust_centers:
-            means = stats.binned_statistic_dd(sample, sample + forces, bins=self._bins, range=ranges)
-            self.centers = [means.statistic[i].flatten()[index] for i in range(n)]
-            self.mean_forces = [means.statistic[n+i].flatten()[index] for i in range(n)]
-        else:
-            means = stats.binned_statistic_dd(sample, forces, bins=self._bins, range=ranges)
-            bin_centers = [0.5*(edges[1:] + edges[:-1]) for edges in counts.bin_edges]
-            center_points = np.stack([np.array(point) for point in itertools.product(*bin_centers)])
-            self.centers = [center_points[:, i][index] for i in range(n)]
-            self.mean_forces = [statistic.flatten()[index] for statistic in means.statistic]
-
-    def _compute_forces(self, ufed, dataframe):
-        collective_variables = [colvar.id for v in ufed.variables for colvar in v.colvars]
-        extended_variables = [v.id for v in ufed.variables]
-        all_variables = collective_variables + extended_variables
-
-        force = openmm.CustomCVForce(_get_energy_function(ufed.variables))
-        for key, value in _get_parameters(ufed.variables).items():
-            force.addGlobalParameter(key, value)
-        for variable in all_variables:
-            force.addGlobalParameter(variable, 0)
-        for xv in extended_variables:
-            force.addEnergyParameterDerivative(xv)
-
-        system = openmm.System()
-        system.addForce(force)
-        system.addParticle(0)
-        platform = openmm.Platform.getPlatformByName('Reference')
-        context = openmm.Context(system, openmm.CustomIntegrator(0), platform)
-        context.setPositions([openmm.Vec3(0, 0, 0)])
-
-        n = len(dataframe.index)
-        forces = [np.empty(n) for xv in extended_variables]
-        for j, row in dataframe.iterrows():
-            for variable in all_variables:
-                context.setParameter(variable, row[variable])
-            state = context.getState(getParameterDerivatives=True)
-            derivatives = state.getEnergyParameterDerivatives()
-            for i, xv in enumerate(extended_variables):
-                forces[i][j] = -derivatives[xv]
-        return forces
+        self._min_count = min_count
+        self._adjust_centers = adjust_centers
 
     def free_energy_functions(self, sigma=None, factor=8):
         """
@@ -166,17 +201,24 @@ class Analyzer(FreeEnergyCalculator):
                 the direction of the first collective variable).
 
         """
+        self.centers, self.mean_forces = self.centers_and_mean_forces(
+            self._bins,
+            self._min_count,
+            self._adjust_centers,
+        )
+        variables = self._ufed.variables
+
         if sigma is None:
-            variances = [(factor*v._range/self._bins[i])**2 for i, v in enumerate(self._ufed.variables)]
+            variances = [(factor*v._range/bin)**2 for v, bin in zip(variables, self._bins)]
         else:
             try:
                 variances = [_standardized(value)**2 for value in sigma]
             except TypeError:
-                variances = [_standardized(sigma)**2]*len(self._ufed.variables)
+                variances = [_standardized(sigma)**2]*len(variables)
 
         exponent = []
         derivative = []
-        for v, variance in zip(self._ufed.variables, variances):
+        for v, variance in zip(variables, variances):
             if v.periodic:  # von Mises
                 factor = 2*np.pi/v._range
                 exponent.append(lambda x: (np.cos(factor*x)-1.0)/(factor*factor*variance))
@@ -185,7 +227,7 @@ class Analyzer(FreeEnergyCalculator):
                 exponent.append(lambda x: -0.5*x**2/variance)
                 derivative.append(lambda x: -x/variance)
 
-        n = len(self._ufed.variables)
+        n = len(variables)
 
         def kernel(x):
             return np.exp(np.sum(exponent[i](x[i]) for i in range(n)))
