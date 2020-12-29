@@ -35,8 +35,9 @@ class FreeEnergyAnalyzer(object):
 
     def metadynamics_bias_free_energy(self):
         """
-        Returns a callable object that estimates the free energy of the system as a function of
-        the extended phase-space variable values.
+        Returns a Python function which, in turn, receives the values of extended-space variables
+        and returns the energy estimated from a Metadynamics bias potential reconstructed from the
+        simulation data.
 
         Returns
         -------
@@ -110,6 +111,84 @@ class FreeEnergyAnalyzer(object):
             centers = [center_points[:, i][index] for i in range(n)]
             mean_forces = [statistic.flatten()[index] for statistic in means.statistic]
         return centers, mean_forces
+
+    def mean_force_free_energy(self, centers, mean_forces, sigma):
+        """
+        Returns Python functions for evaluating the potential of mean force and their originating
+        mean forces as a function of the collective variables.
+
+        Parameters
+        ----------
+            centers : list(numpy.array)
+                The bin centers.
+            mean_forces : list(numpy.array)
+                The mean forces.
+            sigmas : float or unit.Quantity or list
+                The standard deviation of kernels.
+
+        Returns
+        -------
+            potential : function
+                A Python function whose arguments are collective variable values and whose result
+                is the potential of mean force at that values.
+            mean_force : function
+                A Python function whose arguments are collective variable values and whose result
+                is the mean force at that values regarding a given direction. Such direction must
+                be defined through a keyword argument `dir`, whose default value is `0` (meaning
+                the direction of the first collective variable).
+
+        """
+        variables = self._ufed.variables
+        n = len(variables)
+        try:
+            variances = [_standardized(value)**2 for value in sigma]
+        except TypeError:
+            variances = [_standardized(sigma)**2]*n
+
+        exponent = []
+        derivative = []
+        for v, variance in zip(variables, variances):
+            if v.periodic:  # von Mises
+                factor = 2*np.pi/v._range
+                exponent.append(lambda x: (np.cos(factor*x)-1.0)/(factor*factor*variance))
+                derivative.append(lambda x: -np.sin(factor*x)/(factor*variance))
+            else:  # Gauss
+                exponent.append(lambda x: -0.5*x**2/variance)
+                derivative.append(lambda x: -x/variance)
+
+        def kernel(x):
+            return np.exp(np.sum(exponent[i](x[i]) for i in range(n)))
+
+        def gradient(x, i):
+            return kernel(x)*derivative[i](x[i])
+
+        centers = [np.array(xc) for xc in zip(*self.centers)]
+        coefficients = []
+        for i in range(n):
+            for x in centers:
+                coefficients.append(np.array([gradient(x-xc, i) for xc in centers]))
+
+        M = np.vstack(coefficients)
+        F = -np.hstack(self.mean_forces)
+        A, _, _, _ = np.linalg.lstsq(M, F, rcond=None)
+
+        kernels = np.empty((len(centers), len(centers)))
+        for i, x in enumerate(centers):
+            kernels[i, :] = np.array([kernel(x-xc) for xc in centers])
+        potentials = kernels.dot(A)
+        minimum = potentials.min()
+
+        def potential(*x):
+            xa = np.array(x)
+            kernels = np.array([kernel(xa-xc) for xc in centers])
+            return np.sum(A*kernels) - minimum
+
+        def mean_force(*x, dir=0):
+            xa = np.array(x)
+            gradients = np.array([gradient(xa-xc, dir) for xc in centers])
+            return -np.sum(A*gradients)
+
+        return np.vectorize(potential), np.vectorize(mean_force)
 
     def _compute_forces(self):
         variables = self._ufed.variables
@@ -207,57 +286,12 @@ class Analyzer(FreeEnergyAnalyzer):
             self._adjust_centers,
         )
         variables = self._ufed.variables
-
         if sigma is None:
-            variances = [(factor*v._range/bin)**2 for v, bin in zip(variables, self._bins)]
+            sigmas = [factor*v._range/bin for v, bin in zip(variables, self._bins)]
         else:
             try:
-                variances = [_standardized(value)**2 for value in sigma]
+                sigmas = [_standardized(value) for value in sigma]
             except TypeError:
-                variances = [_standardized(sigma)**2]*len(variables)
+                sigmas = [_standardized(sigma)]*len(variables)
 
-        exponent = []
-        derivative = []
-        for v, variance in zip(variables, variances):
-            if v.periodic:  # von Mises
-                factor = 2*np.pi/v._range
-                exponent.append(lambda x: (np.cos(factor*x)-1.0)/(factor*factor*variance))
-                derivative.append(lambda x: -np.sin(factor*x)/(factor*variance))
-            else:  # Gauss
-                exponent.append(lambda x: -0.5*x**2/variance)
-                derivative.append(lambda x: -x/variance)
-
-        n = len(variables)
-
-        def kernel(x):
-            return np.exp(np.sum(exponent[i](x[i]) for i in range(n)))
-
-        def gradient(x, i):
-            return kernel(x)*derivative[i](x[i])
-
-        centers = [np.array(xc) for xc in zip(*self.centers)]
-        coefficients = []
-        for i in range(n):
-            for x in centers:
-                coefficients.append(np.array([gradient(x-xc, i) for xc in centers]))
-        M = np.vstack(coefficients)
-        F = -np.hstack(self.mean_forces)
-        A, _, _, _ = np.linalg.lstsq(M, F, rcond=None)
-
-        kernels = np.empty((len(centers), len(centers)))
-        for i, x in enumerate(centers):
-            kernels[i, :] = np.array([kernel(x-xc) for xc in centers])
-        potentials = kernels.dot(A)
-        minimum = potentials.min()
-
-        def potential(*x):
-            xa = np.array(x)
-            kernels = np.array([kernel(xa-xc) for xc in centers])
-            return np.sum(A*kernels) - minimum
-
-        def mean_force(*x, dir=0):
-            xa = np.array(x)
-            gradients = np.array([gradient(xa-xc, dir) for xc in centers])
-            return -np.sum(A*gradients)
-
-        return np.vectorize(potential), np.vectorize(mean_force)
+        return self.mean_force_free_energy(self.centers, self.mean_forces, sigmas)
