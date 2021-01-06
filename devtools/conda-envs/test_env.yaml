@@ -5,12 +5,13 @@ dependencies:
     # Base depends
   - python
   - pip
-  - sphinxcontrib-bibtex >=0.4
+  - sphinxcontrib-bibtex ==1.0
 
   - numpy
   - openmm >=7.5
   - pyyaml
   - scipy
+  - pandas
 
     # Testing
   - isort
