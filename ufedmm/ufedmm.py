@@ -156,7 +156,7 @@ class CollectiveVariable(object):
         context = self._create_context(system, positions)
         forces = _standardized(context.getState(getForces=True, groups={1}).getForces(asNumpy=True))
         denom = sum(f.dot(f)/_standardized(system.getParticleMass(i)) for i, f in enumerate(forces))
-        return 1.0/denom
+        return 1.0/float(denom)
 
 
 class DynamicalVariable(object):
