@@ -307,12 +307,10 @@ class HelixRamachandranContent(openmm.CustomTorsionForce):
 
 class InOutLennardJonesForce(openmm.CustomNonbondedForce):
     """
-    Lennard-Jones (LJ) interactions between the atoms of a specified group and all other atoms in
-    the system, referred to as in/out LJ interactions. Both the full LJ model or a capped
-    (Buelens-Grubmüller-type) version thereof can be defined. All LJ parameters are imported from
-    a provided NonbondedForce_ object, which is then modified so that all in-group interactions are
-    treated as exceptions and all LJ parametes of the group atoms are scaled by a newly created
-    Context_ global parameter whose default value is 0.0.
+    Lennard-Jones (LJ) interactions between the atoms of a specified group and all other atoms
+    in the system, referred to as in/out LJ interactions. All LJ parameters are imported from a
+    provided NonbondedForce_ object, which is then modified so that all in-group interactions are
+    treated as exceptions and all atoms of the group are removed from regular LJ interactions.
 
     .. note::
         Only exclusion exceptions are allowed in the NonbondedForce_ when they involve in/out atom
@@ -332,15 +330,15 @@ class InOutLennardJonesForce(openmm.CustomNonbondedForce):
 
     Keyword Args
     ------------
-        capped : bool, default=False
-            Whether to apply a Buelens-Grubmuller-type cap to the Lennard-Jones potential.
-        scaling_parameter : str, default='lambda_lj'
-            A Context_ global parameter whose value will multiply, in the passed NonbondedForce_
-            object, the epsilon parameters of all atoms in the specified group.
         pbc_for_exceptions : bool, default=False
             Whether to consider periodic boundary conditions for exceptions in the NonbondedForce_
             object. This might be necessary if the specified group contains several detached
             molecules or one long molecule.
+
+    Methods
+    -------
+        capped_version
+            Returns a capped (Buelens-Grubmüller-type) version of the in/out Lennard-Jones force.
 
     Raises
     ------
@@ -350,24 +348,15 @@ class InOutLennardJonesForce(openmm.CustomNonbondedForce):
 
     """
 
-    def __init__(self, group, nbforce, capped=False, scaling_parameter='lambda_lj', pbc_for_exceptions=False):
+    def __init__(self, group, nbforce, pbc_for_exceptions=False):
         u_LJ = '4/x^12-4/x^6'
         definitions = ['x=r/sigma', 'sigma=(sigma1+sigma2)/2', 'epsilon=sqrt(epsilon1*epsilon2)']
-        if capped:
-            u_cap = '(596-7200*x^4+10944*x^5-4340*x^6)/5'
-            equations = [f'epsilon*select(step(1-x),{u_cap},{u_LJ})'] + definitions
-        else:
-            equations = [f'epsilon*({u_LJ})'] + definitions
+        equations = [f'epsilon*({u_LJ})'] + definitions
         super().__init__(';'.join(equations))
 
         N = nbforce.getNumParticles()
         ParamTuple = namedtuple('ParamTuple', 'charge sigma epsilon')
         parameters = [ParamTuple(*nbforce.getParticleParameters(i)) for i in range(N)]
-
-        for index in range(nbforce.getNumParticleParameterOffsets()):
-            variable, i, _, sigma, epsilon = nbforce.getParticleParameterOffset(index)
-            if variable == scaling_parameter:
-                parameters[i] = ParamTuple(parameters[i].charge, sigma, epsilon)
 
         self.addPerParticleParameter('sigma')
         self.addPerParticleParameter('epsilon')
@@ -402,10 +391,30 @@ class InOutLennardJonesForce(openmm.CustomNonbondedForce):
         if pbc_for_exceptions:
             nbforce.setExceptionsUsePeriodicBoundaryConditions(True)
 
-        global_vars = map(nbforce.getGlobalParameterName, range(nbforce.getNumGlobalParameters()))
-        if scaling_parameter not in global_vars:
-            nbforce.addGlobalParameter(scaling_parameter, 0.0)
-            for i in group:
-                charge, sigma, epsilon = parameters[i]
-                nbforce.setParticleParameters(i, charge, 0.0, 0.0)
-                nbforce.addParticleParameterOffset(scaling_parameter, i, 0.0, sigma, epsilon)
+        for i in group:
+            nbforce.setParticleParameters(i, parameters[i].charge, 1.0, 0.0)
+
+    def capped_version(self):
+        """
+        Returns a capped (Buelens-Grubmüller-type) version of the in/out Lennard-Jones force.
+
+        """
+
+        u_LJ = '4/x^12-4/x^6'
+        u_cap = '(596-7200*x^4+10944*x^5-4340*x^6)/5'
+        definitions = ['x=r/sigma', 'sigma=(sigma1+sigma2)/2', 'epsilon=sqrt(epsilon1*epsilon2)']
+        equations = [f'epsilon*select(step(1-x),{u_cap},{u_LJ})'] + definitions
+        force = openmm.CustomNonbondedForce(';'.join(equations))
+        force.addPerParticleParameter('sigma')
+        force.addPerParticleParameter('epsilon')
+        for index in range(self.getNumParticles()):
+            force.addParticle(self.getParticleParameters(index))
+        for index in range(self.getNumExclusions()):
+            force.addExclusion(*self.getExclusionParticles(index))
+        force.setNonbondedMethod(force.CutoffPeriodic)
+        force.setCutoffDistance(self.getCutoffDistance())
+        force.setUseSwitchingFunction(self.getUseSwitchingFunction())
+        force.setSwitchingDistance(self.getSwitchingDistance())
+        force.setUseLongRangeCorrection(self.getUseLongRangeCorrection())
+        force.addInteractionGroup(*self.getInteractionGroupParameters(0))
+        return force
