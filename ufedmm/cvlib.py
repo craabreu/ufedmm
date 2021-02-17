@@ -21,6 +21,9 @@ from collections import namedtuple
 from simtk import openmm, unit
 
 
+ParamTuple = namedtuple('ParamTuple', 'charge sigma epsilon')
+
+
 class SquareRadiusOfGyration(openmm.CustomBondForce):
     """
     The square of the radius of gyration of a group of atoms, defined as:
@@ -305,7 +308,43 @@ class HelixRamachandranContent(openmm.CustomTorsionForce):
         return phi_indices, psi_indices
 
 
-class InOutLennardJonesForce(openmm.CustomNonbondedForce):
+class _InOutForce(openmm.CustomNonbondedForce):
+    """
+    An abstract class for In/Out-force collective variables.
+
+    """
+
+    def _import_properties(self, group, nbforce):
+        for index in range(nbforce.getNumExceptions()):
+            i, j, _, _, _ = nbforce.getExceptionParameters(index)
+            self.addExclusion(i, j)
+        self.setNonbondedMethod(self.CutoffPeriodic)
+        self.setCutoffDistance(nbforce.getCutoffDistance())
+        self.setUseSwitchingFunction(nbforce.getUseSwitchingFunction())
+        self.setSwitchingDistance(nbforce.getSwitchingDistance())
+        self.addInteractionGroup(set(group), set(range(nbforce.getNumParticles())) - set(group))
+
+    def _update_nonbonded_force(self, group, nbforce, parameters, pbc_for_exceptions):
+        internal_exception_pairs = []
+        for index in range(nbforce.getNumExceptions()):
+            i, j, _, _, epsilon = nbforce.getExceptionParameters(index)
+            i_in_group, j_in_group = i in group, j in group
+            if i_in_group and j_in_group:
+                internal_exception_pairs.append(set([i, j]))
+            elif (i_in_group or j_in_group) and epsilon/epsilon.unit != 0.0:
+                raise ValueError("Only exclusion exceptions are allowed in in/out interactions")
+
+        for i, j in itertools.combinations(group, 2):
+            if set([i, j]) not in internal_exception_pairs:
+                chargeprod = parameters[i].charge*parameters[j].charge
+                sigma = (parameters[i].sigma + parameters[j].sigma)/2
+                epsilon = unit.sqrt(parameters[i].epsilon*parameters[j].epsilon)
+                nbforce.addException(i, j, chargeprod, sigma, epsilon)
+        if pbc_for_exceptions:
+            nbforce.setExceptionsUsePeriodicBoundaryConditions(True)
+
+
+class InOutLennardJonesForce(_InOutForce):
     """
     Lennard-Jones (LJ) interactions between the atoms of a specified group and all other atoms
     in the system, referred to as in/out LJ interactions. All LJ parameters are imported from a
@@ -335,11 +374,6 @@ class InOutLennardJonesForce(openmm.CustomNonbondedForce):
             object. This might be necessary if the specified group contains several detached
             molecules or one long molecule.
 
-    Methods
-    -------
-        capped_version
-            Returns a capped (Buelens-Grubmüller-type) version of the in/out Lennard-Jones force.
-
     Raises
     ------
         ValueError:
@@ -353,45 +387,15 @@ class InOutLennardJonesForce(openmm.CustomNonbondedForce):
         definitions = ['x=r/sigma', 'sigma=(sigma1+sigma2)/2', 'epsilon=sqrt(epsilon1*epsilon2)']
         equations = [f'epsilon*({u_LJ})'] + definitions
         super().__init__(';'.join(equations))
-
         N = nbforce.getNumParticles()
-        ParamTuple = namedtuple('ParamTuple', 'charge sigma epsilon')
         parameters = [ParamTuple(*nbforce.getParticleParameters(i)) for i in range(N)]
-
         self.addPerParticleParameter('sigma')
         self.addPerParticleParameter('epsilon')
         for parameter in parameters:
             self.addParticle([parameter.sigma, parameter.epsilon])
-
-        for index in range(nbforce.getNumExceptions()):
-            i, j, _, _, _ = nbforce.getExceptionParameters(index)
-            self.addExclusion(i, j)
-        self.setNonbondedMethod(self.CutoffPeriodic)
-        self.setCutoffDistance(nbforce.getCutoffDistance())
-        self.setUseSwitchingFunction(nbforce.getUseSwitchingFunction())
-        self.setSwitchingDistance(nbforce.getSwitchingDistance())
-        self.addInteractionGroup(set(group), set(range(N)) - set(group))
-
+        self._import_properties(group, nbforce)
         self.setUseLongRangeCorrection(nbforce.getUseDispersionCorrection())
-
-        internal_exception_pairs = []
-        for index in range(nbforce.getNumExceptions()):
-            i, j, _, _, epsilon = nbforce.getExceptionParameters(index)
-            i_in_group, j_in_group = i in group, j in group
-            if i_in_group and j_in_group:
-                internal_exception_pairs.append(set([i, j]))
-            elif (i_in_group or j_in_group) and epsilon/epsilon.unit != 0.0:
-                raise ValueError("Only exclusion exceptions are allowed in in/out interactions")
-
-        for i, j in itertools.combinations(group, 2):
-            if set([i, j]) not in internal_exception_pairs:
-                chargeprod = parameters[i].charge*parameters[j].charge
-                sigma = (parameters[i].sigma + parameters[j].sigma)/2
-                epsilon = unit.sqrt(parameters[i].epsilon*parameters[j].epsilon)
-                nbforce.addException(i, j, chargeprod, sigma, epsilon)
-        if pbc_for_exceptions:
-            nbforce.setExceptionsUsePeriodicBoundaryConditions(True)
-
+        self._update_nonbonded_force(group, nbforce, parameters, pbc_for_exceptions)
         for i in group:
             nbforce.setParticleParameters(i, parameters[i].charge, 1.0, 0.0)
 
@@ -421,7 +425,7 @@ class InOutLennardJonesForce(openmm.CustomNonbondedForce):
         return force
 
 
-class InOutShiftedCoulombForce(openmm.CustomNonbondedForce):
+class InOutShiftedCoulombForce(_InOutForce):
     """
     Shifted Coulomb interactions between the atoms of a specified group and all other atoms in the
     system, referred to as in/out Coulomb interactions. All charges parameters are imported from
@@ -465,54 +469,22 @@ class InOutShiftedCoulombForce(openmm.CustomNonbondedForce):
 
     def __init__(self, group, nbforce, scaling_parameter='coul_scaling', pbc_for_exceptions=False):
         super().__init__('138.935485*charge1*charge2*(1/r-1/rc)')
-
         N = nbforce.getNumParticles()
-        ParamTuple = namedtuple('ParamTuple', 'charge sigma epsilon')
         parameters = [ParamTuple(*nbforce.getParticleParameters(i)) for i in range(N)]
-
         for index in range(nbforce.getNumParticleParameterOffsets()):
             variable, i, charge, _, _ = nbforce.getParticleParameterOffset(index)
             if variable == scaling_parameter:
                 parameters[i] = ParamTuple(charge, parameters[i].sigma, parameters[i].epsilon)
-
         self.addGlobalParameter('rc', nbforce.getCutoffDistance())
         self.addPerParticleParameter('charge')
         for parameter in parameters:
             self.addParticle([parameter.charge])
-
-        for index in range(nbforce.getNumExceptions()):
-            i, j, _, _, _ = nbforce.getExceptionParameters(index)
-            self.addExclusion(i, j)
-        self.setNonbondedMethod(self.CutoffPeriodic)
-        self.setCutoffDistance(nbforce.getCutoffDistance())
-        self.setUseSwitchingFunction(nbforce.getUseSwitchingFunction())
-        self.setSwitchingDistance(nbforce.getSwitchingDistance())
-        self.addInteractionGroup(set(group), set(range(N)) - set(group))
-
+        self._import_properties(group, nbforce)
         self.setUseLongRangeCorrection(False)
-
-        internal_exception_pairs = []
-        for index in range(nbforce.getNumExceptions()):
-            i, j, charge, _, _ = nbforce.getExceptionParameters(index)
-            i_in_group, j_in_group = i in group, j in group
-            if i_in_group and j_in_group:
-                internal_exception_pairs.append(set([i, j]))
-            elif (i_in_group or j_in_group) and charge/charge.unit != 0.0:
-                raise ValueError("Only exclusion exceptions are allowed in in/out interactions")
-
-        for i, j in itertools.combinations(group, 2):
-            if set([i, j]) not in internal_exception_pairs:
-                chargeprod = parameters[i].charge*parameters[j].charge
-                sigma = (parameters[i].sigma + parameters[j].sigma)/2
-                epsilon = unit.sqrt(parameters[i].epsilon*parameters[j].epsilon)
-                nbforce.addException(i, j, chargeprod, sigma, epsilon)
-        if pbc_for_exceptions:
-            nbforce.setExceptionsUsePeriodicBoundaryConditions(True)
-
+        self._update_nonbonded_force(group, nbforce, parameters, pbc_for_exceptions)
         global_vars = map(nbforce.getGlobalParameterName, range(nbforce.getNumGlobalParameters()))
         if scaling_parameter not in global_vars:
             nbforce.addGlobalParameter(scaling_parameter, 0.0)
-            for i in group:
-                charge, sigma, epsilon = parameters[i]
-                nbforce.setParticleParameters(i, 0.0, sigma, epsilon)
-                nbforce.addParticleParameterOffset(scaling_parameter, i, charge, 0.0, 0.0)
+        for i in group:
+            nbforce.setParticleParameters(i, 0.0, parameters[i].sigma, parameters[i].epsilon)
+            nbforce.addParticleParameterOffset(scaling_parameter, i, parameters[i].charge, 0.0, 0.0)
