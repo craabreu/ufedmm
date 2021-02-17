@@ -334,9 +334,13 @@ class InOutLennardJonesForce(openmm.CustomNonbondedForce):
     ------------
         capped : bool, default=False
             Whether to apply a Buelens-Grubmuller-type cap to the Lennard-Jones potential.
-        scaling_parameter : str, default="lennard_jones_scaling"
+        scaling_parameter : str, default='lambda_lj'
             A Context_ global parameter whose value will multiply, in the passed NonbondedForce_
             object, the epsilon parameters of all atoms in the specified group.
+        pbc_for_exceptions : bool, default=False
+            Whether to consider periodic boundary conditions for exceptions in the NonbondedForce_
+            object. This might be necessary if the specified group contains several detached
+            molecules or one long molecule.
 
     Raises
     ------
@@ -346,7 +350,7 @@ class InOutLennardJonesForce(openmm.CustomNonbondedForce):
 
     """
 
-    def __init__(self, group, nbforce, capped=False, scaling_parameter='lennard_jones_scaling'):
+    def __init__(self, group, nbforce, capped=False, scaling_parameter='lambda_lj', pbc_for_exceptions=False):
         u_LJ = '4/x^12-4/x^6'
         definitions = ['x=r/sigma', 'sigma=(sigma1+sigma2)/2', 'epsilon=sqrt(epsilon1*epsilon2)']
         if capped:
@@ -382,11 +386,11 @@ class InOutLennardJonesForce(openmm.CustomNonbondedForce):
 
         internal_exception_pairs = []
         for index in range(nbforce.getNumExceptions()):
-            i, j, chargeprod, _, epsilon = nbforce.getExceptionParameters(index)
-            i_in_set, j_in_set = i in group, j in group
-            if i_in_set and j_in_set:
+            i, j, _, _, epsilon = nbforce.getExceptionParameters(index)
+            i_in_group, j_in_group = i in group, j in group
+            if i_in_group and j_in_group:
                 internal_exception_pairs.append(set([i, j]))
-            elif (i_in_set or j_in_set) and epsilon/epsilon.unit:
+            elif (i_in_group or j_in_group) and epsilon/epsilon.unit != 0.0:
                 raise ValueError("Only exclusion exceptions are allowed in in/out interactions")
 
         for i, j in itertools.combinations(group, 2):
@@ -395,11 +399,13 @@ class InOutLennardJonesForce(openmm.CustomNonbondedForce):
                 sigma = (parameters[i].sigma + parameters[j].sigma)/2
                 epsilon = unit.sqrt(parameters[i].epsilon*parameters[j].epsilon)
                 nbforce.addException(i, j, chargeprod, sigma, epsilon)
+        if pbc_for_exceptions:
+            nbforce.setExceptionsUsePeriodicBoundaryConditions(True)
 
         global_vars = map(nbforce.getGlobalParameterName, range(nbforce.getNumGlobalParameters()))
         if scaling_parameter not in global_vars:
             nbforce.addGlobalParameter(scaling_parameter, 0.0)
             for i in group:
                 charge, sigma, epsilon = parameters[i]
-                nbforce.setParticleParameters(i, charge, 1.0, 0.0)
+                nbforce.setParticleParameters(i, charge, 0.0, 0.0)
                 nbforce.addParticleParameterOffset(scaling_parameter, i, 0.0, sigma, epsilon)
