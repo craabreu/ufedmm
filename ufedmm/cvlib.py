@@ -9,12 +9,15 @@
 .. _CustomCVForce: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.CustomCVForce.html
 .. _CustomIntegrator: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.CustomIntegrator.html
 .. _Force: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.Force.html
+.. _NonbondedForce: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.NonbondedForce.html
 .. _System: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.System.html
 
 """
 
 import re
+import itertools
 
+from collections import namedtuple
 from simtk import openmm, unit
 
 
@@ -300,3 +303,103 @@ class HelixRamachandranContent(openmm.CustomTorsionForce):
             i, j, k, l, parameters = self.getTorsionParameters(index + N)
             psi_indices.append((i, j, k, l))
         return phi_indices, psi_indices
+
+
+class InOutLennardJonesForce(openmm.CustomNonbondedForce):
+    """
+    Lennard-Jones (LJ) interactions between the atoms of a specified group and all other atoms in
+    the system, referred to as in/out LJ interactions. Both the full LJ model or a capped
+    (Buelens-Grubmüller-type) version thereof can be defined. All LJ parameters are imported from
+    a provided NonbondedForce_ object, which is then modified so that all in-group interactions are
+    treated as exceptions and all LJ parametes of the group atoms are scaled by a newly created
+    Context_ global parameter whose default value is 0.0.
+
+    .. note::
+        Only exclusion exceptions are allowed in the NonbondedForce_ when they involve in/out atom
+        pairs.
+
+    Warnings
+    --------
+        side effect:
+            The constructor of this class modifies the passed NonbondedForce_ object.
+
+    Parameters
+    ----------
+        group : list of int
+            The atoms in the specified group.
+        nbforce : openmm.NonbondedForce
+            The NonbondedForce_ object from which the atom parameters are imported.
+
+    Keyword Args
+    ------------
+        capped : bool, default=False
+            Whether to apply a Buelens-Grubmuller-type cap to the Lennard-Jones potential.
+        scaling_parameter : str, default="lennard_jones_scaling"
+            A Context_ global parameter whose value will multiply, in the passed NonbondedForce_
+            object, the epsilon parameters of all atoms in the specified group.
+
+    Raises
+    ------
+        ValueError:
+            Raised if there are any non-exclusion exceptions in the NonbondedForce_ object involving
+            cross-group (i.e. in/out) atom pairs.
+
+    """
+
+    def __init__(self, group, nbforce, capped=False, scaling_parameter='lennard_jones_scaling'):
+        u_LJ = '4/x^12-4/x^6'
+        definitions = ['x=r/sigma', 'sigma=(sigma1+sigma2)/2', 'epsilon=sqrt(epsilon1*epsilon2)']
+        if capped:
+            u_cap = '(596-7200*x^4+10944*x^5-4340*x^6)/5'
+            equations = [f'epsilon*select(step(1-x),{u_cap},{u_LJ})'] + definitions
+        else:
+            equations = [f'epsilon*({u_LJ})'] + definitions
+        super().__init__(';'.join(equations))
+
+        N = nbforce.getNumParticles()
+        ParamTuple = namedtuple('ParamTuple', 'charge sigma epsilon')
+        parameters = [ParamTuple(*nbforce.getParticleParameters(i)) for i in range(N)]
+
+        for index in range(nbforce.getNumParticleParameterOffsets()):
+            variable, i, _, sigma, epsilon = nbforce.getParticleParameterOffset(index)
+            if variable == scaling_parameter:
+                parameters[i] = ParamTuple(parameters[i].charge, sigma, epsilon)
+
+        self.addPerParticleParameter('sigma')
+        self.addPerParticleParameter('epsilon')
+        for parameter in parameters:
+            self.addParticle([parameter.sigma, parameter.epsilon])
+
+        for index in range(nbforce.getNumExceptions()):
+            i, j, _, _, _ = nbforce.getExceptionParameters(index)
+            self.addExclusion(i, j)
+        self.setNonbondedMethod(self.CutoffPeriodic)
+        self.setCutoffDistance(nbforce.getCutoffDistance())
+        self.setUseSwitchingFunction(nbforce.getUseSwitchingFunction())
+        self.setSwitchingDistance(nbforce.getSwitchingDistance())
+        self.setUseLongRangeCorrection(nbforce.getUseDispersionCorrection())
+        self.addInteractionGroup(set(group), set(range(N)) - set(group))
+
+        internal_exception_pairs = []
+        for index in range(nbforce.getNumExceptions()):
+            i, j, chargeprod, _, epsilon = nbforce.getExceptionParameters(index)
+            i_in_set, j_in_set = i in group, j in group
+            if i_in_set and j_in_set:
+                internal_exception_pairs.append(set([i, j]))
+            elif (i_in_set or j_in_set) and epsilon/epsilon.unit:
+                raise ValueError("Only exclusion exceptions are allowed in in/out interactions")
+
+        for i, j in itertools.combinations(group, 2):
+            if set([i, j]) not in internal_exception_pairs:
+                chargeprod = parameters[i].charge*parameters[j].charge
+                sigma = (parameters[i].sigma + parameters[j].sigma)/2
+                epsilon = unit.sqrt(parameters[i].epsilon*parameters[j].epsilon)
+                nbforce.addException(i, j, chargeprod, sigma, epsilon)
+
+        global_vars = map(nbforce.getGlobalParameterName, range(nbforce.getNumGlobalParameters()))
+        if scaling_parameter not in global_vars:
+            nbforce.addGlobalParameter(scaling_parameter, 0.0)
+            for i in group:
+                charge, sigma, epsilon = parameters[i]
+                nbforce.setParticleParameters(i, charge, 1.0, 0.0)
+                nbforce.addParticleParameterOffset(scaling_parameter, i, 0.0, sigma, epsilon)
