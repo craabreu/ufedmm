@@ -393,9 +393,9 @@ class InOutLennardJonesForce(_InOutForce):
         self.addPerParticleParameter('epsilon')
         for parameter in parameters:
             self.addParticle([parameter.sigma, parameter.epsilon])
+        self._update_nonbonded_force(group, nbforce, parameters, pbc_for_exceptions)
         self._import_properties(group, nbforce)
         self.setUseLongRangeCorrection(nbforce.getUseDispersionCorrection())
-        self._update_nonbonded_force(group, nbforce, parameters, pbc_for_exceptions)
         for i in group:
             nbforce.setParticleParameters(i, parameters[i].charge, 1.0, 0.0)
 
@@ -479,9 +479,9 @@ class InOutShiftedCoulombForce(_InOutForce):
         self.addPerParticleParameter('charge')
         for parameter in parameters:
             self.addParticle([parameter.charge])
+        self._update_nonbonded_force(group, nbforce, parameters, pbc_for_exceptions)
         self._import_properties(group, nbforce)
         self.setUseLongRangeCorrection(False)
-        self._update_nonbonded_force(group, nbforce, parameters, pbc_for_exceptions)
         global_vars = map(nbforce.getGlobalParameterName, range(nbforce.getNumGlobalParameters()))
         if scaling_parameter not in global_vars:
             nbforce.addGlobalParameter(scaling_parameter, 0.0)
