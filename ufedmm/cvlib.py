@@ -16,9 +16,11 @@
 
 import re
 import itertools
+import math
 
 from collections import namedtuple
 from simtk import openmm, unit
+from ufedmm.ufedmm import _standardized
 
 
 ParamTuple = namedtuple('ParamTuple', 'charge sigma epsilon')
@@ -425,13 +427,13 @@ class InOutLennardJonesForce(_InOutForce):
         return force
 
 
-class InOutShiftedCoulombForce(_InOutForce):
+class InOutDSFCoulombForce(_InOutForce):
     """
-    Shifted Coulomb interactions between the atoms of a specified group and all other atoms in the
-    system, referred to as in/out Coulomb interactions. All charges parameters are imported from
-    a provided NonbondedForce_ object, which is then modified so that all in-group interactions are
-    treated as exceptions and all charges of the group atoms are scaled by a newly created Context_
-    global parameter whose default value is 0.0.
+    Damped Shifted-Force (DSF) Coulomb interactions between the atoms of a specified group and all
+    other atoms in the system, referred to as in/out DSF interactions. All charges are imported
+    from a provided NonbondedForce_ object, which is then modified so that all in-group interactions
+    are treated as exceptions and all charges of the group atoms are scaled by a newly created
+    Context_ global parameter whose default value is 0.0.
 
     .. note::
         Only exclusion exceptions are allowed in the NonbondedForce_ when they involve in/out atom
@@ -442,6 +444,15 @@ class InOutShiftedCoulombForce(_InOutForce):
         side effect:
             The constructor of this class modifies the passed NonbondedForce_ object.
 
+    The model equation is
+
+    .. math::
+        V_\\mathrm{DSF}(r) = \\frac{q_i q_j}{4 \\pi \\epsilon_0}\\left\\{
+            \\frac{\\mathrm{erfc}(\\alpha r)}{r} - \\frac{\\mathrm{erfc}(\\alpha r_c)}{r_c} +
+            \\left[ \\frac{\\mathrm{erfc}(\\alpha r_c)}{r_c} +
+            \\frac{2\\alpha e^{-\\alpha^2 r_c^2}}{\\pi^{1/2}}\\right]\\left(\\frac{r}{r_c}-1\\right)
+        \\right\\}
+
     Parameters
     ----------
         group : list of int
@@ -451,7 +462,9 @@ class InOutShiftedCoulombForce(_InOutForce):
 
     Keyword Args
     ------------
-        scaling_parameter : str, default='coul_scaling'
+        damping_coefficient : float or unit.Quantity, default=0.2/unit.angstroms
+            The damping coefficient :math:`\\alpha` in inverse distance unit.
+        scaling_parameter_name : str, default='coulomb_scaling'
             A Context_ global parameter whose value will multiply, in the passed NonbondedForce_
             object, the epsilon parameters of all atoms in the specified group.
         pbc_for_exceptions : bool, default=False
@@ -467,15 +480,20 @@ class InOutShiftedCoulombForce(_InOutForce):
 
     """
 
-    def __init__(self, group, nbforce, scaling_parameter='coul_scaling', pbc_for_exceptions=False):
-        super().__init__('138.935485*charge1*charge2*(1/r-1/rc)')
+    def __init__(self, group, nbforce, damping_coefficient=0.2/unit.angstroms,
+                 scaling_parameter_name='coulomb_scaling', pbc_for_exceptions=False):
+        alpha = _standardized(damping_coefficient)
+        rc = _standardized(nbforce.getCutoffDistance())
+        factor = '1' if alpha == 0.0 else f'erfc({alpha}*r)'
+        A = math.erfc(alpha*rc)/rc
+        B = (2*alpha/math.sqrt(math.pi))*math.exp(-(alpha*rc)**2)/rc
+        super().__init__(f'138.935485*charge1*charge2*({factor}/r+{(A + B)/rc}*r-{2*A + B})')
         N = nbforce.getNumParticles()
         parameters = [ParamTuple(*nbforce.getParticleParameters(i)) for i in range(N)]
         for index in range(nbforce.getNumParticleParameterOffsets()):
             variable, i, charge, _, _ = nbforce.getParticleParameterOffset(index)
-            if variable == scaling_parameter:
+            if variable == scaling_parameter_name:
                 parameters[i] = ParamTuple(charge, parameters[i].sigma, parameters[i].epsilon)
-        self.addGlobalParameter('rc', nbforce.getCutoffDistance())
         self.addPerParticleParameter('charge')
         for parameter in parameters:
             self.addParticle([parameter.charge])
@@ -483,8 +501,9 @@ class InOutShiftedCoulombForce(_InOutForce):
         self._import_properties(group, nbforce)
         self.setUseLongRangeCorrection(False)
         global_vars = map(nbforce.getGlobalParameterName, range(nbforce.getNumGlobalParameters()))
-        if scaling_parameter not in global_vars:
-            nbforce.addGlobalParameter(scaling_parameter, 0.0)
+        if scaling_parameter_name not in global_vars:
+            nbforce.addGlobalParameter(scaling_parameter_name, 0.0)
         for i in group:
-            nbforce.setParticleParameters(i, 0.0, parameters[i].sigma, parameters[i].epsilon)
-            nbforce.addParticleParameterOffset(scaling_parameter, i, parameters[i].charge, 0.0, 0.0)
+            charge, sigma, epsilon = parameters[i]
+            nbforce.setParticleParameters(i, 0.0, sigma, epsilon)
+            nbforce.addParticleParameterOffset(scaling_parameter_name, i, charge, 0.0, 0.0)

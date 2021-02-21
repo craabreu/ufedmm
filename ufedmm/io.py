@@ -79,17 +79,19 @@ class StateDataReporter(app.StateDataReporter):
     Keyword Args
     ------------
         variables : bool, default=False
-            If this is `True`, then the current values of all collective variables and
-            dynamical variables related to the extended-space simulation will be reported.
+            Whether to report all dynamical variables related to the extended-space simulation and
+            their associated collective variables.
         multipleTemperatures : bool, default=False
-            If this is `True`, then the running temperature estimates will be reported separately
-            for the atoms and for the extended-space dynamical variables.
+            Whether to separately report the temperature estimates for the atoms and for the
+            extended-space dynamical variables.
         hillHeights : bool, default=False
-            If this is `True`, then the height of the latest deposited metadynamics hill will be
-            reported.
+            Whether to report the height of the latest deposited metadynamics hill.
         collectiveVariables : bool, default=False
-            If this is `True`, then all collective variables in CustomCVForce_ objects will be
-            reported.
+            Whether to report the collective variables in all CustomCVForce_ objects in the system.
+        globalVariableStates : pandas.DataFrame, default=None
+            A DataFrame containing context global parameters (column names) and sets of values
+            thereof. If it is provided, then the potential energy will be reported for every state
+            defined by these values.
 
     Example
     -------
@@ -123,6 +125,7 @@ class StateDataReporter(app.StateDataReporter):
         self._multitemps = kwargs.pop('multipleTemperatures', False)
         self._hill_heights = kwargs.pop('hillHeights', False)
         self._collective_variables = kwargs.pop('collectiveVariables', False)
+        self._global_parameter_states = kwargs.pop('globalParameterStates', None)
         super().__init__(file, report_interval, **kwargs)
         items = [self._volume, self._density, self._speed, self._elapsedTime, self._remainingTime]
         self._backSteps = -sum(items)
@@ -177,6 +180,9 @@ class StateDataReporter(app.StateDataReporter):
             for force in self._cv_forces:
                 for index in range(force.getNumCollectiveVariables()):
                     self._add_item(headers, force.getCollectiveVariableName(index))
+        if self._global_parameter_states is not None:
+            for index in self._global_parameter_states.index:
+                self._add_item(headers, f'Energy[{index}] (kJ/mole)')
         return headers
 
     def _constructReportValues(self, simulation, state):
@@ -203,6 +209,15 @@ class StateDataReporter(app.StateDataReporter):
             for force in self._cv_forces:
                 for cv in force.getCollectiveVariableValues(simulation.context):
                     self._add_item(values, cv)
+        if self._global_parameter_states is not None:
+            originals = map(simulation.context.getParameter, self._global_parameter_states.columns)
+            for index, row in self._global_parameter_states.iterrows():
+                for name, value in row.items():
+                    simulation.context.setParameter(name, value)
+                energy = simulation.context.getState(getEnergy=True).getPotentialEnergy()
+                self._add_item(values, energy.value_in_unit(unit.kilojoules_per_mole))
+            for name, value in zip(self._global_parameter_states.columns, originals):
+                simulation.context.setParameter(name, value)
         return values
 
 
