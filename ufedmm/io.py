@@ -88,7 +88,7 @@ class StateDataReporter(app.StateDataReporter):
             Whether to report the height of the latest deposited metadynamics hill.
         collectiveVariables : bool, default=False
             Whether to report the collective variables in all CustomCVForce_ objects in the system.
-        globalVariableStates : pandas.DataFrame, default=None
+        globalParameterStates : pandas.DataFrame, default=None
             A DataFrame containing context global parameters (column names) and sets of values
             thereof. If it is provided, then the potential energy will be reported for every state
             defined by these values.
@@ -210,7 +210,7 @@ class StateDataReporter(app.StateDataReporter):
                 for cv in force.getCollectiveVariableValues(simulation.context):
                     self._add_item(values, cv)
         if self._global_parameter_states is not None:
-            originals = map(simulation.context.getParameter, self._global_parameter_states.columns)
+            originals = list(map(simulation.context.getParameter, self._global_parameter_states.columns))
             for index, row in self._global_parameter_states.iterrows():
                 for name, value in row.items():
                     simulation.context.setParameter(name, value)
