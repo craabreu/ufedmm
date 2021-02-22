@@ -16,7 +16,7 @@ def potential_energy(system, positions, force_cls, scaling=None):
     context = openmm.Context(syscopy, integrator, platform)
     context.setPositions(positions)
     if scaling is not None:
-        context.setParameter('coulomb_scaling', scaling)
+        context.setParameter('inOutCoulombScaling', scaling)
     return context.getState(getEnergy=True, groups={31}).getPotentialEnergy()
 
 
@@ -39,6 +39,6 @@ def test_in_out_shifted_coulomb_force():
     in_out_coul = cvlib.InOutDSFCoulombForce(solute_atoms, nbforce)
     model.system.addForce(in_out_coul)
     after = potential_energy(model.system, model.positions, (openmm.NonbondedForce, openmm.CustomNonbondedForce))
-    assert after/after.unit == pytest.approx(before/before.unit, 1E-1)
+    assert after/after.unit == pytest.approx(before/before.unit, 0.1)
     scaled = potential_energy(model.system, model.positions, openmm.NonbondedForce, scaling=1.0)
     assert scaled/scaled.unit == pytest.approx(before/before.unit, 1E-5)

@@ -316,15 +316,11 @@ class _InOutForce(openmm.CustomNonbondedForce):
 
     """
 
-    def _import_properties(self, group, nbforce):
-        for index in range(nbforce.getNumExceptions()):
-            i, j, _, _, _ = nbforce.getExceptionParameters(index)
-            self.addExclusion(i, j)
+    def _import_properties(self, nbforce):
         self.setNonbondedMethod(self.CutoffPeriodic)
         self.setCutoffDistance(nbforce.getCutoffDistance())
         self.setUseSwitchingFunction(nbforce.getUseSwitchingFunction())
         self.setSwitchingDistance(nbforce.getSwitchingDistance())
-        self.addInteractionGroup(set(group), set(range(nbforce.getNumParticles())) - set(group))
 
     def _update_nonbonded_force(self, group, nbforce, parameters, pbc_for_exceptions):
         internal_exception_pairs = []
@@ -333,8 +329,8 @@ class _InOutForce(openmm.CustomNonbondedForce):
             i_in_group, j_in_group = i in group, j in group
             if i_in_group and j_in_group:
                 internal_exception_pairs.append(set([i, j]))
-            elif (i_in_group or j_in_group) and epsilon/epsilon.unit != 0.0:
-                raise ValueError("Only exclusion exceptions are allowed in in/out interactions")
+            elif (i_in_group or j_in_group):
+                raise ValueError("No exceptions are allowed for in-group/out-group interactions")
 
         for i, j in itertools.combinations(group, 2):
             if set([i, j]) not in internal_exception_pairs:
@@ -342,6 +338,7 @@ class _InOutForce(openmm.CustomNonbondedForce):
                 sigma = (parameters[i].sigma + parameters[j].sigma)/2
                 epsilon = unit.sqrt(parameters[i].epsilon*parameters[j].epsilon)
                 nbforce.addException(i, j, chargeprod, sigma, epsilon)
+
         if pbc_for_exceptions:
             nbforce.setExceptionsUsePeriodicBoundaryConditions(True)
 
@@ -354,8 +351,7 @@ class InOutLennardJonesForce(_InOutForce):
     treated as exceptions and all atoms of the group are removed from regular LJ interactions.
 
     .. note::
-        Only exclusion exceptions are allowed in the NonbondedForce_ when they involve in/out atom
-        pairs.
+        No exceptions which involve in/out atom pairs are allowed.
 
     Warnings
     --------
@@ -379,7 +375,7 @@ class InOutLennardJonesForce(_InOutForce):
     Raises
     ------
         ValueError:
-            Raised if there are any non-exclusion exceptions in the NonbondedForce_ object involving
+            Raised if there are any exceptions in the NonbondedForce_ object involving
             cross-group (i.e. in/out) atom pairs.
 
     """
@@ -396,7 +392,8 @@ class InOutLennardJonesForce(_InOutForce):
         for parameter in parameters:
             self.addParticle([parameter.sigma, parameter.epsilon])
         self._update_nonbonded_force(group, nbforce, parameters, pbc_for_exceptions)
-        self._import_properties(group, nbforce)
+        self._import_properties(nbforce)
+        self.addInteractionGroup(set(group), set(range(N)) - set(group))
         self.setUseLongRangeCorrection(nbforce.getUseDispersionCorrection())
         for i in group:
             nbforce.setParticleParameters(i, parameters[i].charge, 1.0, 0.0)
@@ -429,15 +426,14 @@ class InOutLennardJonesForce(_InOutForce):
 
 class InOutDSFCoulombForce(_InOutForce):
     """
-    Damped Shifted-Force (DSF) Coulomb interactions between the atoms of a specified group and all
+    Damped, Shifted-Force (DSF) Coulomb interactions between the atoms of a specified group and all
     other atoms in the system, referred to as in/out DSF interactions. All charges are imported
     from a provided NonbondedForce_ object, which is then modified so that all in-group interactions
     are treated as exceptions and all charges of the group atoms are scaled by a newly created
     Context_ global parameter whose default value is 0.0.
 
     .. note::
-        Only exclusion exceptions are allowed in the NonbondedForce_ when they involve in/out atom
-        pairs.
+        No exceptions which involve in/out atom pairs are allowed.
 
     Warnings
     --------
@@ -464,9 +460,11 @@ class InOutDSFCoulombForce(_InOutForce):
     ------------
         damping_coefficient : float or unit.Quantity, default=0.2/unit.angstroms
             The damping coefficient :math:`\\alpha` in inverse distance unit.
-        scaling_parameter_name : str, default='coulomb_scaling'
+        scaling_parameter_name : str, default='inOutCoulombScaling'
             A Context_ global parameter whose value will multiply, in the passed NonbondedForce_
             object, the epsilon parameters of all atoms in the specified group.
+        shift_energy_only : bool, default=False
+            Whether to perform shifting in the potential energy only.
         pbc_for_exceptions : bool, default=False
             Whether to consider periodic boundary conditions for exceptions in the NonbondedForce_
             object. This might be necessary if the specified group contains several detached
@@ -475,19 +473,23 @@ class InOutDSFCoulombForce(_InOutForce):
     Raises
     ------
         ValueError:
-            Raised if there are any non-exclusion exceptions in the NonbondedForce_ object involving
+            Raised if there are any exceptions in the NonbondedForce_ object involving
             cross-group (i.e. in/out) atom pairs.
 
     """
 
-    def __init__(self, group, nbforce, damping_coefficient=0.2/unit.angstroms,
-                 scaling_parameter_name='coulomb_scaling', pbc_for_exceptions=False):
+    def __init__(self, group, nbforce, damping_coefficient=0.2/unit.angstroms, shift_energy_only=False,
+                 scaling_parameter_name='inOutCoulombScaling', pbc_for_exceptions=False):
         alpha = _standardized(damping_coefficient)
         rc = _standardized(nbforce.getCutoffDistance())
+        prefix = '138.935485*charge1*charge2'
         factor = '1' if alpha == 0.0 else f'erfc({alpha}*r)'
         A = math.erfc(alpha*rc)/rc
-        B = (2*alpha/math.sqrt(math.pi))*math.exp(-(alpha*rc)**2)/rc
-        super().__init__(f'138.935485*charge1*charge2*({factor}/r+{(A + B)/rc}*r-{2*A + B})')
+        if shift_energy_only:
+            super().__init__(f'{prefix}*({factor}/r-{A})')
+        else:
+            B = (2*alpha/math.sqrt(math.pi))*math.exp(-(alpha*rc)**2)/rc
+            super().__init__(f'{prefix}*({factor}/r+{(A + B)/rc}*r-{2*A + B})')
         N = nbforce.getNumParticles()
         parameters = [ParamTuple(*nbforce.getParticleParameters(i)) for i in range(N)]
         for index in range(nbforce.getNumParticleParameterOffsets()):
@@ -498,7 +500,8 @@ class InOutDSFCoulombForce(_InOutForce):
         for parameter in parameters:
             self.addParticle([parameter.charge])
         self._update_nonbonded_force(group, nbforce, parameters, pbc_for_exceptions)
-        self._import_properties(group, nbforce)
+        self._import_properties(nbforce)
+        self.addInteractionGroup(set(group), set(range(N)) - set(group))
         self.setUseLongRangeCorrection(False)
         global_vars = map(nbforce.getGlobalParameterName, range(nbforce.getNumGlobalParameters()))
         if scaling_parameter_name not in global_vars:
