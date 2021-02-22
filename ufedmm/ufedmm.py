@@ -39,6 +39,27 @@ def _standardized(quantity):
         return quantity
 
 
+def _update_RMSD_forces(system):
+    N = system.getNumParticles()
+
+    def update_RMSDForce(force):
+        positions = force.getReferencePositions()._value
+        if len(positions) >= N:
+            positions = positions[:N]
+        else:
+            positions += [openmm.Vec3(0, 0, 0)]*(N - len(positions))
+        force.setReferencePositions(positions)
+
+    for force in system.getForces():
+        if isinstance(force, openmm.RMSDForce):
+            update_RMSDForce(force)
+        elif isinstance(force, openmm.CustomCVForce):
+            for index in range(force.getNumCollectiveVariables()):
+                cv = force.getCollectiveVariable(index)
+                if isinstance(cv, openmm.RMSDForce):
+                    update_RMSDForce(cv)
+
+
 class CollectiveVariable(object):
     """
     A function of the particle coordinates, evaluated by means of an OpenMM Force_ object.
@@ -81,6 +102,7 @@ class CollectiveVariable(object):
         force_copy.setForceGroup(1)
         system_copy.addForce(force_copy)
         platform = openmm.Platform.getPlatformByName('Reference')
+        _update_RMSD_forces(system_copy)
         context = openmm.Context(system_copy, openmm.CustomIntegrator(0), platform)
         context.setPositions(positions)
         return context
@@ -713,6 +735,7 @@ class ExtendedSpaceContext(openmm.Context):
             parameter = driving_force.getCollectiveVariable(2*i)
             parameter.setParticleParameters(0, np+i, [])
         system.addForce(driving_force)
+        _update_RMSD_forces(system)
         super().__init__(system, *args, **kwargs)
         self.setParameter('Lx', a.x)
         self.variables = variables
