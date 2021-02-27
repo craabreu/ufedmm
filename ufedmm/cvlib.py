@@ -23,7 +23,7 @@ from simtk import openmm, unit
 from ufedmm.ufedmm import _standardized
 
 
-ParamTuple = namedtuple('ParamTuple', 'charge sigma epsilon')
+_ParamTuple = namedtuple('_ParamTuple', 'charge sigma epsilon')
 
 
 class SquareRadiusOfGyration(openmm.CustomBondForce):
@@ -386,7 +386,7 @@ class InOutLennardJonesForce(_InOutForce):
         equations = [f'epsilon*({u_LJ})'] + definitions
         super().__init__(';'.join(equations))
         N = nbforce.getNumParticles()
-        parameters = [ParamTuple(*nbforce.getParticleParameters(i)) for i in range(N)]
+        parameters = [_ParamTuple(*nbforce.getParticleParameters(i)) for i in range(N)]
         self.addPerParticleParameter('sigma')
         self.addPerParticleParameter('epsilon')
         for parameter in parameters:
@@ -424,13 +424,13 @@ class InOutLennardJonesForce(_InOutForce):
         return force
 
 
-class InOutDSFCoulombForce(_InOutForce):
+class InOutCoulombForce(_InOutForce):
     """
-    Damped, Shifted-Force (DSF) Coulomb interactions between the atoms of a specified group and all
-    other atoms in the system, referred to as in/out DSF interactions. All charges are imported
-    from a provided NonbondedForce_ object, which is then modified so that all in-group interactions
-    are treated as exceptions and all charges of the group atoms are scaled by a newly created
-    Context_ global parameter whose default value is 0.0.
+    Cut-off, pairwise Coulomb interactions between the atoms of a specified group and al other atoms
+    in the system, referred to as in/out Coulomb interactions. All charges are imported from a
+    provided NonbondedForce_ object, which is then modified so that all in-group interactions are
+    treated as exceptions and all charges of the group atoms are scaled by a newly created Context_
+    global parameter whose default value is 0.0.
 
     .. note::
         No exceptions which involve in/out atom pairs are allowed.
@@ -443,11 +443,43 @@ class InOutDSFCoulombForce(_InOutForce):
     The model equation is
 
     .. math::
-        V_\\mathrm{DSF}(r) = \\frac{q_i q_j}{4 \\pi \\epsilon_0}\\left\\{
-            \\frac{\\mathrm{erfc}(\\alpha r)}{r} - \\frac{\\mathrm{erfc}(\\alpha r_c)}{r_c} +
-            \\left[ \\frac{\\mathrm{erfc}(\\alpha r_c)}{r_c} +
-            \\frac{2\\alpha e^{-\\alpha^2 r_c^2}}{\\pi^{1/2}}\\right]\\left(\\frac{r}{r_c}-1\\right)
-        \\right\\}
+        V_\\mathrm{coul}(r) = \\frac{q_i q_j}{4 \\pi \\epsilon_0} \\frac{u(r/r_c)}{r_c}
+
+    The function :math:`u(x)` can be chosen from a number of different styles:
+
+    1. Shifted:
+
+    .. math::
+        u(x) = \\frac{1}{x} - 1
+
+    2. Shifted-force (default):
+
+    .. math::
+        u(x) = \\frac{1}{x} + x - 2
+
+    3. Reaction-field:
+
+        3.1. With infinite dielectric constant (default):
+
+        .. math::
+            u(x) = \\frac{1}{x} + \\frac{x^2}{2} - \\frac{3}{2}
+
+        3.2. With finite dielectric constant :math:`\\epsilon`:
+
+        .. math::
+            u(x) = \\frac{1}{x} + \\frac{(2\\epsilon-1)x^2-3\\epsilon}{2\\epsilon+1}
+
+    4. Damped:
+
+    .. math::
+        u(x) = \\frac{\\mathrm{erfc}(\\alpha_c x)}{x}
+
+    5. Damped-shifted-force (DSF):
+
+    .. math::
+        u(x) = \\frac{\\mathrm{erfc}(\\alpha_c x)}{x} - \\mathrm{erfc}(\\alpha_c) +
+        \\left[\\mathrm{erfc}(\\alpha_c) +
+        \\frac{2\\alpha_c e^{-\\alpha_c^2}}{\\sqrt{\\pi}}\\right]\\left(x - 1\\right)
 
     Parameters
     ----------
@@ -458,13 +490,18 @@ class InOutDSFCoulombForce(_InOutForce):
 
     Keyword Args
     ------------
+        style : str, default='shifted-force'
+            The style of cutoff electrostatic potential to be used. Valid options are `shifted`,
+            `shifted-force`, `reaction-field`, `damped`, and `damped-shifted-force`.
+        infinite_dielectric_constant : bool, default=True
+            Whether to consider a medium with infinite dielectric constant in the reaction-field
+            potential. Otherwise, the dielectric constant will be retrieved from the passed
+            NonbondedForce_ object.
         damping_coefficient : float or unit.Quantity, default=0.2/unit.angstroms
             The damping coefficient :math:`\\alpha` in inverse distance unit.
         scaling_parameter_name : str, default='inOutCoulombScaling'
             A Context_ global parameter whose value will multiply, in the passed NonbondedForce_
             object, the epsilon parameters of all atoms in the specified group.
-        shift_energy_only : bool, default=False
-            Whether to perform shifting in the potential energy only.
         pbc_for_exceptions : bool, default=False
             Whether to consider periodic boundary conditions for exceptions in the NonbondedForce_
             object. This might be necessary if the specified group contains several detached
@@ -475,27 +512,45 @@ class InOutDSFCoulombForce(_InOutForce):
         ValueError:
             Raised if there are any exceptions in the NonbondedForce_ object involving
             cross-group (i.e. in/out) atom pairs.
+        ValueError:
+            Raised if an invalid `style` keyword is passed.
 
     """
 
-    def __init__(self, group, nbforce, damping_coefficient=0.2/unit.angstroms, shift_energy_only=False,
+    def __init__(self, group, nbforce, style='shifted-force',
+                 infinite_dielectric_constant=True, damping_coefficient=0.2/unit.angstroms,
                  scaling_parameter_name='inOutCoulombScaling', pbc_for_exceptions=False):
-        alpha = _standardized(damping_coefficient)
+
         rc = _standardized(nbforce.getCutoffDistance())
-        prefix = '138.935485*charge1*charge2'
-        factor = '1' if alpha == 0.0 else f'erfc({alpha}*r)'
-        A = math.erfc(alpha*rc)/rc
-        if shift_energy_only:
-            super().__init__(f'{prefix}*({factor}/r-{A})')
+        alpha_c = _standardized(damping_coefficient)*rc
+        prefix = f'{138.935485/rc}*charge1*charge2'
+        if style == 'shifted':
+            u_C = '1/x - 1'
+        elif style == 'shifted-force':
+            u_C = '1/x + x - 2'
+        elif style == 'reaction-field' and infinite_dielectric_constant:
+            u_C = '1/x + x^2/2 - 3/2'
+        elif style == 'reaction-field':
+            epsilon = nbforce.getReactionFieldDielectric()
+            krf = (epsilon - 1)/(2*epsilon + 1)
+            crf = 3*epsilon/(2*epsilon + 1)
+            u_C = f'1/x + {krf}*x^2 - {crf}'
+        elif style == 'damped':
+            u_C = f'ercf({alpha_c}*x)/x'
+        elif style == 'damped-shifted-force':
+            A = math.erfc(alpha_c)
+            B = A + 2*alpha_c*math.exp(-alpha_c**2)/math.sqrt(math.pi)
+            u_C = f'ercf({alpha_c}*x)/x + {A+B}*x - {2*A+B}'
         else:
-            B = (2*alpha/math.sqrt(math.pi))*math.exp(-(alpha*rc)**2)/rc
-            super().__init__(f'{prefix}*({factor}/r+{(A + B)/rc}*r-{2*A + B})')
+            raise ValueError("Invalid cutoff electrostatic style")
+
+        super().__init__(f'{prefix}*({u_C}); x=r/{rc}')
         N = nbforce.getNumParticles()
-        parameters = [ParamTuple(*nbforce.getParticleParameters(i)) for i in range(N)]
+        parameters = [_ParamTuple(*nbforce.getParticleParameters(i)) for i in range(N)]
         for index in range(nbforce.getNumParticleParameterOffsets()):
             variable, i, charge, _, _ = nbforce.getParticleParameterOffset(index)
             if variable == scaling_parameter_name:
-                parameters[i] = ParamTuple(charge, parameters[i].sigma, parameters[i].epsilon)
+                parameters[i] = _ParamTuple(charge, parameters[i].sigma, parameters[i].epsilon)
         self.addPerParticleParameter('charge')
         for parameter in parameters:
             self.addParticle([parameter.charge])
