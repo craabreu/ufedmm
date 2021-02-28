@@ -501,12 +501,12 @@ class InOutCoulombForce(_InOutForce):
     .. math::
         u(x) = \\frac{1}{x} - 1
 
-    2. Shifted-force (default):
+    2. Shifted-force:
 
     .. math::
         u(x) = \\frac{1}{x} + x - 2
 
-    3. Reaction-field:
+    3. Reaction-field (default):
 
         3.1. With infinite dielectric constant (default):
 
@@ -566,7 +566,7 @@ class InOutCoulombForce(_InOutForce):
 
     """
 
-    def __init__(self, group, nbforce, style='shifted-force',
+    def __init__(self, group, nbforce, style='reaction-field',
                  infinite_dielectric_constant=True, damping_coefficient=0.2/unit.angstroms,
                  scaling_parameter_name='inOutCoulombScaling', pbc_for_exceptions=False):
 
