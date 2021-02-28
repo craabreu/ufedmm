@@ -358,6 +358,17 @@ class InOutLennardJonesForce(_InOutForce):
         side effect:
             The constructor of this class modifies the passed NonbondedForce_ object.
 
+    The model equation is:
+
+    .. math::
+        V_\\mathrm{LJ}(\\mathbf{r}) = \\sum_{i \\in \\mathcal{G}} \\sum_{j \\notin \\mathcal{G}}
+        \\epsilon_{ij} u_\\mathrm{LJ}\\left(\\frac{r_{ij}}{\\sigma_{ij}}\\right)
+
+    where :math:`\\mathcal{G}` is the specified group and
+
+    .. math::
+        u_\\mathrm{LJ}(x) = 4(x^{-12} - x^{-6})
+
     Parameters
     ----------
         group : list of int
@@ -398,14 +409,50 @@ class InOutLennardJonesForce(_InOutForce):
         for i in group:
             nbforce.setParticleParameters(i, parameters[i].charge, 1.0, 0.0)
 
-    def capped_version(self):
+    def capped_version(self, m=2):
         """
         Returns a capped (Buelens-Grubmüller-type) version of the in/out Lennard-Jones force.
+
+        The model equation is
+
+        .. math::
+            V_\\mathrm{BG}(\\mathbf{r}) = \\sum_{i \\in \\mathcal{G}} \\sum_{j \\notin \\mathcal{G}}
+                \\epsilon_{ij} u_\\mathrm{BG}\\left(\\frac{r_{ij}}{\\sigma_{ij}}\\right)
+
+        where
+
+        .. math::
+            u_\\mathrm{BG}(x) = \\left\\{ \\begin{array}{ccc}
+                u_\\mathrm{cap}(x) & \\mathrm{if} & x < 1 \\\\
+                4(x^{-12} - x^{-6}) & \\mathrm{if} & x \\geq 1
+            \\end{array}\\right.
+
+        with
+
+        .. math::
+            u_\\mathrm{cap}(x) = \\left\\{ \\begin{array}{ccc}
+                126 x^4 - 176 x^3 + 50 & \\mathrm{if} & m = 2 \\\\
+                \\frac{-4340 x^6 + 10944 x^5 - 7200 x^4 + 596}{5} & \\mathrm{if} & m = 3 \\\\
+                \\frac{43365 x^8 - 155880 x^7 + 191065 x^6 - 80472 x^5 + 1922}{35} & \\mathrm{if} & m = 4
+            \\end{array}\\right.
+
+        Keyword Args
+        ------------
+            m : int, default=2
+                The highest order of derivatives to be zero at :math:`r=0` and to match the
+                Lennard-Jones values at :math:`r=\\sigma`. Valid options are 2, 3, and 4.
 
         """
 
         u_LJ = '4/x^12-4/x^6'
-        u_cap = '(596-7200*x^4+10944*x^5-4340*x^6)/5'
+        if m == 2:
+            u_cap = '126*x^4-176*x^3+50'
+        elif m == 3:
+            u_cap = '(-4340*x^6+10944*x^5-7200*x^4+596)/5'
+        elif m == 4:
+            u_cap = '(43365*x^8-155880*x^7+191065*x^6-80472*x^5+1922)/35'
+        else:
+            raise ValueError("Raised if an invalid `m` keyword value is passed.")
         definitions = ['x=r/sigma', 'sigma=(sigma1+sigma2)/2', 'epsilon=sqrt(epsilon1*epsilon2)']
         equations = [f'epsilon*select(step(1-x),{u_cap},{u_LJ})'] + definitions
         force = openmm.CustomNonbondedForce(';'.join(equations))
@@ -443,9 +490,11 @@ class InOutCoulombForce(_InOutForce):
     The model equation is
 
     .. math::
-        V_\\mathrm{coul}(r) = \\frac{q_i q_j}{4 \\pi \\epsilon_0} \\frac{u(r/r_c)}{r_c}
+        V_\\mathrm{coul}(\\mathbf{r}) = \\sum_{i \\in \\mathcal{G}} \\sum_{j \\notin \\mathcal{G}}
+            \\frac{q_i q_j}{4 \\pi \\epsilon_0 r_c} u\\left(\\frac{r}{r_c}\\right)
 
-    The function :math:`u(x)` can be chosen from a number of different styles:
+    where :math:`\\mathcal{G}` is the specified group and the function :math:`u(x)` can be
+    chosen from a number of different styles:
 
     1. Shifted:
 
@@ -474,7 +523,7 @@ class InOutCoulombForce(_InOutForce):
     .. math::
         u(x) = \\frac{\\mathrm{erfc}(\\alpha_c x)}{x}
 
-    5. Damped-shifted-force (DSF):
+    5. Damped-shifted-force (DSF), with :math:`\\alpha_c = \\alpha r_c`:
 
     .. math::
         u(x) = \\frac{\\mathrm{erfc}(\\alpha_c x)}{x} - \\mathrm{erfc}(\\alpha_c) +
@@ -513,7 +562,7 @@ class InOutCoulombForce(_InOutForce):
             Raised if there are any exceptions in the NonbondedForce_ object involving
             cross-group (i.e. in/out) atom pairs.
         ValueError:
-            Raised if an invalid `style` keyword is passed.
+            Raised if an invalid `style` keyword value is passed.
 
     """
 
