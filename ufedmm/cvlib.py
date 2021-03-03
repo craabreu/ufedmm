@@ -51,6 +51,33 @@ class SquareRadiusOfGyration(openmm.CustomBondForce):
                 self.addBond(i, j)
 
 
+class RadiusOfGyration(openmm.CustomCVForce):
+    """
+    The radius of gyration of a group of atoms, defined as:
+
+    .. math::
+        R_g = \\frac{1}{n} \\sqrt{\\sum_i \\sum_{j>i} r_{i,j}^2},
+
+    where :math:`n` is the number of atoms in the group and :math:`r_{i,j}` is the distance between
+    atoms `i` and `j`.
+
+    Parameters
+    ----------
+        group : list(int)
+            The indices of the atoms in the group.
+
+    """
+
+    def __init__(self, group):
+        RgSq = openmm.CustomBondForce('r^2')
+        RgSq.setUsesPeriodicBoundaryConditions(False)
+        for i in group[0:-1]:
+            for j in group[i+1:]:
+                RgSq.addBond(i, j)
+        super().__init__(f'sqrt(RgSq)/{len(group)}')
+        self.addCollectiveVariable('RgSq', RgSq)
+
+
 class CoordinationNumber(openmm.CustomNonbondedForce):
     """
      A continuos approximation for the number of neighbor pairs among atoms of two groups,
