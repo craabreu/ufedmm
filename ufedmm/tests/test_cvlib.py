@@ -6,6 +6,34 @@ from simtk import openmm
 from ufedmm import cvlib
 
 
+def test_radius_of_gyration():
+    model = ufedmm.AlanineDipeptideModel()
+
+    R = model.positions._value
+    N = len(R)
+    Rmean = sum(R, openmm.Vec3(0, 0, 0))/N
+    RgSqVal = 0.0
+    for r in R:
+        dr = r - Rmean
+        RgSqVal += dr.x**2 + dr.y**2 + dr.z**2
+    RgSqVal /= N
+
+    RgSq = cvlib.SquareRadiusOfGyration(range(model.topology._numAtoms))
+    RgSq.setForceGroup(1)
+    model.system.addForce(RgSq)
+    Rg = cvlib.RadiusOfGyration(range(model.topology._numAtoms))
+    Rg.setForceGroup(2)
+    model.system.addForce(Rg)
+    integrator = openmm.CustomIntegrator(0)
+    platform = openmm.Platform.getPlatformByName('Reference')
+    context = openmm.Context(model.system, integrator, platform)
+    context.setPositions(model.positions)
+    RgSq = context.getState(getEnergy=True, groups={1}).getPotentialEnergy()._value
+    assert RgSq == pytest.approx(RgSqVal)
+    Rg = context.getState(getEnergy=True, groups={2}).getPotentialEnergy()._value
+    assert Rg*Rg == pytest.approx(RgSqVal)
+
+
 def potential_energy(system, positions, force_cls, scaling=None):
     syscopy = deepcopy(system)
     for force in syscopy.getForces():
