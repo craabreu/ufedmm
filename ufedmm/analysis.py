@@ -68,27 +68,30 @@ class FreeEnergyAnalyzer(object):
 
     def centers_and_mean_forces(self, bins, min_count=1, adjust_centers=False):
         """
-        Performs binned statistics of the UFED simulation data.
+        Performs binned statistics with the UFED simulation data.
 
         Parameters
         ----------
-            bins : int or list(int)
-                The number of bins in each direction.
+            bins : list(int) or int
+                The number of bins in each direction. If a single integer is passed, then the same
+                number of bins will be considered for all directions.
 
         Keyword Args
         ------------
             min_count : int, default=1
-                The miminum number of hits for a given bin to be considered in the analysis.
+                The miminum number of hits for any bin to be considered in the analysis.
             adjust_centers : bool, default=False
                 Whether to consider the center of a bin as the mean value of the its sampled
-                internal points istead of its geometric center.
+                internal points instead of its geometric center.
 
         Returns
         -------
             centers : list(numpy.array)
-                The bin centers.
+                A list of Numpy arrays, each one containing the values of an extended-space
+                variable at the centers of all bins that satisfy the minimum-count criterion.
             mean_forces : list(numpy.array)
-                The mean forces.
+                A list of Numpy arrays, each one containing the mean forces in the direction of
+                an extended-space variable.
 
         """
         variables = self._ufed.variables
@@ -110,6 +113,7 @@ class FreeEnergyAnalyzer(object):
             center_points = np.stack([np.array(point) for point in itertools.product(*bin_centers)])
             centers = [center_points[:, i][index] for i in range(n)]
             mean_forces = [statistic.flatten()[index] for statistic in means.statistic]
+
         return centers, mean_forces
 
     def mean_force_free_energy(self, centers, mean_forces, sigma):
@@ -162,30 +166,30 @@ class FreeEnergyAnalyzer(object):
         def gradient(x, i):
             return kernel(x)*derivative[i](x[i])
 
-        centers = [np.array(xc) for xc in zip(*self.centers)]
+        center_points = [np.array(xc) for xc in zip(*centers)]
         coefficients = []
         for i in range(n):
-            for x in centers:
-                coefficients.append(np.array([gradient(x-xc, i) for xc in centers]))
+            for x in center_points:
+                coefficients.append(np.array([gradient(x-xc, i) for xc in center_points]))
 
         M = np.vstack(coefficients)
-        F = -np.hstack(self.mean_forces)
+        F = -np.hstack(mean_forces)
         A, _, _, _ = np.linalg.lstsq(M, F, rcond=None)
 
-        kernels = np.empty((len(centers), len(centers)))
-        for i, x in enumerate(centers):
-            kernels[i, :] = np.array([kernel(x-xc) for xc in centers])
+        kernels = np.empty((len(center_points), len(center_points)))
+        for i, x in enumerate(center_points):
+            kernels[i, :] = np.array([kernel(x-xc) for xc in center_points])
         potentials = kernels.dot(A)
         minimum = potentials.min()
 
         def potential(*x):
             xa = np.array(x)
-            kernels = np.array([kernel(xa-xc) for xc in centers])
+            kernels = np.array([kernel(xa-xc) for xc in center_points])
             return np.sum(A*kernels) - minimum
 
         def mean_force(*x, dir=0):
             xa = np.array(x)
-            gradients = np.array([gradient(xa-xc, dir) for xc in centers])
+            gradients = np.array([gradient(xa-xc, dir) for xc in center_points])
             return -np.sum(A*gradients)
 
         return np.vectorize(potential), np.vectorize(mean_force)
@@ -226,6 +230,9 @@ class FreeEnergyAnalyzer(object):
 class Analyzer(FreeEnergyAnalyzer):
     """
     UFED Analyzer.
+
+    .. warning::
+        This class is obsolete and will be discontinued. Use :class:`FreeEnergyAnalyzer` instead.
 
     Parameters
     ----------
