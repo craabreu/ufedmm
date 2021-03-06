@@ -226,7 +226,7 @@ def serialize(object, file):
     Serializes a ufedmm object.
 
     """
-    dump = yaml.dump(object)
+    dump = yaml.dump(object, Dumper=yaml.CDumper)
     if isinstance(file, str):
         with open(file, 'w') as f:
             f.write(dump)
@@ -241,7 +241,7 @@ def deserialize(file):
     """
     if isinstance(file, str):
         with open(file, 'r') as f:
-            object = yaml.load(f.read(), Loader=yaml.FullLoader)
+            object = yaml.load(f.read(), Loader=yaml.CLoader)
     else:
-        object = yaml.load(file.read(), Loader=yaml.FullLoader)
+        object = yaml.load(file.read(), Loader=yaml.CLoader)
     return object
