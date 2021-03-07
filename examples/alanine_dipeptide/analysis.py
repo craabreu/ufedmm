@@ -18,8 +18,7 @@ print(df[['T[atoms] (K)'] + [f'T[{v.id}] (K)' for v in ufed.variables]].mean())
 
 analyzer = ufedmm.FreeEnergyAnalyzer(ufed, df)
 
-bins = (nbins, nbins)
-centers, mean_forces = analyzer.centers_and_mean_forces(bins)
+centers, mean_forces = analyzer.centers_and_mean_forces(nbins)
 
 delta = 2*np.pi/nbins
 potential, mean_force = analyzer.mean_force_free_energy(centers, mean_forces, sigma=factor*delta)
