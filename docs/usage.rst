@@ -2,6 +2,6 @@
 Usage
 =====
 
-To use AFED for OpenMM in a project::
+To use UFEDMM for OpenMM in a project::
 
 	import ufedmm

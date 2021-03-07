@@ -17,8 +17,8 @@ When `reporting a bug <https://github.com/craabreu/ufedmm/issues>`_ please inclu
 Documentation improvements
 ==========================
 
-AFED could always use more documentation, whether as part of the
-official AFED docs, in docstrings, or even on the web in blog posts,
+UFEDMM could always use more documentation, whether as part of the
+official UFEDMM docs, in docstrings, or even on the web in blog posts,
 articles, and such.
 
 Feature requests and feedback

@@ -4,7 +4,7 @@ Glossary
 
 .. glossary::
 
-    AFED
+    UFED
         Unified Free Energy Dynamics
 
     NHC
@@ -12,6 +12,6 @@ Glossary
 
     ODE
         Ordinary Differential Equation
-        
+
     SDE
         Stochastic Differential Equation
