@@ -533,24 +533,22 @@ class InOutCoulombForce(_InOutForce):
     .. math::
         u(x) = \\frac{1}{x} + x - 2
 
-    3. Reaction-field (default):
-
-        3.1. With infinite dielectric constant (default):
+    3. Conductor Reaction-field (default):
 
         .. math::
             u(x) = \\frac{1}{x} + \\frac{x^2}{2} - \\frac{3}{2}
 
-        3.2. With finite dielectric constant :math:`\\epsilon`:
+    4. Reaction-field (with finite dielectric constant :math:`\\epsilon`):
 
         .. math::
             u(x) = \\frac{1}{x} + \\frac{(2\\epsilon-1)x^2-3\\epsilon}{2\\epsilon+1}
 
-    4. Damped:
+    5. Damped:
 
     .. math::
         u(x) = \\frac{\\mathrm{erfc}(\\alpha_c x)}{x}
 
-    5. Damped-shifted-force (DSF), with :math:`\\alpha_c = \\alpha r_c`:
+    6. Damped-shifted-force (DSF), with :math:`\\alpha_c = \\alpha r_c`:
 
     .. math::
         u(x) = \\frac{\\mathrm{erfc}(\\alpha_c x)}{x} - \\mathrm{erfc}(\\alpha_c) +
@@ -566,13 +564,10 @@ class InOutCoulombForce(_InOutForce):
 
     Keyword Args
     ------------
-        style : str, default='shifted-force'
+        style : str, default='conductor-reaction-field'
             The style of cutoff electrostatic potential to be used. Valid options are `shifted`,
-            `shifted-force`, `reaction-field`, `damped`, and `damped-shifted-force`.
-        infinite_dielectric_constant : bool, default=True
-            Whether to consider a medium with infinite dielectric constant in the reaction-field
-            potential. Otherwise, the dielectric constant will be retrieved from the passed
-            NonbondedForce_ object.
+            `shifted-force`, `reaction-field`, `conductor-reaction-field`, `damped`, and
+            `damped-shifted-force`.
         damping_coefficient : float or unit.Quantity, default=0.2/unit.angstroms
             The damping coefficient :math:`\\alpha` in inverse distance unit.
         scaling_parameter_name : str, default='inOutCoulombScaling'
@@ -593,8 +588,8 @@ class InOutCoulombForce(_InOutForce):
 
     """
 
-    def __init__(self, group, nbforce, style='reaction-field',
-                 infinite_dielectric_constant=True, damping_coefficient=0.2/unit.angstroms,
+    def __init__(self, group, nbforce, style='conductor-reaction-field',
+                 damping_coefficient=0.2/unit.angstroms,
                  scaling_parameter_name='inOutCoulombScaling', pbc_for_exceptions=False):
 
         rc = _standardized(nbforce.getCutoffDistance())
@@ -604,7 +599,7 @@ class InOutCoulombForce(_InOutForce):
             u_C = '1/x - 1'
         elif style == 'shifted-force':
             u_C = '1/x + x - 2'
-        elif style == 'reaction-field' and infinite_dielectric_constant:
+        elif style == 'conductor-reaction-field':
             u_C = '1/x + x^2/2 - 3/2'
         elif style == 'reaction-field':
             epsilon = nbforce.getReactionFieldDielectric()
@@ -612,11 +607,11 @@ class InOutCoulombForce(_InOutForce):
             crf = 3*epsilon/(2*epsilon + 1)
             u_C = f'1/x + {krf}*x^2 - {crf}'
         elif style == 'damped':
-            u_C = f'ercf({alpha_c}*x)/x'
+            u_C = f'erfc({alpha_c}*x)/x'
         elif style == 'damped-shifted-force':
             A = math.erfc(alpha_c)
             B = A + 2*alpha_c*math.exp(-alpha_c**2)/math.sqrt(math.pi)
-            u_C = f'ercf({alpha_c}*x)/x + {A+B}*x - {2*A+B}'
+            u_C = f'erfc({alpha_c}*x)/x + {A+B}*x - {2*A+B}'
         else:
             raise ValueError("Invalid cutoff electrostatic style")
 
