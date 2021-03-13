@@ -618,9 +618,11 @@ class InOutCoulombForce(_InOutForce):
         super().__init__(f'{prefix}*({u_C}); x=r/{rc}')
         N = nbforce.getNumParticles()
         parameters = [_ParamTuple(*nbforce.getParticleParameters(i)) for i in range(N)]
+        offset_index = {}
         for index in range(nbforce.getNumParticleParameterOffsets()):
             variable, i, charge, _, _ = nbforce.getParticleParameterOffset(index)
             if variable == scaling_parameter_name:
+                offset_index[i] = index
                 parameters[i] = _ParamTuple(charge, parameters[i].sigma, parameters[i].epsilon)
         self.addPerParticleParameter('charge')
         for parameter in parameters:
@@ -635,4 +637,8 @@ class InOutCoulombForce(_InOutForce):
         for i in group:
             charge, sigma, epsilon = parameters[i]
             nbforce.setParticleParameters(i, 0.0, sigma, epsilon)
-            nbforce.addParticleParameterOffset(scaling_parameter_name, i, charge, 0.0, 0.0)
+            input = [scaling_parameter_name, i, charge, 0.0, 0.0]
+            if i in offset_index:
+                nbforce.setParticleParameterOffset(offset_index[i], *input)
+            else:
+                nbforce.addParticleParameterOffset(*input)
