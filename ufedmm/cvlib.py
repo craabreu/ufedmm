@@ -23,9 +23,6 @@ from simtk import openmm, unit
 from ufedmm.ufedmm import _standardized
 
 
-_ParamTuple = namedtuple('_ParamTuple', 'charge sigma epsilon')
-
-
 class SquareRadiusOfGyration(openmm.CustomBondForce):
     """
     The square of the radius of gyration of a group of atoms, defined as:
@@ -348,6 +345,17 @@ class _InOutForce(openmm.CustomNonbondedForce):
         self.setCutoffDistance(nbforce.getCutoffDistance())
         self.setUseSwitchingFunction(nbforce.getUseSwitchingFunction())
         self.setSwitchingDistance(nbforce.getSwitchingDistance())
+        for index in range(nbforce.getNumExceptions()):
+            i, j, _, _, _ = nbforce.getExceptionParameters(index)
+            self.addExclusion(i, j)
+
+    def _get_parameters(self, nbforce):
+        _ParamTuple = namedtuple('_ParamTuple', 'charge sigma epsilon')
+        parameters = []
+        for i in range(nbforce.getNumParticles()):
+            charge, sigma, epsilon = [p/p.unit for p in nbforce.getParticleParameters(i)]
+            parameters.append(_ParamTuple(charge, sigma if epsilon != 0.0 else 1.0, epsilon))
+        return parameters
 
     def _update_nonbonded_force(self, group, nbforce, parameters, pbc_for_exceptions):
         internal_exception_pairs = []
@@ -423,15 +431,14 @@ class InOutLennardJonesForce(_InOutForce):
         definitions = ['x=r/sigma', 'sigma=(sigma1+sigma2)/2', 'epsilon=sqrt(epsilon1*epsilon2)']
         equations = [f'epsilon*({u_LJ})'] + definitions
         super().__init__(';'.join(equations))
-        N = nbforce.getNumParticles()
-        parameters = [_ParamTuple(*nbforce.getParticleParameters(i)) for i in range(N)]
+        parameters = self._get_parameters(nbforce)
         self.addPerParticleParameter('sigma')
         self.addPerParticleParameter('epsilon')
         for parameter in parameters:
             self.addParticle([parameter.sigma, parameter.epsilon])
         self._update_nonbonded_force(group, nbforce, parameters, pbc_for_exceptions)
         self._import_properties(nbforce)
-        self.addInteractionGroup(set(group), set(range(N)) - set(group))
+        self.addInteractionGroup(set(group), set(range(nbforce.getNumParticles())) - set(group))
         self.setUseLongRangeCorrection(nbforce.getUseDispersionCorrection())
         for i in group:
             nbforce.setParticleParameters(i, parameters[i].charge, 1.0, 0.0)
@@ -616,8 +623,7 @@ class InOutCoulombForce(_InOutForce):
             raise ValueError("Invalid cutoff electrostatic style")
 
         super().__init__(f'{prefix}*({u_C}); x=r/{rc}')
-        N = nbforce.getNumParticles()
-        parameters = [_ParamTuple(*nbforce.getParticleParameters(i)) for i in range(N)]
+        parameters = self._get_parameters(nbforce)
         offset_index = {}
         for index in range(nbforce.getNumParticleParameterOffsets()):
             variable, i, charge, _, _ = nbforce.getParticleParameterOffset(index)
@@ -629,7 +635,7 @@ class InOutCoulombForce(_InOutForce):
             self.addParticle([parameter.charge])
         self._update_nonbonded_force(group, nbforce, parameters, pbc_for_exceptions)
         self._import_properties(nbforce)
-        self.addInteractionGroup(set(group), set(range(N)) - set(group))
+        self.addInteractionGroup(set(group), set(range(nbforce.getNumParticles())) - set(group))
         self.setUseLongRangeCorrection(False)
         global_vars = map(nbforce.getGlobalParameterName, range(nbforce.getNumGlobalParameters()))
         if scaling_parameter_name not in global_vars:
