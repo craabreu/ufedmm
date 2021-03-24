@@ -23,6 +23,9 @@ from simtk import openmm, unit
 from ufedmm.ufedmm import _standardized
 
 
+_ParamTuple = namedtuple('_ParamTuple', 'charge sigma epsilon')
+
+
 class SquareRadiusOfGyration(openmm.CustomBondForce):
     """
     The square of the radius of gyration of a group of atoms, defined as:
@@ -350,7 +353,6 @@ class _InOutForce(openmm.CustomNonbondedForce):
             self.addExclusion(i, j)
 
     def _get_parameters(self, nbforce):
-        _ParamTuple = namedtuple('_ParamTuple', 'charge sigma epsilon')
         parameters = []
         for i in range(nbforce.getNumParticles()):
             charge, sigma, epsilon = [p/p.unit for p in nbforce.getParticleParameters(i)]

@@ -540,6 +540,8 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
     ------------
         nchain : int, default=2
             The number of thermostats in each Nose-Hoover chain.
+        track_energy : bool, default=False
+            Whether to track the thermostat energy term.
         **kwargs
             All keyword arguments in :class:`AbstractMiddleRespaIntegrator`, except ``num_rattles``.
 
@@ -573,15 +575,18 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
 
     """
 
-    def __init__(self, temperature, time_constant, step_size, nchain=2, **kwargs):
+    def __init__(self, temperature, time_constant, step_size, nchain=2, track_energy=False, **kwargs):
         if 'num_rattles' in kwargs.keys() and kwargs['num_rattles'] != 0:
             raise ValueError(f'{self.__class__.__name__} cannot handle constraints')
         self._tau = _standardized(time_constant)
         self._nchain = nchain
+        self._track_energy = track_energy
         super().__init__(temperature, step_size, **kwargs)
         self.addPerDofVariable('Q', 0)
         for i in range(nchain):
             self.addPerDofVariable(f'v{i+1}', 0)
+            if track_energy:
+                self.addPerDofVariable(f'eta{i+1}', 0)
 
     def update_temperatures(self, system_temperature, extended_space_temperatures):
         super().update_temperatures(system_temperature, extended_space_temperatures)

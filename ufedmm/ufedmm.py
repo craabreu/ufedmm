@@ -937,6 +937,9 @@ class ExtendedSpaceSimulation(app.Simulation):
                 The number of steps to be executed.
 
         """
+        if isinstance(self.integrator, ufedmm.AbstractMiddleRespaIntegrator):
+            if self.integrator._num_rattles == 0 and self.system.getNumConstraints() > 0:
+                raise RuntimeError("Integrator cannot handle constraints")
         if self._periodic_tasks:
             for task in self._periodic_tasks:
                 task.update(self, steps)
