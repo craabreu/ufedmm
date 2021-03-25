@@ -46,9 +46,8 @@ class SquareRadiusOfGyration(openmm.CustomBondForce):
     def __init__(self, group):
         super().__init__(f'r^2/{len(group)**2}')
         self.setUsesPeriodicBoundaryConditions(False)
-        for i in group[0:-1]:
-            for j in group[i+1:]:
-                self.addBond(i, j)
+        for i, j in itertools.combinations(group, 2):
+            self.addBond(i, j)
 
 
 class RadiusOfGyration(openmm.CustomCVForce):
@@ -71,9 +70,8 @@ class RadiusOfGyration(openmm.CustomCVForce):
     def __init__(self, group):
         RgSq = openmm.CustomBondForce('r^2')
         RgSq.setUsesPeriodicBoundaryConditions(False)
-        for i in group[0:-1]:
-            for j in group[i+1:]:
-                RgSq.addBond(i, j)
+        for i, j in itertools.combinations(group, 2):
+            RgSq.addBond(i, j)
         super().__init__(f'sqrt(RgSq)/{len(group)}')
         self.addCollectiveVariable('RgSq', RgSq)
 
