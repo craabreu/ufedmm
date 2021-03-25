@@ -139,7 +139,7 @@ class CollectiveVariable(object):
         energy = context.getState(getEnergy=True, groups={1}).getPotentialEnergy()
         return energy.value_in_unit(unit.kilojoules_per_mole)
 
-    def effective_mass(self, system, positions):
+    def effective_mass(self, system, positions, cv_unit=None):
         """
         Computes the effective mass of the collective variable for a given system and a given set of
         particle coordinates.
@@ -160,9 +160,15 @@ class CollectiveVariable(object):
                 A list whose size equals the number of particles in the system and which contains
                 the coordinates of these particles.
 
+        Keyword Args
+        ------------
+            cv_unit : unit.Unit, default=None
+                The unity of measurement of the collective variable. If this is `None`, then a
+                numerical value is returned based on the OpenMM default units.
+
         Returns
         -------
-            float
+            float or unit.Quantity
 
         Example
         -------
@@ -178,7 +184,11 @@ class CollectiveVariable(object):
         context = self._create_context(system, positions)
         forces = _standardized(context.getState(getForces=True, groups={1}).getForces(asNumpy=True))
         denom = sum(f.dot(f)/_standardized(system.getParticleMass(i)) for i, f in enumerate(forces))
-        return 1.0/float(denom)
+        effective_mass = 1.0/float(denom)
+        if cv_unit is not None:
+            factor = _standardized(1*cv_unit)**2
+            effective_mass *= factor*unit.dalton*(unit.nanometers/cv_unit)**2
+        return effective_mass
 
 
 class DynamicalVariable(object):
