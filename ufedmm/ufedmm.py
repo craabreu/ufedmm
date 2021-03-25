@@ -107,7 +107,7 @@ class CollectiveVariable(object):
         context.setPositions(positions)
         return context
 
-    def evaluate(self, system, positions):
+    def evaluate(self, system, positions, cv_unit=None):
         """
         Computes the value of the collective variable for a given system and a given set of particle
         coordinates.
@@ -120,9 +120,15 @@ class CollectiveVariable(object):
                 A list whose size equals the number of particles in the system and which contains
                 the coordinates of these particles.
 
+        Keyword Args
+        ------------
+            cv_unit : unit.Unit, default=None
+                The unity of measurement of the collective variable. If this is `None`, then a
+                numerical value is returned based on the OpenMM default units.
+
         Returns
         -------
-            float
+            float or unit.Quantity
 
         Example
         -------
@@ -137,7 +143,10 @@ class CollectiveVariable(object):
         """
         context = self._create_context(system, positions)
         energy = context.getState(getEnergy=True, groups={1}).getPotentialEnergy()
-        return energy.value_in_unit(unit.kilojoules_per_mole)
+        value = energy.value_in_unit(unit.kilojoules_per_mole)
+        if cv_unit is not None:
+            value *= cv_unit/_standardized(1*cv_unit)
+        return value
 
     def effective_mass(self, system, positions, cv_unit=None):
         """
