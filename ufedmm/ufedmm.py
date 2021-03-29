@@ -741,24 +741,40 @@ class ExtendedSpaceContext(openmm.Context):
                 driving_force.addCollectiveVariable(colvar.id, deepcopy(colvar.force))
 
         np = system.getNumParticles()
-        nb_forces = [f for f in system.getForces()
-                     if isinstance(f, (openmm.NonbondedForce, openmm.CustomNonbondedForce))]
         a, _, _ = system.getDefaultPeriodicBoxVectors()
         for i, v in enumerate(variables):
             system.addParticle(v._particle_mass(a.x))
-            for nb_force in nb_forces:
-                if isinstance(nb_force, openmm.NonbondedForce):
-                    nb_force.addParticle(0.0, 1.0, 0.0)
-                else:
-                    nb_force.addParticle([0.0]*nb_force.getNumPerParticleParameters())
             parameter = driving_force.getCollectiveVariable(2*i)
             parameter.setParticleParameters(0, np+i, [])
+        for force in system.getForces():
+            self._add_fake_particles(force, len(variables))
         system.addForce(driving_force)
         _update_RMSD_forces(system)
         super().__init__(system, *args, **kwargs)
         self.setParameter('Lx', a.x)
         self.variables = variables
         self.driving_force = driving_force
+
+    def _add_fake_particles(self, force, n):
+        if isinstance(force, openmm.NonbondedForce):
+            for i in range(n):
+                force.addParticle(0.0, 1.0, 0.0)
+        elif isinstance(force, openmm.CustomNonbondedForce):
+            for i in range(n):
+                force.addParticle([0.0]*force.getNumPerParticleParameters())
+        elif isinstance(force, openmm.CustomGBForce):
+            parameter_list = list(map(force.getParticleParameters, range(force.getNumParticles())))
+            force.addPerParticleParameter('isreal')
+            for index in range(force.getNumEnergyTerms()):
+                expression, type = force.getEnergyTermParameters(index)
+                energy = 'isreal*E_GB' if type == force.SingleParticle else 'isreal1*isreal2*E_GB'
+                force.setEnergyTermParameters(index, f'{energy}; E_GB={expression}', type)
+            for index, parameters in enumerate(parameter_list):
+                force.setParticleParameters(index, parameters + (1.0,))
+            for i in range(n):
+                force.addParticle(parameter_list[0] + (0.0,))
+        elif isinstance(force, openmm.GBSAOBCForce):
+            raise RuntimeError("GBSAOBCForce not supported")
 
     def getState(self, **kwargs):
         """
