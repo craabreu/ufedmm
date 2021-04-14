@@ -116,7 +116,7 @@ class FreeEnergyAnalyzer(object):
 
         return centers, mean_forces
 
-    def mean_force_free_energy(self, centers, mean_forces, sigma):
+    def mean_force_free_energy(self, centers, mean_forces, sigma, platform='Reference'):
         """
         Returns Python functions for evaluating the potential of mean force and their originating
         mean forces as a function of the collective variables.
@@ -130,6 +130,11 @@ class FreeEnergyAnalyzer(object):
             sigmas : float or unit.Quantity or list
                 The standard deviation of kernels.
 
+        Keyword Args
+        ------------
+            platform : string, default='Reference'
+                The OpenMM Platform to be used for potential and mean-force evaluations.
+
         Returns
         -------
             potential : function
@@ -137,9 +142,7 @@ class FreeEnergyAnalyzer(object):
                 is the potential of mean force at that values.
             mean_force : function
                 A Python function whose arguments are collective variable values and whose result
-                is the mean force at that values regarding a given direction. Such direction must
-                be defined through a keyword argument `dir`, whose default value is `0` (meaning
-                the direction of the first collective variable).
+                is the mean force at those values.
 
         """
         variables = self._ufed.variables
@@ -176,22 +179,50 @@ class FreeEnergyAnalyzer(object):
         F = -np.hstack(mean_forces)
         A, _, _, _ = np.linalg.lstsq(M, F, rcond=None)
 
-        kernels = np.empty((len(center_points), len(center_points)))
-        for i, x in enumerate(center_points):
-            kernels[i, :] = np.array([kernel(x-xc) for xc in center_points])
-        potentials = kernels.dot(A)
-        minimum = potentials.min()
+        num_particles = n//3 + 1
+        coordinates = [f'{x}{i+1}' for i in range(num_particles) for x in 'xyz']
+        exponents = []
+        for v, x in zip(variables, coordinates):
+            if v.periodic:  # von Mises
+                factor = 2*np.pi/v._range
+                exponents.append(f'{1.0/(factor**2*variance)}*(cos({factor}*({v.id}-{x}))-1)')
+            else:  # Gauss
+                exponents.append(f'({-0.5/variance})*({v.id}-{x})^2')
+        force = openmm.CustomCompoundBondForce(num_particles, f'A*exp({"+".join(exponents)})')
+        for v in variables:
+            force.addGlobalParameter(v.id, 0)
+            force.addEnergyParameterDerivative(v.id)
+        force.addPerBondParameter('A')
+
+        system = openmm.System()
+        positions = []
+        for i, (center_point, value) in enumerate(zip(center_points, A)):
+            for position in np.resize(center_point, (num_particles, 3)):
+                system.addParticle(1.0)
+                positions.append(openmm.Vec3(*position))
+            particles = list(range(i*num_particles, (i+1)*num_particles))
+            force.addBond(particles, [value])
+
+        system.addForce(force)
+        integrator = openmm.CustomIntegrator(0)
+        platform = openmm.Platform.getPlatformByName(platform)
+        context = openmm.Context(system, integrator, platform)
+        context.parameters = [v.id for v in variables]
+        context.setPositions(positions)
+        minimum = 0.0
 
         def potential(*x):
-            xa = np.array(x)
-            kernels = np.array([kernel(xa-xc) for xc in center_points])
-            return np.sum(A*kernels) - minimum
+            for parameter, value in zip(context.parameters, x):
+                context.setParameter(parameter, value)
+            return context.getState(getEnergy=True).getPotentialEnergy()._value - minimum
 
-        def mean_force(*x, dir=0):
-            xa = np.array(x)
-            gradients = np.array([gradient(xa-xc, dir) for xc in center_points])
-            return -np.sum(A*gradients)
+        def mean_force(*x):
+            for parameter, value in zip(context.parameters, x):
+                context.setParameter(parameter, value)
+            state = context.getState(getParameterDerivatives=True)
+            return -state.getEnergyParameterDerivatives()._value
 
+        minimum = np.min([potential(*x) for x in center_points])
         return np.vectorize(potential), np.vectorize(mean_force)
 
     def _compute_forces(self):
