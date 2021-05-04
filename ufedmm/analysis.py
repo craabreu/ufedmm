@@ -16,6 +16,40 @@ from simtk import openmm
 from ufedmm.ufedmm import _standardized, _get_energy_function, _get_parameters
 
 
+class _RBFContext(openmm.Context):
+    def __init__(self, variables, variances, centers, weights, platform, properties):
+        num_particles = len(variables)//3 + 1
+        coordinates = [f'{x}{i+1}' for i in range(num_particles) for x in 'xyz']
+        exponents = []
+        for v, variance, x in zip(variables, variances, coordinates):
+            if v.periodic:  # von Mises
+                factor = 2*np.pi/v._range
+                exponents.append(f'{1.0/(variance*factor**2)}*(cos({factor}*({v.id}-{x}))-1)')
+            else:  # Gauss
+                exponents.append(f'(-{0.5/variance})*({v.id}-{x})^2')
+        expression = f'weight*exp({"+".join(exponents)})'
+
+        force = openmm.CustomCompoundBondForce(num_particles, expression)
+        force.addPerBondParameter('weight')
+        for v in variables:
+            force.addGlobalParameter(v.id, 0)
+            force.addEnergyParameterDerivative(v.id)
+
+        system = openmm.System()
+        positions = []
+        for i, (center, weight) in enumerate(zip(centers, weights)):
+            for position in np.resize(center, (num_particles, 3)):
+                system.addParticle(1.0)
+                positions.append(openmm.Vec3(*position))
+            force.addBond(range(i*num_particles, (i+1)*num_particles), [weight])
+
+        system.addForce(force)
+        integrator = openmm.CustomIntegrator(0)
+        super().__init__(system, integrator, platform, properties)
+        self.parameters = [v.id for v in variables]
+        self.setPositions(positions)
+
+
 class FreeEnergyAnalyzer(object):
     """
     Calculate free energy landscapes from UFED simulation results.
@@ -116,7 +150,7 @@ class FreeEnergyAnalyzer(object):
 
         return centers, mean_forces
 
-    def mean_force_free_energy(self, centers, mean_forces, sigma):
+    def mean_force_free_energy(self, centers, mean_forces, sigma, platform_name='Reference', properties={}):
         """
         Returns Python functions for evaluating the potential of mean force and their originating
         mean forces as a function of the collective variables.
@@ -130,6 +164,13 @@ class FreeEnergyAnalyzer(object):
             sigmas : float or unit.Quantity or list
                 The standard deviation of kernels.
 
+        Keyword Args
+        ------------
+            platform_name : string, default='Reference'
+                The name of the OpenMM Platform to be used for potential and mean-force evaluations.
+            properties : dict, default={}
+                A set of values for platform-specific properties. Keys are the property names.
+
         Returns
         -------
             potential : function
@@ -137,9 +178,7 @@ class FreeEnergyAnalyzer(object):
                 is the potential of mean force at that values.
             mean_force : function
                 A Python function whose arguments are collective variable values and whose result
-                is the mean force at that values regarding a given direction. Such direction must
-                be defined through a keyword argument `dir`, whose default value is `0` (meaning
-                the direction of the first collective variable).
+                is the mean force at those values.
 
         """
         variables = self._ufed.variables
@@ -166,32 +205,33 @@ class FreeEnergyAnalyzer(object):
         def gradient(x, i):
             return kernel(x)*derivative[i](x[i])
 
-        center_points = [np.array(xc) for xc in zip(*centers)]
+        grid_points = [np.array(xc) for xc in zip(*centers)]
         coefficients = []
         for i in range(n):
-            for x in center_points:
-                coefficients.append(np.array([gradient(x-xc, i) for xc in center_points]))
+            for x in grid_points:
+                coefficients.append(np.array([gradient(x-xc, i) for xc in grid_points]))
 
         M = np.vstack(coefficients)
         F = -np.hstack(mean_forces)
         A, _, _, _ = np.linalg.lstsq(M, F, rcond=None)
 
-        kernels = np.empty((len(center_points), len(center_points)))
-        for i, x in enumerate(center_points):
-            kernels[i, :] = np.array([kernel(x-xc) for xc in center_points])
-        potentials = kernels.dot(A)
-        minimum = potentials.min()
+        platform = openmm.Platform.getPlatformByName(platform_name)
+        context = _RBFContext(variables, variances, grid_points, A, platform, properties)
+        minimum = 0.0
 
         def potential(*x):
-            xa = np.array(x)
-            kernels = np.array([kernel(xa-xc) for xc in center_points])
-            return np.sum(A*kernels) - minimum
+            for parameter, value in zip(context.parameters, x):
+                context.setParameter(parameter, value)
+            state = context.getState(getEnergy=True)
+            return state.getPotentialEnergy()._value - minimum
 
-        def mean_force(*x, dir=0):
-            xa = np.array(x)
-            gradients = np.array([gradient(xa-xc, dir) for xc in center_points])
-            return -np.sum(A*gradients)
+        def mean_force(*x):
+            for parameter, value in zip(context.parameters, x):
+                context.setParameter(parameter, value)
+            state = context.getState(getParameterDerivatives=True)
+            return -state.getEnergyParameterDerivatives()._value
 
+        minimum = np.min([potential(*x) for x in grid_points])
         return np.vectorize(potential), np.vectorize(mean_force)
 
     def _compute_forces(self):
