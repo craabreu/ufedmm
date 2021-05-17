@@ -540,6 +540,8 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
     ------------
         nchain : int, default=2
             The number of thermostats in each Nose-Hoover chain.
+        track_energy : bool, default=False
+            Whether to track the thermostat energy term.
         **kwargs
             All keyword arguments in :class:`AbstractMiddleRespaIntegrator`, except ``num_rattles``.
 
@@ -573,15 +575,18 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
 
     """
 
-    def __init__(self, temperature, time_constant, step_size, nchain=2, **kwargs):
+    def __init__(self, temperature, time_constant, step_size, nchain=2, track_energy=False, **kwargs):
         if 'num_rattles' in kwargs.keys() and kwargs['num_rattles'] != 0:
             raise ValueError(f'{self.__class__.__name__} cannot handle constraints')
         self._tau = _standardized(time_constant)
         self._nchain = nchain
+        self._track_energy = track_energy
         super().__init__(temperature, step_size, **kwargs)
         self.addPerDofVariable('Q', 0)
         for i in range(nchain):
             self.addPerDofVariable(f'v{i+1}', 0)
+            if track_energy:
+                self.addPerDofVariable(f'eta{i+1}', 0)
 
     def update_temperatures(self, system_temperature, extended_space_temperatures):
         super().update_temperatures(system_temperature, extended_space_temperatures)
@@ -672,14 +677,13 @@ class MiddleMassiveGGMTIntegrator(AbstractMiddleRespaIntegrator):
 class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
     """
     A regulated version of the massive Nose-Hoover-Langevin :cite:`Samoletov_2007,Leimkuhler_2009`
-    method. Regulation means that velocities are modified so as to remain below a
-    temperature-dependent speed limit. This method is closely related to the SIN(R) method
-    :cite:`Leimkuhler_2013` and allows multiple time-scale integration with very large outer
-    time steps, without resonance.
+    method. Regulation means that the system Hamiltonian is modified so that velocities remain below
+    a temperature-dependent limit. This is closely related to the SIN(R) method :cite:`Leimkuhler_2013`
+    and allows multiple time-scale integration with very large outer time steps, without resonance.
 
     .. info:
-        If `regulation_parameter=1`, this method is completely equivalent to SIN(R) with a
-        single thermostat per degree of freedom (that is, `L=1`).
+        If `regulation_parameter = 1` (default), this method is equivalent to SIN(R) with a single
+        thermostat per degree of freedom (that is, `L=1`).
 
     The following :term:`SDE` system is solved for every degree of freedom in the system:
 
@@ -695,10 +699,9 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
         v_i = c_i \\tanh\\left(\\frac{p_i}{m_i c_i}\\right).
 
     Here, :math:`n` is the regulation parameter and :math:`c_i = \\sqrt{\\frac{n k T}{m_i}}` is
-    the speed limit for degree of freedom `i`.
-    As usual, the inertial parameter :math:`Q` is defined as :math:`Q = k_B T \\tau^2`, with
-    :math:`\\tau` being a relaxation time :cite:`Tuckerman_1992`. An approximate solution is
-    obtained by applying the Trotter-Suzuki splitting formula:
+    the maximum speed for degree of freedom `i`. The inertial parameter :math:`Q` is defined as
+    :math:`Q = n k_B T \\tau^2`, with :math:`\\tau` being a relaxation time :cite:`Tuckerman_1992`.
+    An approximate solution is obtained by applying the Trotter-Suzuki splitting formula:
 
     .. math::
         e^{\\Delta t\\mathcal{L}} =
@@ -741,7 +744,7 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
 
     .. math::
         p_i(t) = m_i c_i \\mathrm{arcsinh}\\left[
-                    \\sinh\\left(\\frac{p_i}{m_i c_i}\\right) e^{- v_{\\eta_i} t}
+                    \\sinh\\left(\\frac{p_i^0}{m_i c_i}\\right) e^{- v_{\\eta_i} t}
                  \\right]
 
     Part 'O' is an Ornstein–Uhlenbeck process, whose solution is:
@@ -764,31 +767,35 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
             The relaxation time (:math:`\\tau`) of the Nose-Hoover thermostat.
         friction_coefficient : unit.Quantity (1/time)
             The friction coefficient (:math:`\\gamma`) of the Langevin thermostat.
+        regulation_parameter : int or float
+            The regulation parameter n.
 
     Keyword Args
     ------------
-        regulation_parameter : int or float
-            The regulation parameter n.
         split_ornstein_uhlenbeck : bool, default=False
             Whether to split the drifted Ornstein-Uhlenbeck operator.
+        semi_regulated : bool, default=False
+            Whether to use the semi-regulated NHL method instead of its fully-regulated version.
         **kwargs
             All keyword arguments in :class:`AbstractMiddleRespaIntegrator`, except ``num_rattles``.
 
     """
 
     def __init__(self, temperature, time_constant, friction_coefficient, step_size,
-                 regulation_parameter=1, split_ornstein_uhlenbeck=False, **kwargs):
+                 regulation_parameter, split_ornstein_uhlenbeck=False, semi_regulated=False,
+                 **kwargs):
         if 'num_rattles' in kwargs.keys() and kwargs['num_rattles'] != 0:
             raise ValueError(f'{self.__class__.__name__} cannot handle constraints')
-        self._tau = time_constant
+        self._tau = np.sqrt(regulation_parameter)*time_constant
         self._n = regulation_parameter
         self._split = split_ornstein_uhlenbeck
+        self._semi_regulated = semi_regulated
         super().__init__(temperature, step_size, **kwargs)
         self.addPerDofVariable('invQ', 0)
         self.addPerDofVariable('v_eta', 0)
         self.addPerDofVariable('c', 0)
         self.addGlobalVariable('friction', friction_coefficient)
-        self.addGlobalVariable('omega', 1/time_constant)
+        self.addGlobalVariable('omega', 1.0/self._tau)
         self.addGlobalVariable('aa', 0)
         self.addGlobalVariable('bb', 0)
 
@@ -815,11 +822,17 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
         n = self._n
         if self._split:
             boost = f'v_eta + G*{0.5*fraction}*dt'
-            boost += f'; G=({(n+1)/n}*m*(c*tanh(v/c))^2 - kT)*invQ'
+            if self._semi_regulated:
+                boost += '; G=(m*v*c*tanh(v/c) - kT)*invQ'
+            else:
+                boost += f'; G=({(n+1)/n}*m*(c*tanh(v/c))^2 - kT)*invQ'
 
-        scaling = 'c*asinh_z'
-        scaling += '; asinh_z=(2*step(z)-1)*log(select(step(za-1E8),2*za,za+sqrt(1+z*z))); za=abs(z)'
-        scaling += f'; z=sinh(v/c)*exp(-v_eta*{0.5*fraction}*dt)'
+        if self._semi_regulated:
+            scaling = f'v*exp(-v_eta*{0.5*fraction}*dt)'
+        else:
+            scaling = 'c*asinh_z'
+            scaling += '; asinh_z=(2*step(z)-1)*log(select(step(za-1E8),2*za,za+sqrt(1+z*z))); za=abs(z)'
+            scaling += f'; z=sinh(v/c)*exp(-v_eta*{0.5*fraction}*dt)'
 
         if self._split:
             Ornstein_Uhlenbeck = 'v_eta*aa + bb*gaussian'

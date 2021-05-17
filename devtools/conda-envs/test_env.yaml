@@ -1,21 +1,22 @@
 name: test
 channels:
   - conda-forge
-  - omnia-dev
 dependencies:
     # Base depends
-  - python
   - pip
-  - sphinxcontrib-bibtex >=0.4
+  - python
+  - sphinxcontrib-bibtex ==1.0
 
   - numpy
   - openmm >=7.5
+  - pandas
   - pyyaml
   - scipy
+  - yaml
 
     # Testing
-  - isort
   - flake8
+  - isort
   - pytest
   - pytest-cov
 

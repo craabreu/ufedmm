@@ -31,7 +31,7 @@ class AlanineDipeptideModel(object):
             Available options are "spce", "tip3p", "tip4pew", and "tip5p".
         box_length : unit.Quantity, default=25*unit.angstroms
             The size of the simulation box. This is only effective if water is not `None`.
-        constraints : object, default=None
+        constraints : object, default=`openmm.app.HBonds`
             Specifies which bonds and angles should be implemented with constraints. Allowed
             values are `None`, `openmm.app.HBonds`, `openmm.app.AllBonds`, or
             `openmm.app.HAngles`.

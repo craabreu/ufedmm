@@ -23,8 +23,9 @@ def ufed_model(
     frequency=10,
     bias_factor=None,
     enforce_gridless=False,
+    constraints=openmm.app.HBonds,
 ):
-    model = ufedmm.AlanineDipeptideModel()
+    model = ufedmm.AlanineDipeptideModel(constraints=constraints)
     s_phi = ufedmm.DynamicalVariable('s_phi', -limit, limit, mass, Ts, model.phi, Ks, sigma=sigma)
     s_psi = ufedmm.DynamicalVariable('s_psi', -limit, limit, mass, Ts, model.psi, Ks, sigma=sigma)
     return model, ufedmm.UnifiedFreeEnergyDynamics([s_phi, s_psi], temp, height, frequency, bias_factor,
@@ -48,7 +49,7 @@ def test_serialization():
 
 
 def test_variables():
-    model, ufed = ufed_model()
+    model, ufed = ufed_model(constraints=None)
     integrator = ufedmm.MiddleMassiveNHCIntegrator(300*unit.kelvin, 10*unit.femtoseconds, 1*unit.femtoseconds)
     platform = openmm.Platform.getPlatformByName('Reference')
     simulation = ufed.simulation(model.topology, model.system, integrator, platform)
@@ -68,31 +69,39 @@ def test_variables():
 
 
 def test_NHC_integrator():
-    model, ufed = ufed_model()
-    integrator = ufedmm.MiddleMassiveNHCIntegrator(300*unit.kelvin, 10*unit.femtoseconds, 1*unit.femtoseconds)
+    model, ufed = ufed_model(constraints=None)
+    nonbonded = next(filter(lambda f: isinstance(f, openmm.NonbondedForce), model.system.getForces()))
+    nonbonded.setForceGroup(1)
+    integrator = ufedmm.MiddleMassiveNHCIntegrator(
+        300*unit.kelvin, 10*unit.femtoseconds, 1*unit.femtoseconds, respa_loops=[5, 1],
+    )
     platform = openmm.Platform.getPlatformByName('Reference')
     simulation = ufed.simulation(model.topology, model.system, integrator, platform)
     simulation.context.setPositions(model.positions)
     simulation.context.setVelocitiesToTemperature(300*unit.kelvin, 1234)
     simulation.step(100)
     energy = simulation.context.getState(getEnergy=True).getPotentialEnergy()
-    assert energy/energy.unit == pytest.approx(-23.43, abs=0.1)
+    assert energy/energy.unit == pytest.approx(6.18, abs=0.2)
 
 
 def test_GGMT_integrator():
-    model, ufed = ufed_model()
-    integrator = ufedmm.MiddleMassiveGGMTIntegrator(300*unit.kelvin, 10*unit.femtoseconds, 1*unit.femtoseconds)
+    model, ufed = ufed_model(constraints=None)
+    nonbonded = next(filter(lambda f: isinstance(f, openmm.NonbondedForce), model.system.getForces()))
+    nonbonded.setForceGroup(1)
+    integrator = ufedmm.MiddleMassiveGGMTIntegrator(
+        300*unit.kelvin, 10*unit.femtoseconds, 1*unit.femtoseconds, respa_loops=[5, 1],
+    )
     platform = openmm.Platform.getPlatformByName('Reference')
     simulation = ufed.simulation(model.topology, model.system, integrator, platform)
     simulation.context.setPositions(model.positions)
     simulation.context.setVelocitiesToTemperature(300*unit.kelvin, 1234)
     simulation.step(100)
     energy = simulation.context.getState(getEnergy=True).getPotentialEnergy()
-    assert energy/energy.unit == pytest.approx(-22.5, abs=0.1)
+    assert energy/energy.unit == pytest.approx(-17.78, abs=0.2)
 
 
 def test_gridded_metadynamics():
-    model, ufed = ufed_model(height=2.0*unit.kilocalorie_per_mole)
+    model, ufed = ufed_model(height=2.0*unit.kilocalorie_per_mole, constraints=None)
     integrator = ufedmm.MiddleMassiveNHCIntegrator(300*unit.kelvin, 10*unit.femtoseconds, 1*unit.femtoseconds)
     platform = openmm.Platform.getPlatformByName('Reference')
     simulation = ufed.simulation(model.topology, model.system, integrator, platform)
@@ -100,7 +109,7 @@ def test_gridded_metadynamics():
     simulation.context.setVelocitiesToTemperature(300*unit.kelvin, 1234)
     simulation.step(100)
     energy = simulation.context.getState(getEnergy=True).getPotentialEnergy()
-    assert energy/energy.unit == pytest.approx(672.49, abs=0.1)
+    assert energy/energy.unit == pytest.approx(695.95, abs=0.1)
 
 
 # def test_gridless_metadynamics():
@@ -116,7 +125,7 @@ def test_gridded_metadynamics():
 
 
 def test_well_tempered_metadynamics():
-    model, ufed = ufed_model(height=2.0*unit.kilocalorie_per_mole, bias_factor=10)
+    model, ufed = ufed_model(height=2.0*unit.kilocalorie_per_mole, bias_factor=10, constraints=None)
     integrator = ufedmm.MiddleMassiveNHCIntegrator(300*unit.kelvin, 10*unit.femtoseconds, 1*unit.femtoseconds)
     platform = openmm.Platform.getPlatformByName('Reference')
     simulation = ufed.simulation(model.topology, model.system, integrator, platform)
@@ -124,4 +133,4 @@ def test_well_tempered_metadynamics():
     simulation.context.setVelocitiesToTemperature(300*unit.kelvin, 1234)
     simulation.step(100)
     energy = simulation.context.getState(getEnergy=True).getPotentialEnergy()
-    assert energy/energy.unit == pytest.approx(129.77, abs=0.1)
+    assert energy/energy.unit == pytest.approx(153.17, abs=0.1)
