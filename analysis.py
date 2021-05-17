@@ -2,9 +2,7 @@
 .. module:: analysis
    :platform: Unix, Windows
    :synopsis: Unified Free Energy Dynamics with OpenMM
-
 .. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
-
 """
 
 import itertools
@@ -14,7 +12,9 @@ from collections import namedtuple
 from scipy import stats
 from simtk import openmm
 from ufedmm.ufedmm import _standardized, _get_energy_function, _get_parameters
-
+import numba
+from numba import jit
+import math
 
 class _RBFContext(openmm.Context):
     def __init__(self, variables, variances, centers, weights, platform, properties):
@@ -53,14 +53,12 @@ class _RBFContext(openmm.Context):
 class FreeEnergyAnalyzer(object):
     """
     Calculate free energy landscapes from UFED simulation results.
-
     Parameters
     ----------
         ufed : :class:`~ufedmm.ufedmm.UnifiedFreeEnergyDynamics`
             The UFED object.
         dataframe : pandas.DataFrame
             A data frame containing sampled sets of collective variables and driver parameters.
-
     """
     def __init__(self, ufed, dataframe):
         self._ufed = ufed
@@ -72,12 +70,10 @@ class FreeEnergyAnalyzer(object):
         Returns a Python function which, in turn, receives the values of extended-space variables
         and returns the energy estimated from a Metadynamics bias potential reconstructed from the
         simulation data.
-
         Returns
         -------
             function
                 The free energy function.
-
         """
         Variable = namedtuple('Variable', 'sigma factor periodic centers')
         variables = [
@@ -103,13 +99,11 @@ class FreeEnergyAnalyzer(object):
     def centers_and_mean_forces(self, bins, min_count=1, adjust_centers=False):
         """
         Performs binned statistics with the UFED simulation data.
-
         Parameters
         ----------
             bins : list(int) or int
                 The number of bins in each direction. If a single integer is passed, then the same
                 number of bins will be considered for all directions.
-
         Keyword Args
         ------------
             min_count : int, default=1
@@ -117,7 +111,6 @@ class FreeEnergyAnalyzer(object):
             adjust_centers : bool, default=False
                 Whether to consider the center of a bin as the mean value of the its sampled
                 internal points instead of its geometric center.
-
         Returns
         -------
             centers : list(numpy.array)
@@ -126,7 +119,6 @@ class FreeEnergyAnalyzer(object):
             mean_forces : list(numpy.array)
                 A list of Numpy arrays, each one containing the mean forces in the direction of
                 an extended-space variable.
-
         """
         variables = self._ufed.variables
         sample = [self._dataframe[v.id] for v in variables]
@@ -154,7 +146,6 @@ class FreeEnergyAnalyzer(object):
         """
         Returns Python functions for evaluating the potential of mean force and their originating
         mean forces as a function of the collective variables.
-
         Parameters
         ----------
             centers : list(numpy.array)
@@ -163,14 +154,12 @@ class FreeEnergyAnalyzer(object):
                 The mean forces.
             sigmas : float or unit.Quantity or list
                 The standard deviation of kernels.
-
         Keyword Args
         ------------
             platform_name : string, default='Reference'
                 The name of the OpenMM Platform to be used for potential and mean-force evaluations.
             properties : dict, default={}
                 A set of values for platform-specific properties. Keys are the property names.
-
         Returns
         -------
             potential : function
@@ -179,7 +168,6 @@ class FreeEnergyAnalyzer(object):
             mean_force : function
                 A Python function whose arguments are collective variable values and whose result
                 is the mean force at those values.
-
         """
         variables = self._ufed.variables
         n = len(variables)
@@ -193,14 +181,20 @@ class FreeEnergyAnalyzer(object):
         for v, variance in zip(variables, variances):
             if v.periodic:  # von Mises
                 factor = 2*np.pi/v._range
-                exponent.append(lambda x: (np.cos(factor*x)-1.0)/(factor*factor*variance))
-                derivative.append(lambda x: -np.sin(factor*x)/(factor*variance))
+                exponent.append(lambda x: (math.cos(factor*x)-1.0)/(factor*factor*variance))
+                derivative.append(lambda x: -math.sin(factor*x)/(factor*variance))
             else:  # Gauss
                 exponent.append(lambda x: -0.5*x**2/variance)
                 derivative.append(lambda x: -x/variance)
-
+        @jit
         def kernel(x):
-            return np.exp(np.sum(exponent[i](x[i]) for i in range(n)))
+            trace=0.0
+            for i in range(n):
+                trace=trace+exponent[i](x[i])
+            return math.exp(trace)
+
+#        def kernel(x):
+#            return np.exp(np.sum(exponent[i](x[i]) for i in range(n)))
 
         def gradient(x, i):
             return kernel(x)*derivative[i](x[i])
@@ -270,10 +264,8 @@ class FreeEnergyAnalyzer(object):
 class Analyzer(FreeEnergyAnalyzer):
     """
     UFED Analyzer.
-
     .. warning::
         This class is obsolete and will be discontinued. Use :class:`FreeEnergyAnalyzer` instead.
-
     Parameters
     ----------
         ufed : :class:`~ufedmm.ufedmm.UnifiedFreeEnergyDynamics`
@@ -282,7 +274,6 @@ class Analyzer(FreeEnergyAnalyzer):
             A data frame containing sampled sets of collective variables and driver parameters.
         bins : int or list(int)
             The number of bins in each direction.
-
     Keyword Args
     ------------
         min_count : int, default=1
@@ -290,7 +281,6 @@ class Analyzer(FreeEnergyAnalyzer):
         adjust_centers : bool, default=False
             Whether to consider the center of a bin as the mean value of the its sampled
             internal points istead of its geometric center.
-
     """
     def __init__(self, ufed, dataframe, bins, min_count=1, adjust_centers=False):
         super().__init__(ufed, dataframe)
@@ -305,7 +295,6 @@ class Analyzer(FreeEnergyAnalyzer):
         """
         Returns Python functions for evaluating the potential of mean force and their originating
         mean forces as a function of the collective variables.
-
         Keyword Args
         ------------
             sigma : float or unit.Quantity, default=None
@@ -314,7 +303,6 @@ class Analyzer(FreeEnergyAnalyzer):
             factor : float, default=8
                 If ``sigma`` is not explicitly provided, then it will be computed as
                 ``sigma = factor*range/bins`` for each direction.
-
         Returns
         -------
             potential : function
@@ -325,7 +313,6 @@ class Analyzer(FreeEnergyAnalyzer):
                 is the mean force at that values regarding a given direction. Such direction must
                 be defined through a keyword argument `dir`, whose default value is `0` (meaning
                 the direction of the first collective variable).
-
         """
         self.centers, self.mean_forces = self.centers_and_mean_forces(
             self._bins,
