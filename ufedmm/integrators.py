@@ -659,12 +659,23 @@ class MiddleMassiveGGMTIntegrator(AbstractMiddleRespaIntegrator):
         self.addPerDofVariable('v1', 0)
         self.addPerDofVariable('v2', 0)
 
+    def set_extended_space_time_constants(self, time_constants):
+        self._xs_taus = [_standardized(tau) for tau in time_constants]
+
     def update_temperatures(self, system_temperature, extended_space_temperatures):
         super().update_temperatures(system_temperature, extended_space_temperatures)
         kT_vectors = self.getPerDofVariableByName('kT')
         kT3_vectors = [openmm.Vec3(kT.x**3, kT.y**3, kT.z**3) for kT in kT_vectors]
-        self.setPerDofVariableByName('Q1', [kT*self._tau**2 for kT in kT_vectors])
-        self.setPerDofVariableByName('Q2', [8/3*kT3*self._tau**2 for kT3 in kT3_vectors])
+        if hasattr(self, '_xs_taus'):
+            num_particles = len(kT_vectors) - len(extended_space_temperatures)
+            taus = [self._tau]*num_particles + self._xs_taus
+            Q1 = [kT*tau**2 for kT, tau in zip(kT_vectors, taus)]
+            Q2 = [8/3*kT3*tau**2 for kT3, tau in zip(kT3_vectors, taus)]
+        else:
+            Q1 = [kT*self._tau**2 for kT in kT_vectors]
+            Q2 = [8/3*kT3*self._tau**2 for kT3 in kT3_vectors]
+        self.setPerDofVariableByName('Q1', Q1)
+        self.setPerDofVariableByName('Q2', Q2)
 
     def _bath(self, fraction):
         self.addComputePerDof('v1', f'v1 + {fraction/2}*dt*(m*v^2 - kT)/Q1')
