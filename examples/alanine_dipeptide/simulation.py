@@ -14,7 +14,7 @@ parser.add_argument('--platform', dest='platform', help='the computation platfor
 args = parser.parse_args()
 
 seed = random.SystemRandom().randint(0, 2**31) if args.seed is None else args.seed
-model = ufedmm.AlanineDipeptideModel(force_field=args.ff, water=args.water)
+model = ufedmm.AlanineDipeptideModel(force_field=args.ff, water=args.water, constraints=None)
 temp = 300*unit.kelvin
 gamma = 10/unit.picoseconds
 dt = 2*unit.femtoseconds
@@ -30,7 +30,10 @@ s_phi = ufedmm.DynamicalVariable('s_phi', -limit, limit, mass, Ts, model.phi, Ks
 s_psi = ufedmm.DynamicalVariable('s_psi', -limit, limit, mass, Ts, model.psi, Ks, sigma=sigma)
 ufed = ufedmm.UnifiedFreeEnergyDynamics([s_phi, s_psi], temp, height, deposition_period)
 ufedmm.serialize(ufed, 'ufed_object.yml')
-integrator = ufedmm.GeodesicLangevinIntegrator(temp, gamma, dt)
+# integrator = ufedmm.GeodesicLangevinIntegrator(temp, gamma, dt)
+# integrator = ufedmm.MiddleMassiveNHCIntegrator(temp, 1/gamma, dt)
+integrator = ufedmm.MiddleMassiveGGMTIntegrator(temp, 1/gamma, dt)
+
 integrator.setRandomNumberSeed(seed)
 print(integrator)
 platform = openmm.Platform.getPlatformByName(args.platform)

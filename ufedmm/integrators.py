@@ -641,10 +641,10 @@ class MiddleMassiveGGMTIntegrator(AbstractMiddleRespaIntegrator):
            1: v <- v + 0.5*dt*f/m
            2: x <- x + 0.5*dt*v
            3: v1 <- v1 + 0.5*dt*(m*v^2 - kT)/Q1
-           4: v2 <- v2 + 0.5*dt*(m^2*v^4/3 - kT^2)/Q2
+           4: v2 <- v2 + 0.5*dt*((m*v^2)^2/3 - kT^2)/Q2
            5: v <- v*exp(-1.0*dt*(v1 + kT*v2))/sqrt(1 + 2.0*dt*m*v^2*v2/3)
            6: v1 <- v1 + 0.5*dt*(m*v^2 - kT)/Q1
-           7: v2 <- v2 + 0.5*dt*(m^2*v^4/3 - kT^2)/Q2
+           7: v2 <- v2 + 0.5*dt*((m*v^2)^2/3 - kT^2)/Q2
            8: x <- x + 0.5*dt*v
            9: v <- v + 0.5*dt*f/m
 
@@ -679,10 +679,10 @@ class MiddleMassiveGGMTIntegrator(AbstractMiddleRespaIntegrator):
 
     def _bath(self, fraction):
         self.addComputePerDof('v1', f'v1 + {fraction/2}*dt*(m*v^2 - kT)/Q1')
-        self.addComputePerDof('v2', f'v2 + {fraction/2}*dt*(m^2*v^4/3 - kT^2)/Q2')
+        self.addComputePerDof('v2', f'v2 + {fraction/2}*dt*((m*v^2)^2/3 - kT^2)/Q2')
         self.addComputePerDof('v', f'v*exp(-{fraction}*dt*(v1 + kT*v2))/sqrt(1 + {2*fraction}*dt*m*v^2*v2/3)')
         self.addComputePerDof('v1', f'v1 + {fraction/2}*dt*(m*v^2 - kT)/Q1')
-        self.addComputePerDof('v2', f'v2 + {fraction/2}*dt*(m^2*v^4/3 - kT^2)/Q2')
+        self.addComputePerDof('v2', f'v2 + {fraction/2}*dt*((m*v^2)^2/3 - kT^2)/Q2')
 
 
 class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
