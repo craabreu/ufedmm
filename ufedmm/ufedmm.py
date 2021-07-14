@@ -735,10 +735,13 @@ class ExtendedSpaceContext(openmm.Context):
         driving_force = openmm.CustomCVForce(_get_energy_function(variables))
         for name, value in _get_parameters(variables).items():
             driving_force.addGlobalParameter(name, value)
+        collective_variables = []
         for v in variables:
             driving_force.addCollectiveVariable(v.id, deepcopy(v.force))
             for colvar in v.colvars:
-                driving_force.addCollectiveVariable(colvar.id, deepcopy(colvar.force))
+                cv_force = deepcopy(colvar.force)
+                driving_force.addCollectiveVariable(colvar.id, cv_force)
+                collective_variables += [colvar.force, cv_force]
 
         np = system.getNumParticles()
         a, _, _ = system.getDefaultPeriodicBoxVectors()
@@ -746,7 +749,7 @@ class ExtendedSpaceContext(openmm.Context):
             system.addParticle(v._particle_mass(a.x))
             parameter = driving_force.getCollectiveVariable(2*i)
             parameter.setParticleParameters(0, np+i, [])
-        for force in system.getForces():
+        for force in system.getForces() + collective_variables:
             self._add_fake_particles(force, len(variables))
         system.addForce(driving_force)
         _update_RMSD_forces(system)
