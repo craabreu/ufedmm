@@ -417,6 +417,13 @@ class InOutLennardJonesForce(_InOutForce):
             Whether to consider periodic boundary conditions for exceptions in the NonbondedForce_
             object. This might be necessary if the specified group contains several detached
             molecules or one long molecule.
+        softcore : bool, default=False
+            Whether to include a softcore version :cite:`Beutler_1994` of the Lennard-Jones
+            potential. In this case, a global variable `lambda_vdw` is added to the constructed
+            object.
+        keep_charges : bool, default=True
+            Whether to keep the charges of the solute atoms. Otherwise, the charges of all solute
+            atoms will be set to zero.
 
     Raises
     ------
@@ -426,11 +433,16 @@ class InOutLennardJonesForce(_InOutForce):
 
     """
 
-    def __init__(self, group, nbforce, pbc_for_exceptions=False):
-        u_LJ = '4/x^12-4/x^6'
-        definitions = ['x=r/sigma', 'sigma=(sigma1+sigma2)/2', 'epsilon=sqrt(epsilon1*epsilon2)']
-        equations = [f'epsilon*({u_LJ})'] + definitions
-        super().__init__(';'.join(equations))
+    def __init__(self, group, nbforce, pbc_for_exceptions=False, softcore=False, keep_charges=True):
+        u_LJ = '4/x^2-4/x'
+        definitions = ['sigma=(sigma1+sigma2)/2', 'epsilon=sqrt(epsilon1*epsilon2)']
+        if softcore:
+            equations = [f'lambda_vdw*epsilon*({u_LJ}); x=(r/sigma)^6+(1-lambda_vdw)/2']
+        else:
+            equations = [f'epsilon*({u_LJ}); x=(r/sigma)^6']
+        super().__init__(';'.join(equations + definitions))
+        if softcore:
+            self.addGlobalParameter('lambda_vdw', 1.0)
         parameters = self._get_parameters(nbforce)
         self.addPerParticleParameter('sigma')
         self.addPerParticleParameter('epsilon')
@@ -441,7 +453,8 @@ class InOutLennardJonesForce(_InOutForce):
         self.addInteractionGroup(set(group), set(range(nbforce.getNumParticles())) - set(group))
         self.setUseLongRangeCorrection(nbforce.getUseDispersionCorrection())
         for i in group:
-            nbforce.setParticleParameters(i, parameters[i].charge, 1.0, 0.0)
+            charge = parameters[i].charge if keep_charges else 0.0
+            nbforce.setParticleParameters(i, charge, 1.0, 0.0)
 
     def capped_version(self, m=2):
         """
