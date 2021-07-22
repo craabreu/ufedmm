@@ -831,12 +831,14 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
 
     def _bath(self, fraction):
         n = self._n
+
+        if self._semi_regulated:
+            G = '; G=(m*v*c*tanh(v/c) - kT)*invQ'
+        else:
+            G = f'; G=({(n+1)/n}*m*(c*tanh(v/c))^2 - kT)*invQ'
+
         if self._split:
-            boost = f'v_eta + G*{0.5*fraction}*dt'
-            if self._semi_regulated:
-                boost += '; G=(m*v*c*tanh(v/c) - kT)*invQ'
-            else:
-                boost += f'; G=({(n+1)/n}*m*(c*tanh(v/c))^2 - kT)*invQ'
+            boost = f'v_eta + G*{0.5*fraction}*dt' + G
 
         if self._semi_regulated:
             scaling = f'v*exp(-v_eta*{0.5*fraction}*dt)'
@@ -848,8 +850,7 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
         if self._split:
             Ornstein_Uhlenbeck = 'v_eta*aa + bb*gaussian'
         else:
-            Ornstein_Uhlenbeck = 'v_eta*aa + G*(1-aa)/friction + bb*gaussian'
-            Ornstein_Uhlenbeck += f'; G=({(n+1)/n}*m*(c*tanh(v/c))^2 - kT)*invQ'
+            Ornstein_Uhlenbeck = 'v_eta*aa + G*(1-aa)/friction + bb*gaussian' + G
 
         self._split and self.addComputePerDof('v_eta', boost)
         self.addComputePerDof('v', scaling)
