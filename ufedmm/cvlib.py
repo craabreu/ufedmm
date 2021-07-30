@@ -11,6 +11,8 @@
 .. _Force: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.Force.html
 .. _NonbondedForce: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.NonbondedForce.html
 .. _System: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.System.html
+.. _coordination: https://www.plumed.org/doc-v2.6/user-doc/html/_c_o_o_r_d_i_n_a_t_i_o_n.html
+.. _PLUMED: https://www.plumed.org
 
 """
 
@@ -82,10 +84,11 @@ class CoordinationNumber(openmm.CustomNonbondedForce):
      defined as:
 
     .. math::
-        N(\\mathbf{g}_1, \\mathbf{g}_2) = \\sum_{i \\in \\mathbf{g}_1} \\sum_{j \\in \\mathbf{g}_2}
-                     S\\left(\\frac{d_{i,j}}{d_0}-1\\right) F_n \\left(\\frac{d_{i,j}}{d_0}\\right)
+        N_{\\mathbf{g}_1, \\mathbf{g}_2}(\\mathbf{r}) =
+                     \\sum_{i \\in \\mathbf{g}_1} \\sum_{j \\in \\mathbf{g}_2}
+                     S\\left(\\frac{r_{i,j}}{r_0}-1\\right) F_n \\left(\\frac{r_{i,j}}{r_0}\\right)
 
-    where :math:`d_0` is a threshold distance and :math:`d_{ij}` is the distance between atoms
+    where :math:`r_0` is a threshold distance and :math:`r_{ij}` is the distance between atoms
     :math:`i \\in \\mathbf{g}_1` and :math:`j \\in \\mathbf{g}_2`.
     The function :math:`F_n(x)` is a continuous step function defined as
 
@@ -93,7 +96,10 @@ class CoordinationNumber(openmm.CustomNonbondedForce):
         F_n(x) = \\frac{1}{1+x^n}
 
     where :math:`n` is a sharpness parameter. With :math:`n = 6` (default), this is the same
-    function defined in :cite:`Iannuzzi_2003`. It has the following shape for varying `n` values:
+    function defined in :cite:`Iannuzzi_2003`.
+    It is also a special case with :math:`d_0 = 0` and :math:`m=2n` of the coordination_ collective
+    variable defined in PLUMED_.
+    It has the following shape for varying `n` values:
 
     .. image::
         figures/coordination_number.png
@@ -109,7 +115,7 @@ class CoordinationNumber(openmm.CustomNonbondedForce):
                \\end{cases}
 
     Thus, the amount summed up for each atom pair decays smoothly to zero throughout the interval
-    :math:`r_{i,j} \\in [d_0, 2 d_0]`, meaning that :math:`2 d_0` is an actual cutoff distance.
+    :math:`r_{i,j} \\in [r_0, 2 r_0]`, meaning that :math:`2 r_0` is an actual cutoff distance.
 
     .. warning::
         If the two specified atom groups share atoms, each pair `i,j` among these atoms will be
@@ -128,23 +134,40 @@ class CoordinationNumber(openmm.CustomNonbondedForce):
     ------------
         n : int or float, default=6
             Exponent that controls the sharpness of the sigmoidal function.
-        d0 : unit.Quantity, default=4*unit.angstroms
+        r0 : unit.Quantity, default=4*unit.angstroms
             The threshold distance, which is also half the actual cutoff distance.
+
+    Example
+    -------
+        >>> import ufedmm
+        >>> from ufedmm import cvlib
+        >>> from simtk.openmm import app
+        >>> model = ufedmm.AlanineDipeptideModel()
+        >>> carbons = [atom.index for atom in model.topology.atoms() if atom.element == app.element.carbon]
+        >>> oxygens = [atom.index for atom in model.topology.atoms() if atom.element == app.element.carbon]
+        >>> N = cvlib.CoordinationNumber(model.system, carbons, oxygens)
+        >>> N.setForceGroup(1)
+        >>> model.system.addForce(N)
+        4
+        >>> context = openmm.Context(model.system, openmm.CustomIntegrator(0))
+        >>> context.setPositions(model.positions)
+        >>> context.getState(getEnergy=True, groups={1}).getPotentialEnergy()._value
+        9.461968630563433
 
     """
 
-    def __init__(self, system, group1, group2, n=6, d0=4*unit.angstroms):
-        super().__init__(f'1/(1+(r/d0)^{n})')
+    def __init__(self, system, group1, group2, n=6, r0=4*unit.angstroms):
+        super().__init__(f'1/(1+(r/r0)^{n})')
         if system.usesPeriodicBoundaryConditions():
             self.setNonbondedMethod(openmm.CustomNonbondedForce.CutoffPeriodic)
         else:
             self.setNonbondedMethod(openmm.CustomNonbondedForce.CutoffNonPeriodic)
         for i in range(system.getNumParticles()):
             self.addParticle([])
-        self.addGlobalParameter('d0', d0)
+        self.addGlobalParameter('r0', r0)
         self.setUseSwitchingFunction(True)
-        self.setSwitchingDistance(d0)
-        self.setCutoffDistance(2*d0)
+        self.setSwitchingDistance(r0)
+        self.setCutoffDistance(2*r0)
         self.setUseLongRangeCorrection(False)
         self.addInteractionGroup(group1, group2)
 

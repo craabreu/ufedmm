@@ -5,6 +5,8 @@ from copy import deepcopy
 from simtk import openmm
 from ufedmm import cvlib
 
+from simtk.openmm import app
+
 
 def test_radius_of_gyration():
     model = ufedmm.AlanineDipeptideModel()
