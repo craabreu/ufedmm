@@ -43,6 +43,20 @@ class SquareRadiusOfGyration(openmm.CustomBondForce):
         group : list(int)
             The indices of the atoms in the group.
 
+    Example
+    -------
+        >>> import ufedmm
+        >>> from ufedmm import cvlib
+        >>> model = ufedmm.AlanineDipeptideModel()
+        >>> RgSq = cvlib.SquareRadiusOfGyration(range(model.system.getNumParticles()))
+        >>> RgSq.setForceGroup(1)
+        >>> model.system.addForce(RgSq)
+        4
+        >>> context = openmm.Context(model.system, openmm.CustomIntegrator(0))
+        >>> context.setPositions(model.positions)
+        >>> context.getState(getEnergy=True, groups={1}).getPotentialEnergy()._value
+        0.08711416289256209
+
     """
 
     def __init__(self, group):
@@ -66,6 +80,20 @@ class RadiusOfGyration(openmm.CustomCVForce):
     ----------
         group : list(int)
             The indices of the atoms in the group.
+
+    Example
+    -------
+        >>> import ufedmm
+        >>> from ufedmm import cvlib
+        >>> model = ufedmm.AlanineDipeptideModel()
+        >>> Rg = cvlib.RadiusOfGyration(range(model.system.getNumParticles()))
+        >>> Rg.setForceGroup(1)
+        >>> model.system.addForce(Rg)
+        4
+        >>> context = openmm.Context(model.system, openmm.CustomIntegrator(0))
+        >>> context.setPositions(model.positions)
+        >>> context.getState(getEnergy=True, groups={1}).getPotentialEnergy()._value
+        0.2951510848575048
 
     """
 
