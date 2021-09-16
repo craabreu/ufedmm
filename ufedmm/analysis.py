@@ -18,7 +18,7 @@ from ufedmm.ufedmm import _standardized, _get_energy_function, _get_parameters
 
 class _RBFContext(openmm.Context):
     def __init__(self, variables, variances, centers, weights, platform, properties):
-        num_particles = len(variables)//3 + 1
+        num_particles = (len(variables) + 2)//3
         coordinates = [f'{x}{i+1}' for i in range(num_particles) for x in 'xyz']
         exponents = []
         for v, variance, x in zip(variables, variances, coordinates):
