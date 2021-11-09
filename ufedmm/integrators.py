@@ -783,17 +783,18 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
 
     Keyword Args
     ------------
-        split_ornstein_uhlenbeck : bool, default=False
+        semi_regulated : bool, default=True
+            Whether to use the semi-regulated NHL version of the method instead of its
+            fully-regulated version.
+        split_ornstein_uhlenbeck : bool, default=True
             Whether to split the drifted Ornstein-Uhlenbeck operator.
-        semi_regulated : bool, default=False
-            Whether to use the semi-regulated NHL method instead of its fully-regulated version.
         **kwargs
             All keyword arguments in :class:`AbstractMiddleRespaIntegrator`, except ``num_rattles``.
 
     """
 
     def __init__(self, temperature, time_constant, friction_coefficient, step_size,
-                 regulation_parameter, split_ornstein_uhlenbeck=False, semi_regulated=False,
+                 regulation_parameter, semi_regulated=True, split_ornstein_uhlenbeck=True,
                  **kwargs):
         if 'num_rattles' in kwargs.keys() and kwargs['num_rattles'] != 0:
             raise ValueError(f'{self.__class__.__name__} cannot handle constraints')
@@ -826,7 +827,11 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
 
     def _translation(self, fraction):
         n = self._n
-        self.setKineticEnergyExpression(f'{0.5*(n+1)/n}*m*(c*tanh(v/c))^2; c=sqrt({n}*kT/m)')
+        if self._semi_regulated:
+            expression = f'0.5*m*v*c*tanh(v/c); c=sqrt({n}*kT/m)'
+        else:
+            expression = f'{0.5*(n+1)/n}*m*(c*tanh(v/c))^2; c=sqrt({n}*kT/m)'
+        self.setKineticEnergyExpression(expression)
         self.addComputePerDof('x', f'x + c*tanh(v/c)*{fraction}*dt')
 
     def _bath(self, fraction):
