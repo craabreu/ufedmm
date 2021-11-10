@@ -17,6 +17,7 @@ import ufedmm
 from simtk import openmm, unit
 from simtk.openmm import app
 from ufedmm.ufedmm import _Metadynamics
+from ufedmm.ufedmm import _standardized
 
 
 class Tee:
@@ -160,6 +161,24 @@ class StateDataReporter(app.StateDataReporter):
                 bias_factor = self._metadynamics.bias_factor
                 self._height_scaling = 1 if bias_factor is None else bias_factor/(bias_factor - 1)
 
+            if self._multitemps:
+                system = simulation.context.getSystem()
+                integrator = simulation.context.getIntegrator()
+                Nt = system.getNumParticles()
+                Nv = len(simulation.context.variables)
+                ke_system = openmm.System()
+                for i in range(Nt-Nv, Nt):
+                    ke_system.addParticle(system.getParticleMass(i))
+                ke_integrator = openmm.CustomIntegrator(0)
+                ke_integrator.addPerDofVariable('kT', 0)
+                ke_integrator.addComputePerDof('v', integrator.getKineticEnergyExpression())
+                self._ke_context = openmm.Context(ke_system, ke_integrator)
+                if integrator._up_to_date:
+                    kT = integrator.getPerDofVariableByName('kT')
+                    ke_integrator.setPerDofVariableByName('kT', kT[Nt-Nv:Nt])
+                else:
+                    raise ValueError("Integrator temperatures were not set")
+
         if self._collective_variables:
             forces = simulation.context.getSystem().getForces()
             self._cv_forces = list(filter(lambda f: isinstance(f, openmm.CustomCVForce), forces))
@@ -190,16 +209,18 @@ class StateDataReporter(app.StateDataReporter):
         if self._extended_space:
             if self._multitemps:
                 system = simulation.context.getSystem()
+                ke_context = self._ke_context
                 Nt = system.getNumParticles()
-                Nv = len(simulation.context.variables)
-                masses = [system.getParticleMass(i)/unit.dalton for i in range(Nt-Nv, Nt)]
-                velocities = [v.x for v in state.getVelocities(extended=True)[Nt-Nv: Nt]]
-                double_kinetic_energies = [m*v*v for m, v in zip(masses, velocities)]
-                TotalKE = state.getKineticEnergy().value_in_unit(unit.kilojoules_per_mole)
-                kB = unit.MOLAR_GAS_CONSTANT_R.value_in_unit(unit.kilojoules_per_mole/unit.kelvin)
-                self._add_item(values, (2*TotalKE-sum(double_kinetic_energies))/((self._dof-Nv)*kB))
-                for twoKE in double_kinetic_energies:
-                    self._add_item(values, twoKE/kB)
+                Nv = ke_context.getSystem().getNumParticles()
+                ke_context.setVelocities(state.getVelocities(extended=True)[Nt-Nv:Nt])
+                ke_context.getIntegrator().step(1)
+                ke_values = ke_context.getState(getVelocities=True).getVelocities()
+                xvar_ke = sum(ke.x + ke.y + ke.z for ke in ke_values)
+                total_ke = _standardized(state.getKineticEnergy())
+                kB = _standardized(unit.MOLAR_GAS_CONSTANT_R)
+                self._add_item(values, 2*(total_ke-xvar_ke)/((self._dof-3*Nv)*kB))
+                for ke in ke_values:
+                    self._add_item(values, 2*ke.x/kB)
             if self._variables:
                 for cv in simulation.context.driving_force.getCollectiveVariableValues(simulation.context):
                     self._add_item(values, cv)
