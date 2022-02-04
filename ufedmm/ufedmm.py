@@ -942,7 +942,6 @@ class ExtendedSpaceSimulation(app.Simulation):
         self.topology = topology
         self.system = system
         self.integrator = integrator
-        self.currentStep = 0
         self.reporters = []
         self._usesPBC = True
         if platform is None:
