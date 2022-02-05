@@ -413,6 +413,12 @@ class PeriodicTask(object):
     def report(self, simulation, state):
         pass
 
+    def saveCheckpoint(self, file):
+        pass
+
+    def loadCheckpoint(self, file):
+        pass
+
 
 class _Metadynamics(PeriodicTask):
     """
@@ -585,6 +591,25 @@ class _Metadynamics(PeriodicTask):
             self.force.setBondParameters(self._num_hills, self.particles, [self.height] + centers)
             self._num_hills += 1
             self.force.updateParametersInContext(simulation.context)
+
+    def saveCheckpoint(self, file):
+        if self._use_grid:
+            self._bias.tofile(file)
+        else:
+            raise NotImplementedError("Cannot save checkpoint")
+        np.array([self.height]).tofile(file)
+
+    def loadCheckpoint(self, file, context):
+        if self._use_grid:
+            self._bias = np.fromfile(file, count=len(self._bias))
+            if len(self.bias_variables) == 1:
+                self._table.setFunctionParameters(self._bias, *self._bounds)
+            else:
+                self._table.setFunctionParameters(*self._widths, self._bias, *self._bounds)
+        else:
+            raise NotImplementedError("Cannot load checkpoint")
+        self.force.updateParametersInContext(context)
+        self.height = np.fromfile(file, count=1)[0]
 
 
 class ExtendedSpaceState(openmm.State):
@@ -992,9 +1017,7 @@ class ExtendedSpaceSimulation(app.Simulation):
                 self.saveCheckpoint(f)
         else:
             for task in self._periodic_tasks:
-                if isinstance(task, _Metadynamics):
-                    task._bias.tofile(file)
-                    np.array([task.height]).tofile(file)
+                task.saveCheckpoint(file)
             file.write(self.context.createCheckpoint())
 
     def loadCheckpoint(self, file):
@@ -1003,14 +1026,7 @@ class ExtendedSpaceSimulation(app.Simulation):
                 self.loadCheckpoint(f)
         else:
             for task in self._periodic_tasks:
-                if isinstance(task, _Metadynamics):
-                    task._bias = np.fromfile(file, count=len(task._bias))
-                if len(task.bias_variables) == 1:
-                    task._table.setFunctionParameters(task._bias, *task._bounds)
-                else:
-                    task._table.setFunctionParameters(*task._widths, task._bias, *task._bounds)
-                task.force.updateParametersInContext(self.context)
-                task.height = np.fromfile(file, count=1)[0]
+                task.loadCheckpoint(file, self.context)
             self.context.loadCheckpoint(file.read())
 
 
