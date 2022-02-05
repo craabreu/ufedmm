@@ -994,7 +994,7 @@ class ExtendedSpaceSimulation(app.Simulation):
             for task in self._periodic_tasks:
                 if isinstance(task, _Metadynamics):
                     task._bias.tofile(file)
-            np.array([task.height]).tofile(file)
+                    np.array([task.height]).tofile(file)
             file.write(self.context.createCheckpoint())
 
     def loadCheckpoint(self, file):
@@ -1010,7 +1010,7 @@ class ExtendedSpaceSimulation(app.Simulation):
                 else:
                     task._table.setFunctionParameters(*task._widths, task._bias, *task._bounds)
                 task.force.updateParametersInContext(self.context)
-            task.height = np.fromfile(file, count=1)[0]
+                task.height = np.fromfile(file, count=1)[0]
             self.context.loadCheckpoint(file.read())
 
 
