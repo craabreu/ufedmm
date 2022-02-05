@@ -986,6 +986,33 @@ class ExtendedSpaceSimulation(app.Simulation):
         else:
             self._simulate(endStep=self.currentStep+steps)
 
+    def saveCheckpoint(self, file):
+        if isinstance(file, str):
+            with open(file, 'wb') as f:
+                self.saveCheckpoint(f)
+        else:
+            for task in self._periodic_tasks:
+                if isinstance(task, _Metadynamics):
+                    task._bias.tofile(file)
+            np.array([task.height]).tofile(file)
+            file.write(self.context.createCheckpoint())
+
+    def loadCheckpoint(self, file):
+        if isinstance(file, str):
+            with open(file, 'rb') as f:
+                self.loadCheckpoint(f)
+        else:
+            for task in self._periodic_tasks:
+                if isinstance(task, _Metadynamics):
+                    task._bias = np.fromfile(file, count=len(task._bias))
+                if len(task.bias_variables) == 1:
+                    task._table.setFunctionParameters(task._bias, *task._bounds)
+                else:
+                    task._table.setFunctionParameters(*task._widths, task._bias, *task._bounds)
+                task.force.updateParametersInContext(self.context)
+            task.height = np.fromfile(file, count=1)[0]
+            self.context.loadCheckpoint(file.read())
+
 
 class UnifiedFreeEnergyDynamics(object):
     """
