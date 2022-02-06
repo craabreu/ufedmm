@@ -543,6 +543,7 @@ class _Metadynamics(PeriodicTask):
                 self.force.getCollectiveVariable(i).setParticleParameters(0, particle, [])
         else:
             self._num_hills = 0
+            self._total_hills = 0
         free_groups = set(range(32)) - set(f.getForceGroup() for f in simulation.system.getForces())
         self.force.setForceGroup(max(free_groups))
         self.group_set = {max(free_groups)}
@@ -596,7 +597,12 @@ class _Metadynamics(PeriodicTask):
         if self._use_grid:
             self._bias.tofile(file)
         else:
-            raise NotImplementedError("Cannot save checkpoint")
+            np.array([self._num_hills], dtype=int).tofile(file)
+            parameter_list = []
+            for index in range(self._num_hills):
+                _, parameters = self.force.getBondParameters(index)
+                parameter_list.append(parameters)
+            np.array(parameter_list).tofile(file)
         np.array([self.height]).tofile(file)
 
     def loadCheckpoint(self, file, context):
@@ -606,9 +612,19 @@ class _Metadynamics(PeriodicTask):
                 self._table.setFunctionParameters(self._bias, *self._bounds)
             else:
                 self._table.setFunctionParameters(*self._widths, self._bias, *self._bounds)
+            self.force.updateParametersInContext(context)
         else:
-            raise NotImplementedError("Cannot load checkpoint")
-        self.force.updateParametersInContext(context)
+            npars = len(self.bias_variables) + 1
+            nhills = self._num_hills = np.fromfile(file, dtype=int, count=1)[0]
+            parameter_array = np.fromfile(file, count=nhills*npars).reshape((nhills, npars))
+            for index in range(nhills - self.force.getNumBonds()):
+                self.force.addBond(self.particles, [0]*npars)
+            self._total_hills = self.force.getNumBonds()
+            for index, parameters in enumerate(parameter_array):
+                self.force.setBondParameters(index, self.particles, parameters)
+            for index in range(self._total_hills - nhills):
+                self.force.setBondParameters(index, self.particles, [0]*npars)
+            context.reinitialize(preserveState=True)
         self.height = np.fromfile(file, count=1)[0]
 
 
