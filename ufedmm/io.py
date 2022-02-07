@@ -11,11 +11,11 @@
 """
 
 import sys
-import yaml
+import openmm
 import ufedmm
+import yaml
 
-from simtk import openmm, unit
-from simtk.openmm import app
+from openmm import app, unit
 from ufedmm.ufedmm import _Metadynamics
 from ufedmm.ufedmm import _standardized
 

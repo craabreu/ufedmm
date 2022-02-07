@@ -14,9 +14,11 @@
 
 """
 
+import openmm
+
 import numpy as np
 
-from simtk import openmm, unit
+from openmm import unit
 from ufedmm.ufedmm import _standardized
 
 

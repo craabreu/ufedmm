@@ -10,11 +10,11 @@
 
 """
 
-import ufedmm
+import openmm
 import os
+import ufedmm
 
-from simtk import openmm, unit
-from simtk.openmm import app
+from openmm import app, unit
 
 
 class AlanineDipeptideModel(object):

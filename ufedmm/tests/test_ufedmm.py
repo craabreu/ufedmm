@@ -3,13 +3,13 @@ Unit and regression test for the ufedmm package.
 """
 
 # Import package, test suite, and other packages as needed
-import ufedmm
+import io
+import openmm
 import pytest
 import sys
-import io
+import ufedmm
 
-from simtk import openmm
-from simtk import unit
+from openmm import unit
 
 
 def ufed_model(

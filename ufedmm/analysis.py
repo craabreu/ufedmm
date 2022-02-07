@@ -8,11 +8,12 @@
 """
 
 import itertools
+import openmm
+
 import numpy as np
 
 from collections import namedtuple
 from scipy import stats
-from simtk import openmm
 from ufedmm.ufedmm import _standardized, _get_energy_function, _get_parameters
 
 

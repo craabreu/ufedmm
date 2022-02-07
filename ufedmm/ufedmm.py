@@ -20,8 +20,8 @@ import functools
 from copy import deepcopy
 
 import numpy as np
-from simtk import openmm, unit
-from simtk.openmm import app
+import openmm
+from openmm import app, unit
 
 import ufedmm
 
@@ -407,7 +407,7 @@ class PeriodicTask(object):
         pass
 
     def describeNextReport(self, simulation):
-        steps = self.frequency - simulation.currentStep % self.frequency
+        steps = self.frequency - simulation.context.getStepCount() % self.frequency
         return (steps, True, False, False, False, False)
 
     def report(self, simulation, state):
@@ -552,7 +552,8 @@ class _Metadynamics(PeriodicTask):
 
     def update(self, simulation, steps):
         if not self._use_grid:
-            steps_until_next_report = self.frequency - simulation.currentStep % self.frequency
+            current_step = simulation.context.getStepCount()
+            steps_until_next_report = self.frequency - current_step % self.frequency
             if steps_until_next_report > steps:
                 required_hills = 0
             else:
@@ -1018,14 +1019,15 @@ class ExtendedSpaceSimulation(app.Simulation):
         if isinstance(self.integrator, ufedmm.AbstractMiddleRespaIntegrator):
             if self.integrator._num_rattles == 0 and self.system.getNumConstraints() > 0:
                 raise RuntimeError("Integrator cannot handle constraints")
+        current_step = self.context.getStepCount()
         if self._periodic_tasks:
             for task in self._periodic_tasks:
                 task.update(self, steps)
             self.reporters = self._periodic_tasks + self.reporters
-            self._simulate(endStep=self.currentStep+steps)
+            self._simulate(endStep=current_step + steps)
             self.reporters = self.reporters[len(self._periodic_tasks):]
         else:
-            self._simulate(endStep=self.currentStep+steps)
+            self._simulate(endStep=current_step + steps)
 
     def saveCheckpoint(self, file):
         if isinstance(file, str):

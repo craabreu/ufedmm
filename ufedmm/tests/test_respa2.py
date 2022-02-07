@@ -1,9 +1,10 @@
-import numpy as np
+import openmm
 import pytest
 import ufedmm
 
+import numpy as np
+
 from ufedmm.ufedmm import _standardized
-from simtk import openmm
 
 
 def S(z):

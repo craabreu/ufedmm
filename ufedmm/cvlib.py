@@ -19,9 +19,10 @@
 import re
 import itertools
 import math
+import openmm
 
 from collections import namedtuple
-from simtk import openmm, unit
+from openmm import unit
 from ufedmm.ufedmm import _standardized
 
 
