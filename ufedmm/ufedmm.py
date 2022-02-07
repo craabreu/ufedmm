@@ -5,14 +5,14 @@
 
 .. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
 
-.. _Context: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.Context.html
-.. _CustomCVForce: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.CustomCVForce.html
-.. _CustomIntegrator: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.CustomIntegrator.html
-.. _Force: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.Force.html
-.. _Integrator: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.Integrator.html
-.. _Platform: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.Platform.html
-.. _System: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.System.html
-.. _State: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.State.html
+.. _Context: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html
+.. _CustomCVForce: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html
+.. _CustomIntegrator: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomIntegrator.html
+.. _Force: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Force.html
+.. _Integrator: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Integrator.html
+.. _Platform: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Platform.html
+.. _System: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html
+.. _State: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.State.html
 
 """
 
@@ -81,8 +81,9 @@ class CollectiveVariable(object):
 
     Example
     -------
+        >>> import openmm
         >>> import ufedmm
-        >>> from simtk import openmm, unit
+        >>> from openmm import unit
         >>> cv = ufedmm.CollectiveVariable('psi', openmm.CustomTorsionForce('theta'))
         >>> cv.force.addTorsion(0, 1, 2, 3, [])
         0
@@ -133,7 +134,7 @@ class CollectiveVariable(object):
         Example
         -------
             >>> import ufedmm
-            >>> from simtk import unit
+            >>> from openmm import unit
             >>> model = ufedmm.AlanineDipeptideModel()
             >>> model.phi.evaluate(model.system, model.positions)
             3.141592653589793
@@ -182,7 +183,7 @@ class CollectiveVariable(object):
         Example
         -------
             >>> import ufedmm
-            >>> from simtk import unit
+            >>> from openmm import unit
             >>> model = ufedmm.AlanineDipeptideModel()
             >>> model.phi.effective_mass(model.system, model.positions)
             0.0479588726559707
@@ -253,8 +254,9 @@ class DynamicalVariable(object):
 
     Example
     -------
+        >>> import openmm
         >>> import ufedmm
-        >>> from simtk import openmm, unit
+        >>> from openmm import unit
         >>> cv = ufedmm.CollectiveVariable('psi', openmm.CustomTorsionForce('theta'))
         >>> cv.force.addTorsion(0, 1, 2, 3, [])
         0
@@ -825,7 +827,7 @@ class ExtendedSpaceContext(openmm.Context):
         """
         Returns a :class:`ExtendedSpaceState` object.
 
-        .. _getState: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.Context.html#simtk.openmm.openmm.Context.getState  # noqa: E501
+        .. _getState: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html#openmm.openmm.Context.getState  # noqa: E501
 
         Keyword Args
         ------------
@@ -1080,7 +1082,7 @@ class UnifiedFreeEnergyDynamics(object):
     Example
     -------
         >>> import ufedmm
-        >>> from simtk import unit
+        >>> from openmm import unit
         >>> model = ufedmm.AlanineDipeptideModel(water='tip3p')
         >>> mass = 50*unit.dalton*(unit.nanometer/unit.radians)**2
         >>> Ks = 1000*unit.kilojoules_per_mole/unit.radians**2
@@ -1156,7 +1158,7 @@ class UnifiedFreeEnergyDynamics(object):
         Example
         -------
             >>> import ufedmm
-            >>> from simtk import unit
+            >>> from openmm import unit
             >>> model = ufedmm.AlanineDipeptideModel(water='tip3p')
             >>> mass = 50*unit.dalton*(unit.nanometer/unit.radians)**2
             >>> Ks = 1000*unit.kilojoules_per_mole/unit.radians**2

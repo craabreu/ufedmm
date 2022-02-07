@@ -5,12 +5,12 @@
 
 .. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
 
-.. _Context: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.Context.html
-.. _CustomCVForce: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.CustomCVForce.html
-.. _CustomIntegrator: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.CustomIntegrator.html
-.. _Force: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.Force.html
-.. _NonbondedForce: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.NonbondedForce.html
-.. _System: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.System.html
+.. _Context: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html
+.. _CustomCVForce: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html
+.. _CustomIntegrator: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomIntegrator.html
+.. _Force: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Force.html
+.. _NonbondedForce: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html
+.. _System: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html
 
 """
 
@@ -54,7 +54,7 @@ def add_inner_nonbonded_force(system, inner_switch, inner_cutoff, force_group_in
     Example
     -------
         >>> import ufedmm
-        >>> from simtk import unit
+        >>> from openmm import unit
         >>> dt = 2*unit.femtoseconds
         >>> temp = 300*unit.kelvin
         >>> tau = 10*unit.femtoseconds
@@ -308,7 +308,7 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
     Example
     -------
         >>> from ufedmm import integrators
-        >>> from simtk import unit
+        >>> from openmm import unit
         >>> class MiddleNoseHooverIntegrator(integrators.AbstractMiddleRespaIntegrator):
         ...     def __init__(self, ndof, tau, temperature, step_size, num_rattles=1):
         ...         super().__init__(temperature, step_size, num_rattles, 'VV-Middle', [1], 1)
@@ -331,7 +331,7 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
         Per-dof variables:
           kT
         Global variables:
-          gkT = 1247.1693927229858
+          gkT = 1247.169392722986
           Q = 0.1247169392722986
           v_eta = 0.0
           twoK = 0.0

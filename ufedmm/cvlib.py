@@ -5,12 +5,12 @@
 
 .. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
 
-.. _Context: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.Context.html
-.. _CustomCVForce: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.CustomCVForce.html
-.. _CustomIntegrator: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.CustomIntegrator.html
-.. _Force: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.Force.html
-.. _NonbondedForce: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.NonbondedForce.html
-.. _System: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.System.html
+.. _Context: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html
+.. _CustomCVForce: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html
+.. _CustomIntegrator: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomIntegrator.html
+.. _Force: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Force.html
+.. _NonbondedForce: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html
+.. _System: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html
 .. _coordination: https://www.plumed.org/doc-v2.6/user-doc/html/_c_o_o_r_d_i_n_a_t_i_o_n.html
 .. _PLUMED: https://www.plumed.org
 
@@ -46,6 +46,7 @@ class SquareRadiusOfGyration(openmm.CustomBondForce):
 
     Example
     -------
+        >>> import openmm
         >>> import ufedmm
         >>> from ufedmm import cvlib
         >>> model = ufedmm.AlanineDipeptideModel()
@@ -53,7 +54,8 @@ class SquareRadiusOfGyration(openmm.CustomBondForce):
         >>> RgSq.setForceGroup(1)
         >>> model.system.addForce(RgSq)
         4
-        >>> context = openmm.Context(model.system, openmm.CustomIntegrator(0))
+        >>> platform = openmm.Platform.getPlatformByName('Reference')
+        >>> context = openmm.Context(model.system, openmm.CustomIntegrator(0), platform)
         >>> context.setPositions(model.positions)
         >>> context.getState(getEnergy=True, groups={1}).getPotentialEnergy()._value
         0.08711416289256209
@@ -84,6 +86,7 @@ class RadiusOfGyration(openmm.CustomCVForce):
 
     Example
     -------
+        >>> import openmm
         >>> import ufedmm
         >>> from ufedmm import cvlib
         >>> model = ufedmm.AlanineDipeptideModel()
@@ -91,7 +94,8 @@ class RadiusOfGyration(openmm.CustomCVForce):
         >>> Rg.setForceGroup(1)
         >>> model.system.addForce(Rg)
         4
-        >>> context = openmm.Context(model.system, openmm.CustomIntegrator(0))
+        >>> platform = openmm.Platform.getPlatformByName('Reference')
+        >>> context = openmm.Context(model.system, openmm.CustomIntegrator(0), platform)
         >>> context.setPositions(model.positions)
         >>> context.getState(getEnergy=True, groups={1}).getPotentialEnergy()._value
         0.2951510848575048
@@ -168,9 +172,10 @@ class CoordinationNumber(openmm.CustomNonbondedForce):
 
     Example
     -------
+        >>> import openmm
         >>> import ufedmm
+        >>> from openmm import app
         >>> from ufedmm import cvlib
-        >>> from simtk.openmm import app
         >>> model = ufedmm.AlanineDipeptideModel()
         >>> carbons = [atom.index for atom in model.topology.atoms() if atom.element == app.element.carbon]
         >>> oxygens = [atom.index for atom in model.topology.atoms() if atom.element == app.element.carbon]
@@ -178,10 +183,11 @@ class CoordinationNumber(openmm.CustomNonbondedForce):
         >>> N.setForceGroup(1)
         >>> model.system.addForce(N)
         4
-        >>> context = openmm.Context(model.system, openmm.CustomIntegrator(0))
+        >>> platform = openmm.Platform.getPlatformByName('Reference')
+        >>> context = openmm.Context(model.system, openmm.CustomIntegrator(0), platform)
         >>> context.setPositions(model.positions)
         >>> context.getState(getEnergy=True, groups={1}).getPotentialEnergy()._value
-        9.461968630563433
+        9.461968618078124
 
     """
 

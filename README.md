@@ -106,6 +106,6 @@ Project structure based on the
 [d-AFED]: http://doi.org/10.1021/jp805039u
 [Metadynamics]: http://doi.org/10.1021/jp045424k
 [UFED]: http://doi.org/10.1063/1.4733389
-[Context]: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.Context.html
-[CustomCVForce]: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.CustomCVForce.html
-[CustomIntegrator]: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.CustomIntegrator.html
+[Context]: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html
+[CustomCVForce]: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html
+[CustomIntegrator]: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomIntegrator.html

@@ -8,7 +8,7 @@ dependencies:
   - sphinxcontrib-bibtex ==1.0
 
   - numpy
-  - openmm >=7.5
+  - openmm >=7.6
   - pandas
   - pyyaml
   - scipy

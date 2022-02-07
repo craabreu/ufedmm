@@ -5,8 +5,8 @@
 
 .. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
 
-.. _System: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.System.html
-.. _Topology: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.app.topology.Topology.html
+.. _System: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html
+.. _Topology: http://docs.openmm.org/latest/api-python/generated/openmm.app.topology.Topology.html
 
 """
 

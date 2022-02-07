@@ -5,8 +5,8 @@
 
 .. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
 
-.. _CustomCVForce: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.CustomCVForce.html
-.. _StateDataReporter: http://docs.openmm.org/latest/api-python/generated/simtk.openmm.openmm.StateDataReporter.html
+.. _CustomCVForce: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html
+.. _StateDataReporter: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.StateDataReporter.html
 
 """
 
@@ -96,8 +96,9 @@ class StateDataReporter(app.StateDataReporter):
 
     Example
     -------
+        >>> import openmm
         >>> import ufedmm
-        >>> from simtk import openmm, unit
+        >>> from openmm import unit
         >>> from sys import stdout
         >>> model = ufedmm.AlanineDipeptideModel(water='tip3p')
         >>> mass = 50*unit.dalton*(unit.nanometer/unit.radians)**2
@@ -110,7 +111,7 @@ class StateDataReporter(app.StateDataReporter):
         >>> s_phi = ufedmm.DynamicalVariable('s_phi', -limit, limit, mass, Ts, model.phi, Ks)
         >>> s_psi = ufedmm.DynamicalVariable('s_psi', -limit, limit, mass, Ts, model.psi, Ks)
         >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([s_phi, s_psi], T)
-        >>> integrator = ufedmm.GeodesicLangevinIntegrator(dt, T, gamma)
+        >>> integrator = ufedmm.GeodesicLangevinIntegrator(T, gamma, dt)
         >>> platform = openmm.Platform.getPlatformByName('Reference')
         >>> simulation = ufed.simulation(model.topology, model.system, integrator, platform)
         >>> simulation.context.setPositions(model.positions)
