@@ -554,8 +554,7 @@ class _Metadynamics(PeriodicTask):
 
     def update(self, simulation, steps):
         if not self._use_grid:
-            current_step = simulation.context.getStepCount()
-            steps_until_next_report = self.frequency - current_step % self.frequency
+            steps_until_next_report = self.frequency - simulation.currentStep % self.frequency
             if steps_until_next_report > steps:
                 required_hills = 0
             else:
@@ -986,6 +985,8 @@ class ExtendedSpaceSimulation(app.Simulation):
         self.topology = topology
         self.system = system
         self.integrator = integrator
+        if openmm.__version__ < '7.7':
+            self.currentStep = 0
         self.reporters = []
         self._usesPBC = True
         if platform is None:
@@ -1021,15 +1022,14 @@ class ExtendedSpaceSimulation(app.Simulation):
         if isinstance(self.integrator, ufedmm.AbstractMiddleRespaIntegrator):
             if self.integrator._num_rattles == 0 and self.system.getNumConstraints() > 0:
                 raise RuntimeError("Integrator cannot handle constraints")
-        current_step = self.context.getStepCount()
         if self._periodic_tasks:
             for task in self._periodic_tasks:
                 task.update(self, steps)
             self.reporters = self._periodic_tasks + self.reporters
-            self._simulate(endStep=current_step + steps)
+            self._simulate(endStep=self.currentStep + steps)
             self.reporters = self.reporters[len(self._periodic_tasks):]
         else:
-            self._simulate(endStep=current_step + steps)
+            self._simulate(endStep=self.currentStep + steps)
 
     def saveCheckpoint(self, file):
         if isinstance(file, str):
