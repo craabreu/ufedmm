@@ -351,7 +351,8 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
     """
 
     def __init__(self, temperature, step_size, num_rattles=0, scheme='VV-Middle',
-                 respa_loops=[1], bath_loops=1, embodied_force_groups=[], unroll_loops=True):
+                 respa_loops=[1], bath_loops=1, intertwine=True, embodied_force_groups=[],
+                 unroll_loops=True):
         if scheme not in ['LF-Middle', 'VV-Middle']:
             raise Exception(f'Invalid value {scheme} for keyword scheme')
         super().__init__(temperature, step_size)
@@ -359,6 +360,7 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
         self._scheme = scheme
         self._respa_loops = respa_loops
         self._bath_loops = bath_loops
+        self._intertwine = intertwine
         self._subtractive_groups = embodied_force_groups
         num_rattles > 0 and self.addPerDofVariable('x0', 0)
         num_rattles > 1 and self.addGlobalVariable('irattle', 0)
@@ -396,17 +398,19 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
                 self.addComputeGlobal(f'irespa{scale}', f'irespa{scale} + 1')
                 self.endBlock()
         else:
+            self._intertwine or self._translation(0.5*fraction)
             n = self._bath_loops
             if n > 1:
                 self.addComputeGlobal('ibath', '0')
                 self.beginWhileBlock(f'ibath < {n-1/2}')
-            self._translation(0.5*fraction/n)
+            self._intertwine and self._translation(0.5*fraction/n)
             self._bath(fraction/n)
             self._num_rattles > 0 and self.addConstrainVelocities()
-            self._translation(0.5*fraction/n)
+            self._intertwine and self._translation(0.5*fraction/n)
             if n > 1:
                 self.addComputeGlobal('ibath', 'ibath + 1')
                 self.endBlock()
+            self._intertwine or self._translation(0.5*fraction)
 
     def _integrate_respa_unrolled(self, fraction, scale):
         if scale >= 0:
@@ -417,11 +421,13 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
                 self._scheme == 'VV-Middle' and i == n-1 and self._boost(fraction/(2*n), scale)
         else:
             n = self._bath_loops
+            self._intertwine or self._translation(0.5*fraction)
             for i in range(n):
-                self._translation(fraction/(2*n if i == 0 else n))
+                self._intertwine and self._translation(fraction/(2*n if i == 0 else n))
                 self._bath(fraction/n)
                 self._num_rattles > 0 and self.addConstrainVelocities()
-                i == n-1 and self._translation(fraction/(2*n))
+                i == n-1 and self._intertwine and self._translation(fraction/(2*n))
+            self._intertwine or self._translation(0.5*fraction)
 
     def _translation(self, fraction):
         if self._num_rattles > 1:
