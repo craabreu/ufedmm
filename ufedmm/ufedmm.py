@@ -546,13 +546,17 @@ class _Metadynamics(PeriodicTask):
         else:
             self._num_hills = 0
             self._total_hills = 0
-        free_groups = set(range(32)) - set(f.getForceGroup() for f in simulation.system.getForces())
-        self.force.setForceGroup(max(free_groups))
-        self.group_set = {max(free_groups)}
         simulation.system.addForce(self.force)
         context.reinitialize(preserveState=True)
 
     def update(self, simulation, steps):
+        if self.bias_factor is not None:
+            self.free_group = 31
+            used_groups = set(f.getForceGroup() for f in simulation.system.getForces())
+            while self.free_group in used_groups:
+                self.free_group -= 1
+            if self.free_group < 0:
+                raise RuntimeError("Well-tempered Metadynamics requires free force groups")
         if not self._use_grid:
             steps_until_next_report = self.frequency - simulation.currentStep % self.frequency
             if steps_until_next_report > steps:
@@ -567,7 +571,11 @@ class _Metadynamics(PeriodicTask):
         if self.bias_factor is None:
             self.height = self.initial_height
         else:
-            energy = simulation.context.getState(getEnergy=True, groups=self.group_set).getPotentialEnergy()
+            group = self.force.getForceGroup()
+            self.force.setForceGroup(self.free_group)
+            hills_state = simulation.context.getState(getEnergy=True, groups={self.free_group})
+            self.force.setForceGroup(group)
+            energy = hills_state.getPotentialEnergy()
             self.height = self.initial_height*np.exp(-energy/self.delta_kT)
         if self._use_grid:
             hills = []
