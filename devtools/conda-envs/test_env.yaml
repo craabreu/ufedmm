@@ -5,7 +5,7 @@ dependencies:
     # Base depends
   - pip
   - python
-  - sphinxcontrib-bibtex ==1.0
+  - sphinxcontrib-bibtex
 
   - numpy
   - openmm >=7.6
