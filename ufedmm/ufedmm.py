@@ -474,8 +474,9 @@ class _Metadynamics(PeriodicTask):
         self._widths = []
         self._bounds = []
         self._extra_points = []
+        full_periodic = self._full_periodic = all(v.periodic for v in self.bias_variables)
         for v in self.bias_variables:
-            extra_points = min(self.grid_expansion, v.grid_size-1) if v.periodic else 0
+            extra_points = min(self.grid_expansion, v.grid_size-1) if v.periodic and not full_periodic else 0
             extra_range = extra_points*v._range/(v.grid_size - 1)
             self._widths.append(v.grid_size + 2*extra_points)
             self._bounds += [v.min_value - extra_range, v.max_value + extra_range]
@@ -483,11 +484,11 @@ class _Metadynamics(PeriodicTask):
         self._bias = np.zeros(np.prod(self._widths))
         num_bias_variables = len(self.bias_variables)
         if num_bias_variables == 1:
-            self._table = openmm.Continuous1DFunction(self._bias, *self._bounds)
+            self._table = openmm.Continuous1DFunction(self._bias, *self._bounds, full_periodic)
         elif num_bias_variables == 2:
-            self._table = openmm.Continuous2DFunction(*self._widths, self._bias, *self._bounds)
+            self._table = openmm.Continuous2DFunction(*self._widths, self._bias, *self._bounds, full_periodic)
         else:
-            self._table = openmm.Continuous3DFunction(*self._widths, self._bias, *self._bounds)
+            self._table = openmm.Continuous3DFunction(*self._widths, self._bias, *self._bounds, full_periodic)
         expression = f'bias({",".join(v.id for v in self.bias_variables)})'
         for i, v in enumerate(self.bias_variables):
             expression += f';{v.id}={v._get_energy_function(i+1)}'
@@ -589,12 +590,13 @@ class _Metadynamics(PeriodicTask):
                 hills.append(self.height*np.exp(exponents))
             ndim = len(self.bias_variables)
             bias = hills[0] if ndim == 1 else functools.reduce(np.multiply.outer, reversed(hills))
-            for axis, v in enumerate(self.bias_variables):
-                if v.periodic:
-                    n = self._extra_points[axis] + 1
-                    begin = tuple(slice(1, n) if i == axis else slice(None) for i in range(ndim))
-                    end = tuple(slice(-n, -1) if i == axis else slice(None) for i in range(ndim))
-                    bias = np.concatenate((bias[end], bias, bias[begin]), axis=axis)
+            if not self._full_periodic:
+                for axis, v in enumerate(self.bias_variables):
+                    if v.periodic:
+                        n = self._extra_points[axis] + 1
+                        begin = tuple(slice(1, n) if i == axis else slice(None) for i in range(ndim))
+                        end = tuple(slice(-n, -1) if i == axis else slice(None) for i in range(ndim))
+                        bias = np.concatenate((bias[end], bias, bias[begin]), axis=axis)
             self.add_bias(simulation, bias)
         else:
             if self._num_hills == self.force.getNumBonds():
