@@ -475,7 +475,7 @@ class _Metadynamics(PeriodicTask):
         self._bounds = []
         self._extra_points = []
         for v in self.bias_variables:
-            extra_points = min(self.grid_expansion, v.grid_size) if v.periodic else 0
+            extra_points = min(self.grid_expansion, v.grid_size-1) if v.periodic else 0
             extra_range = extra_points*v._range/(v.grid_size - 1)
             self._widths.append(v.grid_size + 2*extra_points)
             self._bounds += [v.min_value - extra_range, v.max_value + extra_range]
