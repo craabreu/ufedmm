@@ -585,6 +585,7 @@ class _Metadynamics(PeriodicTask):
                 dist = np.linspace(0, 1, num=v.grid_size) - x
                 if v.periodic:  # von Mises
                     exponents = (np.cos(2*np.pi*dist)-1)/(4*np.pi*np.pi*v._scaled_variance)
+                    exponents[0] = exponents[-1] = 0.5*(exponents[0] + exponents[-1])
                 else:  # Gauss
                     exponents = -0.5*dist*dist/v._scaled_variance
                 hills.append(self.height*np.exp(exponents))
