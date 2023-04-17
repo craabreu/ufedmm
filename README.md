@@ -3,8 +3,11 @@ Unified Free Energy Dynamics with OpenMM
 
 [//]: # (Badges)
 [![License](https://img.shields.io/github/license/mashape/apistatus.svg)]()
-[![Travis Build Status](https://travis-ci.org/craabreu/ufedmm.png)](https://travis-ci.org/craabreu/ufedmm)
-[![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/8p0jxlr3ly3bta06/branch/master?svg=true)](https://ci.appveyor.com/project/craabreu/ufedmm/branch/master)
+
+[//]: # (Badges)
+[![GitHub Actions Build Status](https://github.com/RedesignScience/ufedmm/workflows/Linux/badge.svg)](https://github.com/RedesignScience/ufedmm/actions?query=workflow%3ALinux)
+[![GitHub Actions Build Status](https://github.com/RedesignScience/ufedmm/workflows/MacOS/badge.svg)](https://github.com/RedesignScience/ufedmm/actions?query=workflow%3AMacOS)
+[![GitHub Actions Build Status](https://github.com/RedesignScience/ufedmm/workflows/Windows/badge.svg)](https://github.com/RedesignScience/ufedmm/actions?query=workflow%3AWindows)
 [![codecov](https://codecov.io/gh/craabreu/ufedmm/branch/master/graph/badge.svg)](https://codecov.io/gh/craabreu/ufedmm/branch/master)
 [![Documentation Status](https://readthedocs.org/projects/ufedmm/badge/?style=flat)](https://readthedocs.org/projects/ufedmm)
 
