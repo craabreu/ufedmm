@@ -1,0 +1,17 @@
+name: docs
+channels:
+  - conda-forge
+dependencies:
+    # Base depends
+  - python
+  - pip
+  - numpy
+  - openmm
+  - pandas
+  - pyyaml
+  - scipy
+
+    # Docs depends
+  - sphinx
+  - sphinxcontrib-bibtex
+  - sphinx-copybutton
