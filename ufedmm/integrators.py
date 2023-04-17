@@ -14,11 +14,10 @@
 
 """
 
-import openmm
-
 import numpy as np
-
+import openmm
 from openmm import unit
+
 from ufedmm.ufedmm import _standardized
 
 
@@ -63,33 +62,49 @@ def add_inner_nonbonded_force(system, inner_switch, inner_cutoff, force_group_in
         >>> ufedmm.add_inner_nonbonded_force(model.system, 5*unit.angstroms, 8*unit.angstroms, 1)
 
     """
-    if openmm.__version__ < '7.5':
+    if openmm.__version__ < "7.5":
         raise Exception("add_inner_nonbonded_force requires OpenMM version >= 7.5")
     try:
-        nonbonded_force = next(filter(lambda f: isinstance(f, openmm.NonbondedForce), system.getForces()))
+        nonbonded_force = next(
+            filter(lambda f: isinstance(f, openmm.NonbondedForce), system.getForces())
+        )
     except StopIteration:
         raise Exception("add_inner_nonbonded_force requires system with NonbondedForce")
-    if nonbonded_force.getNumParticleParameterOffsets() > 0 or nonbonded_force.getNumExceptionParameterOffsets() > 0:
+    if (
+        nonbonded_force.getNumParticleParameterOffsets() > 0
+        or nonbonded_force.getNumExceptionParameterOffsets() > 0
+    ):
         raise Exception("add_inner_nonbonded_force does not support parameter offsets")
     periodic = nonbonded_force.usesPeriodicBoundaryConditions()
     rs = _standardized(inner_switch)
     rc = _standardized(inner_cutoff)
-    a = rc+rs
-    b = rc*rs
-    c = (30/(rc-rs)**5)*np.array([b**2, -2*a*b, a**2 + 2*b, -2*a, 1])
-    f0s = sum([c[n]*rs**(n+1)/(n+1) for n in range(5)])
-    def coeff(n, m): return c[m-1] if m == n else c[m-1]/(m-n)
-    def func(n, m): return '*log(r)' if m == n else (f'*r^{m-n}' if m > n else f'/r^{n-m}')
-    def val(n, m): return f0s if m == 0 else (coeff(n, m) - coeff(0, m) if n != m else coeff(n, m))
-    def sgn(n, m): return '+' if m > 0 and val(n, m) >= 0 else ''
-    def S(n): return ''.join(f'{sgn(n, m)}{val(n, m)}{func(n, m)}' for m in range(6))
-    potential = 'eps4*((sigma/r)^12-(sigma/r)^6)+Qprod/r'
-    potential += f'+step(r-{rs})*(eps4*(sigma^12*({S(12)})-sigma^6*({S(6)}))+Qprod*({S(1)}))'
-    mixing_rules = '; Qprod=Q1*Q2'
-    mixing_rules += '; sigma=halfsig1+halfsig2'
-    mixing_rules += '; eps4=sqrt4eps1*sqrt4eps2'
+    a = rc + rs
+    b = rc * rs
+    c = (30 / (rc - rs) ** 5) * np.array([b**2, -2 * a * b, a**2 + 2 * b, -2 * a, 1])
+    f0s = sum([c[n] * rs ** (n + 1) / (n + 1) for n in range(5)])
+
+    def coeff(n, m):
+        return c[m - 1] if m == n else c[m - 1] / (m - n)
+
+    def func(n, m):
+        return "*log(r)" if m == n else (f"*r^{m-n}" if m > n else f"/r^{n-m}")
+
+    def val(n, m):
+        return f0s if m == 0 else (coeff(n, m) - coeff(0, m) if n != m else coeff(n, m))
+
+    def sgn(n, m):
+        return "+" if m > 0 and val(n, m) >= 0 else ""
+
+    def S(n):
+        return "".join(f"{sgn(n, m)}{val(n, m)}{func(n, m)}" for m in range(6))
+
+    potential = "eps4*((sigma/r)^12-(sigma/r)^6)+Qprod/r"
+    potential += f"+step(r-{rs})*(eps4*(sigma^12*({S(12)})-sigma^6*({S(6)}))+Qprod*({S(1)}))"
+    mixing_rules = "; Qprod=Q1*Q2"
+    mixing_rules += "; sigma=halfsig1+halfsig2"
+    mixing_rules += "; eps4=sqrt4eps1*sqrt4eps2"
     force = openmm.CustomNonbondedForce(potential + mixing_rules)
-    for parameter in ['Q', 'halfsig', 'sqrt4eps']:
+    for parameter in ["Q", "halfsig", "sqrt4eps"]:
         force.addPerParticleParameter(parameter)
     force.setNonbondedMethod(force.CutoffPeriodic if periodic else force.CutoffNonPeriodic)
     force.setCutoffDistance(inner_cutoff)
@@ -97,25 +112,25 @@ def add_inner_nonbonded_force(system, inner_switch, inner_cutoff, force_group_in
     ONE_4PI_EPS0 = 138.93545764438198
     for index in range(nonbonded_force.getNumParticles()):
         charge, sigma, epsilon = map(_standardized, nonbonded_force.getParticleParameters(index))
-        force.addParticle([charge*np.sqrt(ONE_4PI_EPS0), sigma/2, np.sqrt(4*epsilon)])
+        force.addParticle([charge * np.sqrt(ONE_4PI_EPS0), sigma / 2, np.sqrt(4 * epsilon)])
     non_exclusion_exceptions = []
     for index in range(nonbonded_force.getNumExceptions()):
         i, j, q1q2, sigma, epsilon = nonbonded_force.getExceptionParameters(index)
         q1q2, sigma, epsilon = map(_standardized, [q1q2, sigma, epsilon])
         force.addExclusion(i, j)
         if q1q2 != 0.0 or epsilon != 0.0:
-            non_exclusion_exceptions.append((i, j, q1q2*ONE_4PI_EPS0, sigma, 4*epsilon))
+            non_exclusion_exceptions.append((i, j, q1q2 * ONE_4PI_EPS0, sigma, 4 * epsilon))
     force.setForceGroup(force_group_index)
     system.addForce(force)
     if non_exclusion_exceptions:
-        exceptions = openmm.CustomBondForce(f'step({rc}-r)*({potential})')
-        for parameter in ['Qprod', 'sigma', 'eps4']:
+        exceptions = openmm.CustomBondForce(f"step({rc}-r)*({potential})")
+        for parameter in ["Qprod", "sigma", "eps4"]:
             exceptions.addPerBondParameter(parameter)
         for i, j, Qprod, sigma, eps4 in non_exclusion_exceptions:
             exceptions.addBond(i, j, [Qprod, sigma, eps4])
         exceptions.setForceGroup(force_group_index)
         system.addForce(exceptions)
-    nonbonded_force.setForceGroup(force_group_index+1)
+    nonbonded_force.setForceGroup(force_group_index + 1)
 
 
 class CustomIntegrator(openmm.CustomIntegrator):
@@ -138,7 +153,7 @@ class CustomIntegrator(openmm.CustomIntegrator):
     def __init__(self, temperature, step_size):
         super().__init__(step_size)
         self.temperature = temperature
-        self.addPerDofVariable('kT', unit.MOLAR_GAS_CONSTANT_R*temperature)
+        self.addPerDofVariable("kT", unit.MOLAR_GAS_CONSTANT_R * temperature)
         self._up_to_date = False
 
     def __repr__(self):
@@ -153,49 +168,49 @@ class CustomIntegrator(openmm.CustomIntegrator):
         """
         readable_lines = []
 
-        self.getNumPerDofVariables() > 0 and readable_lines.append('Per-dof variables:')
+        self.getNumPerDofVariables() > 0 and readable_lines.append("Per-dof variables:")
         per_dof = []
         for index in range(self.getNumPerDofVariables()):
             per_dof.append(self.getPerDofVariableName(index))
-        readable_lines.append('  ' + ', '.join(per_dof))
+        readable_lines.append("  " + ", ".join(per_dof))
 
-        self.getNumGlobalVariables() > 0 and readable_lines.append('Global variables:')
+        self.getNumGlobalVariables() > 0 and readable_lines.append("Global variables:")
         for index in range(self.getNumGlobalVariables()):
             name = self.getGlobalVariableName(index)
             value = self.getGlobalVariable(index)
-            readable_lines.append(f'  {name} = {value}')
+            readable_lines.append(f"  {name} = {value}")
 
-        readable_lines.append('Computation steps:')
+        readable_lines.append("Computation steps:")
 
         step_type_str = [
-            '{target} <- {expr}',
-            '{target} <- {expr}',
-            '{target} <- sum({expr})',
-            'constrain positions',
-            'constrain velocities',
-            'allow forces to update the context state',
-            'if ({expr}):',
-            'while ({expr}):',
-            'end'
+            "{target} <- {expr}",
+            "{target} <- {expr}",
+            "{target} <- sum({expr})",
+            "constrain positions",
+            "constrain velocities",
+            "allow forces to update the context state",
+            "if ({expr}):",
+            "while ({expr}):",
+            "end",
         ]
         indent_level = 0
         for step in range(self.getNumComputations()):
-            line = ''
+            line = ""
             step_type, target, expr = self.getComputationStep(step)
             if step_type == 8:
                 indent_level -= 1
             command = step_type_str[step_type].format(target=target, expr=expr)
-            line += '{:4d}: '.format(step) + '   '*indent_level + command
+            line += "{:4d}: ".format(step) + "   " * indent_level + command
             if step_type in [6, 7]:
                 indent_level += 1
             readable_lines.append(line)
-        return '\n'.join(readable_lines)
+        return "\n".join(readable_lines)
 
     def update_temperatures(self, system_temperature, extended_space_temperatures):
-        nparticles = len(self.getPerDofVariableByName('kT')) - len(extended_space_temperatures)
-        temperatures = [system_temperature]*nparticles + extended_space_temperatures
-        kT = [unit.MOLAR_GAS_CONSTANT_R*T*openmm.Vec3(1, 1, 1) for T in temperatures]
-        self.setPerDofVariableByName('kT', kT)
+        nparticles = len(self.getPerDofVariableByName("kT")) - len(extended_space_temperatures)
+        temperatures = [system_temperature] * nparticles + extended_space_temperatures
+        kT = [unit.MOLAR_GAS_CONSTANT_R * T * openmm.Vec3(1, 1, 1) for T in temperatures]
+        self.setPerDofVariableByName("kT", kT)
         self._up_to_date = True
 
     def step(self, steps):
@@ -342,11 +357,20 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
 
     """
 
-    def __init__(self, temperature, step_size, num_rattles=0, scheme='VV-Middle',
-                 respa_loops=[1], bath_loops=1, intertwine=True, embodied_force_groups=[],
-                 unroll_loops=True):
-        if scheme not in ['LF-Middle', 'VV-Middle']:
-            raise Exception(f'Invalid value {scheme} for keyword scheme')
+    def __init__(
+        self,
+        temperature,
+        step_size,
+        num_rattles=0,
+        scheme="VV-Middle",
+        respa_loops=[1],
+        bath_loops=1,
+        intertwine=True,
+        embodied_force_groups=[],
+        unroll_loops=True,
+    ):
+        if scheme not in ["LF-Middle", "VV-Middle"]:
+            raise Exception(f"Invalid value {scheme} for keyword scheme")
         super().__init__(temperature, step_size)
         self._num_rattles = num_rattles
         self._scheme = scheme
@@ -354,25 +378,25 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
         self._bath_loops = bath_loops
         self._intertwine = intertwine
         self._subtractive_groups = embodied_force_groups
-        num_rattles > 0 and self.addPerDofVariable('x0', 0)
-        num_rattles > 1 and self.addGlobalVariable('irattle', 0)
+        num_rattles > 0 and self.addPerDofVariable("x0", 0)
+        num_rattles > 1 and self.addGlobalVariable("irattle", 0)
         if not unroll_loops:
             for scale, n in enumerate(respa_loops):
-                n > 1 and self.addGlobalVariable(f'irespa{scale}', 0)
-            bath_loops > 1 and self.addGlobalVariable('ibath', 0)
+                n > 1 and self.addGlobalVariable(f"irespa{scale}", 0)
+            bath_loops > 1 and self.addGlobalVariable("ibath", 0)
         if embodied_force_groups:
-            if openmm.__version__ < '7.5':
-                raise Exception('Use of `embodied_force_groups` option requires OpenMM >= 7.5')
-            self.addPerDofVariable('f_emb', 0)
+            if openmm.__version__ < "7.5":
+                raise Exception("Use of `embodied_force_groups` option requires OpenMM >= 7.5")
+            self.addPerDofVariable("f_emb", 0)
             integration_groups = set(range(len(respa_loops))) - set(embodied_force_groups)
             self.setIntegrationForceGroups(integration_groups)
 
         self.addUpdateContextState()
         self._step_initialization()
         if unroll_loops:
-            self._integrate_respa_unrolled(1, len(respa_loops)-1)
+            self._integrate_respa_unrolled(1, len(respa_loops) - 1)
         else:
-            self._integrate_respa(1, len(respa_loops)-1)
+            self._integrate_respa(1, len(respa_loops) - 1)
 
     def _step_initialization(self):
         pass
@@ -381,69 +405,73 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
         if scale >= 0:
             n = self._respa_loops[scale]
             if n > 1:
-                self.addComputeGlobal(f'irespa{scale}', '0')
-                self.beginWhileBlock(f'irespa{scale} < {n-1/2}')
-            self._boost(fraction/(2*n if self._scheme == 'VV-Middle' else n), scale)
-            self._integrate_respa(fraction/n, scale-1)
-            self._scheme == 'VV-Middle' and self._boost(fraction/(2*n), scale)
+                self.addComputeGlobal(f"irespa{scale}", "0")
+                self.beginWhileBlock(f"irespa{scale} < {n-1/2}")
+            self._boost(fraction / (2 * n if self._scheme == "VV-Middle" else n), scale)
+            self._integrate_respa(fraction / n, scale - 1)
+            self._scheme == "VV-Middle" and self._boost(fraction / (2 * n), scale)
             if n > 1:
-                self.addComputeGlobal(f'irespa{scale}', f'irespa{scale} + 1')
+                self.addComputeGlobal(f"irespa{scale}", f"irespa{scale} + 1")
                 self.endBlock()
         else:
-            self._intertwine or self._translation(0.5*fraction)
+            self._intertwine or self._translation(0.5 * fraction)
             n = self._bath_loops
             if n > 1:
-                self.addComputeGlobal('ibath', '0')
-                self.beginWhileBlock(f'ibath < {n-1/2}')
-            self._intertwine and self._translation(0.5*fraction/n)
-            self._bath(fraction/n)
+                self.addComputeGlobal("ibath", "0")
+                self.beginWhileBlock(f"ibath < {n-1/2}")
+            self._intertwine and self._translation(0.5 * fraction / n)
+            self._bath(fraction / n)
             self._num_rattles > 0 and self.addConstrainVelocities()
-            self._intertwine and self._translation(0.5*fraction/n)
+            self._intertwine and self._translation(0.5 * fraction / n)
             if n > 1:
-                self.addComputeGlobal('ibath', 'ibath + 1')
+                self.addComputeGlobal("ibath", "ibath + 1")
                 self.endBlock()
-            self._intertwine or self._translation(0.5*fraction)
+            self._intertwine or self._translation(0.5 * fraction)
 
     def _integrate_respa_unrolled(self, fraction, scale):
         if scale >= 0:
             n = self._respa_loops[scale]
             for i in range(n):
-                self._boost(fraction/(2*n if self._scheme == 'VV-Middle' and i == 0 else n), scale)
-                self._integrate_respa_unrolled(fraction/n, scale-1)
-                self._scheme == 'VV-Middle' and i == n-1 and self._boost(fraction/(2*n), scale)
+                self._boost(
+                    fraction / (2 * n if self._scheme == "VV-Middle" and i == 0 else n), scale
+                )
+                self._integrate_respa_unrolled(fraction / n, scale - 1)
+                self._scheme == "VV-Middle" and i == n - 1 and self._boost(
+                    fraction / (2 * n), scale
+                )
         else:
             n = self._bath_loops
-            self._intertwine or self._translation(0.5*fraction)
+            self._intertwine or self._translation(0.5 * fraction)
             for i in range(n):
-                self._intertwine and self._translation(fraction/(2*n if i == 0 else n))
-                self._bath(fraction/n)
+                self._intertwine and self._translation(fraction / (2 * n if i == 0 else n))
+                self._bath(fraction / n)
                 self._num_rattles > 0 and self.addConstrainVelocities()
-                i == n-1 and self._intertwine and self._translation(fraction/(2*n))
-            self._intertwine or self._translation(0.5*fraction)
+                i == n - 1 and self._intertwine and self._translation(fraction / (2 * n))
+            self._intertwine or self._translation(0.5 * fraction)
 
     def _translation(self, fraction):
         if self._num_rattles > 1:
-            self.addComputeGlobal('irattle', '0')
-            self.beginWhileBlock(f'irattle < {self._num_rattles-1/2}')
-        self.addComputePerDof('x', f'x + {fraction/max(1, self._num_rattles)}*dt*v')
+            self.addComputeGlobal("irattle", "0")
+            self.beginWhileBlock(f"irattle < {self._num_rattles-1/2}")
+        self.addComputePerDof("x", f"x + {fraction/max(1, self._num_rattles)}*dt*v")
         if self._num_rattles > 0:
-            self.addComputePerDof('x0', 'x')
+            self.addComputePerDof("x0", "x")
             self.addConstrainPositions()
-            self.addComputePerDof('v', f'v + (x - x0)/({fraction/self._num_rattles}*dt)')
+            self.addComputePerDof("v", f"v + (x - x0)/({fraction/self._num_rattles}*dt)")
             self.addConstrainVelocities()
         if self._num_rattles > 1:
-            self.addComputeGlobal('irattle', 'irattle + 1')
+            self.addComputeGlobal("irattle", "irattle + 1")
             self.endBlock()
 
     def _boost(self, fraction, scale):
         if len(self._respa_loops) > 1:
-            if scale-1 in self._subtractive_groups:
-                self.addComputePerDof('f_emb', f'f{scale-1}')
-                self.addComputePerDof('v', f'v + {fraction}*dt*(f{scale}-f_emb)/m')
+            if scale - 1 in self._subtractive_groups:
+                self.addComputePerDof("f_emb", f"f{scale-1}")
+                self.addComputePerDof("v", f"v + {fraction}*dt*(f{scale}-f_emb)/m")
             else:
-                self.addComputePerDof('v', f'v + {fraction}*dt*f{scale}/m')
+                self.addComputePerDof("v", f"v + {fraction}*dt*f{scale}/m")
         else:
-            self.addComputePerDof('v', f'v + {fraction}*dt*f/m')
+            self.addComputePerDof("v", f"v + {fraction}*dt*f/m")
         self._num_rattles > 0 and self.addConstrainVelocities()
 
     def _bath(self, fraction):
@@ -509,14 +537,21 @@ class GeodesicLangevinIntegrator(AbstractMiddleRespaIntegrator):
 
     """
 
-    def __init__(self, temperature, friction_coefficient, step_size,
-                 num_rattles=1, scheme='LF-Middle', **kwargs):
+    def __init__(
+        self,
+        temperature,
+        friction_coefficient,
+        step_size,
+        num_rattles=1,
+        scheme="LF-Middle",
+        **kwargs,
+    ):
         super().__init__(temperature, step_size, num_rattles=num_rattles, scheme=scheme, **kwargs)
-        self.addGlobalVariable('friction', friction_coefficient)
+        self.addGlobalVariable("friction", friction_coefficient)
 
     def _bath(self, fraction):
-        expression = f'z*v + sqrt((1 - z*z)*kT/m)*gaussian; z = exp(-friction*{fraction}*dt)'
-        self.addComputePerDof('v', expression)
+        expression = f"z*v + sqrt((1 - z*z)*kT/m)*gaussian; z = exp(-friction*{fraction}*dt)"
+        self.addComputePerDof("v", expression)
 
 
 class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
@@ -575,35 +610,42 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
 
     """
 
-    def __init__(self, temperature, time_constant, step_size, nchain=2, track_energy=False, **kwargs):
-        if 'num_rattles' in kwargs.keys() and kwargs['num_rattles'] != 0:
-            raise ValueError(f'{self.__class__.__name__} cannot handle constraints')
+    def __init__(
+        self, temperature, time_constant, step_size, nchain=2, track_energy=False, **kwargs
+    ):
+        if "num_rattles" in kwargs.keys() and kwargs["num_rattles"] != 0:
+            raise ValueError(f"{self.__class__.__name__} cannot handle constraints")
         self._tau = _standardized(time_constant)
         self._nchain = nchain
         self._track_energy = track_energy
         super().__init__(temperature, step_size, **kwargs)
-        self.addPerDofVariable('Q', 0)
+        self.addPerDofVariable("Q", 0)
         for i in range(nchain):
-            self.addPerDofVariable(f'v{i+1}', 0)
+            self.addPerDofVariable(f"v{i+1}", 0)
             if track_energy:
-                self.addPerDofVariable(f'eta{i+1}', 0)
+                self.addPerDofVariable(f"eta{i+1}", 0)
 
     def update_temperatures(self, system_temperature, extended_space_temperatures):
         super().update_temperatures(system_temperature, extended_space_temperatures)
-        Q = [self._tau**2*kT for kT in self.getPerDofVariableByName('kT')]
-        self.setPerDofVariableByName('Q', Q)
+        Q = [self._tau**2 * kT for kT in self.getPerDofVariableByName("kT")]
+        self.setPerDofVariableByName("Q", Q)
 
     def _bath(self, fraction):
         n = self._nchain
-        def a(i): return f'(Q*v{i-1}^2 - kT)/Q' if i > 1 else '(m*v^2 - kT)/Q'
-        def z(i): return f'exp(-{fraction/4}*dt*v{i+1})'
-        self.addComputePerDof(f'v{n}', f'v{n} + {fraction/2}*dt*{a(n)}')
+
+        def a(i):
+            return f"(Q*v{i-1}^2 - kT)/Q" if i > 1 else "(m*v^2 - kT)/Q"
+
+        def z(i):
+            return f"exp(-{fraction/4}*dt*v{i+1})"
+
+        self.addComputePerDof(f"v{n}", f"v{n} + {fraction/2}*dt*{a(n)}")
         for i in reversed(range(1, n)):
-            self.addComputePerDof(f'v{i}', f'(v{i}*z + {fraction/2}*dt*{a(i)})*z; z={z(i)}')
-        self.addComputePerDof('v', f'v*exp(-{fraction}*dt*v1)')
+            self.addComputePerDof(f"v{i}", f"(v{i}*z + {fraction/2}*dt*{a(i)})*z; z={z(i)}")
+        self.addComputePerDof("v", f"v*exp(-{fraction}*dt*v1)")
         for i in range(1, n):
-            self.addComputePerDof(f'v{i}', f'(v{i}*z + {fraction/2}*dt*{a(i)})*z; z={z(i)}')
-        self.addComputePerDof(f'v{n}', f'v{n} + {fraction/2}*dt*{a(n)}')
+            self.addComputePerDof(f"v{i}", f"(v{i}*z + {fraction/2}*dt*{a(i)})*z; z={z(i)}")
+        self.addComputePerDof(f"v{n}", f"v{n} + {fraction/2}*dt*{a(n)}")
 
 
 class MiddleMassiveGGMTIntegrator(AbstractMiddleRespaIntegrator):
@@ -649,40 +691,43 @@ class MiddleMassiveGGMTIntegrator(AbstractMiddleRespaIntegrator):
            9: v <- v + 0.5*dt*f/m
 
     """
+
     def __init__(self, temperature, time_constant, step_size, **kwargs):
-        if 'num_rattles' in kwargs.keys() and kwargs['num_rattles'] != 0:
-            raise ValueError(f'{self.__class__.__name__} cannot handle constraints')
+        if "num_rattles" in kwargs.keys() and kwargs["num_rattles"] != 0:
+            raise ValueError(f"{self.__class__.__name__} cannot handle constraints")
         self._tau = _standardized(time_constant)
         super().__init__(temperature, step_size, **kwargs)
-        self.addPerDofVariable('Q1', 0)
-        self.addPerDofVariable('Q2', 0)
-        self.addPerDofVariable('v1', 0)
-        self.addPerDofVariable('v2', 0)
+        self.addPerDofVariable("Q1", 0)
+        self.addPerDofVariable("Q2", 0)
+        self.addPerDofVariable("v1", 0)
+        self.addPerDofVariable("v2", 0)
 
     def set_extended_space_time_constants(self, time_constants):
         self._xs_taus = [_standardized(tau) for tau in time_constants]
 
     def update_temperatures(self, system_temperature, extended_space_temperatures):
         super().update_temperatures(system_temperature, extended_space_temperatures)
-        kT_vectors = self.getPerDofVariableByName('kT')
+        kT_vectors = self.getPerDofVariableByName("kT")
         kT3_vectors = [openmm.Vec3(kT.x**3, kT.y**3, kT.z**3) for kT in kT_vectors]
-        if hasattr(self, '_xs_taus'):
+        if hasattr(self, "_xs_taus"):
             num_particles = len(kT_vectors) - len(extended_space_temperatures)
-            taus = [self._tau]*num_particles + self._xs_taus
-            Q1 = [kT*tau**2 for kT, tau in zip(kT_vectors, taus)]
-            Q2 = [8/3*kT3*tau**2 for kT3, tau in zip(kT3_vectors, taus)]
+            taus = [self._tau] * num_particles + self._xs_taus
+            Q1 = [kT * tau**2 for kT, tau in zip(kT_vectors, taus)]
+            Q2 = [8 / 3 * kT3 * tau**2 for kT3, tau in zip(kT3_vectors, taus)]
         else:
-            Q1 = [kT*self._tau**2 for kT in kT_vectors]
-            Q2 = [8/3*kT3*self._tau**2 for kT3 in kT3_vectors]
-        self.setPerDofVariableByName('Q1', Q1)
-        self.setPerDofVariableByName('Q2', Q2)
+            Q1 = [kT * self._tau**2 for kT in kT_vectors]
+            Q2 = [8 / 3 * kT3 * self._tau**2 for kT3 in kT3_vectors]
+        self.setPerDofVariableByName("Q1", Q1)
+        self.setPerDofVariableByName("Q2", Q2)
 
     def _bath(self, fraction):
-        self.addComputePerDof('v1', f'v1 + {fraction/2}*dt*(m*v^2 - kT)/Q1')
-        self.addComputePerDof('v2', f'v2 + {fraction/2}*dt*((m*v^2)^2/3 - kT^2)/Q2')
-        self.addComputePerDof('v', f'v*exp(-{fraction}*dt*(v1 + kT*v2))/sqrt(1 + {2*fraction}*dt*m*v^2*v2/3)')
-        self.addComputePerDof('v1', f'v1 + {fraction/2}*dt*(m*v^2 - kT)/Q1')
-        self.addComputePerDof('v2', f'v2 + {fraction/2}*dt*((m*v^2)^2/3 - kT^2)/Q2')
+        self.addComputePerDof("v1", f"v1 + {fraction/2}*dt*(m*v^2 - kT)/Q1")
+        self.addComputePerDof("v2", f"v2 + {fraction/2}*dt*((m*v^2)^2/3 - kT^2)/Q2")
+        self.addComputePerDof(
+            "v", f"v*exp(-{fraction}*dt*(v1 + kT*v2))/sqrt(1 + {2*fraction}*dt*m*v^2*v2/3)"
+        )
+        self.addComputePerDof("v1", f"v1 + {fraction/2}*dt*(m*v^2 - kT)/Q1")
+        self.addComputePerDof("v2", f"v2 + {fraction/2}*dt*((m*v^2)^2/3 - kT^2)/Q2")
 
 
 class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
@@ -793,72 +838,82 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
 
     """
 
-    def __init__(self, temperature, time_constant, friction_coefficient, step_size,
-                 regulation_parameter, semi_regulated=True, split_ornstein_uhlenbeck=True,
-                 **kwargs):
-        if 'num_rattles' in kwargs.keys() and kwargs['num_rattles'] != 0:
-            raise ValueError(f'{self.__class__.__name__} cannot handle constraints')
-        self._tau = np.sqrt(regulation_parameter)*time_constant
+    def __init__(
+        self,
+        temperature,
+        time_constant,
+        friction_coefficient,
+        step_size,
+        regulation_parameter,
+        semi_regulated=True,
+        split_ornstein_uhlenbeck=True,
+        **kwargs,
+    ):
+        if "num_rattles" in kwargs.keys() and kwargs["num_rattles"] != 0:
+            raise ValueError(f"{self.__class__.__name__} cannot handle constraints")
+        self._tau = np.sqrt(regulation_parameter) * time_constant
         self._n = regulation_parameter
         self._split = split_ornstein_uhlenbeck
         self._semi_regulated = semi_regulated
         super().__init__(temperature, step_size, **kwargs)
-        self.addPerDofVariable('invQ', 0)
-        self.addPerDofVariable('v_eta', 0)
-        self.addPerDofVariable('c', 0)
-        self.addGlobalVariable('friction', friction_coefficient)
-        self.addGlobalVariable('omega', 1.0/self._tau)
-        self.addGlobalVariable('aa', 0)
-        self.addGlobalVariable('bb', 0)
+        self.addPerDofVariable("invQ", 0)
+        self.addPerDofVariable("v_eta", 0)
+        self.addPerDofVariable("c", 0)
+        self.addGlobalVariable("friction", friction_coefficient)
+        self.addGlobalVariable("omega", 1.0 / self._tau)
+        self.addGlobalVariable("aa", 0)
+        self.addGlobalVariable("bb", 0)
 
     def update_temperatures(self, system_temperature, extended_space_temperatures):
         super().update_temperatures(system_temperature, extended_space_temperatures)
-        kT_vectors = self.getPerDofVariableByName('kT')
-        tauSq = _standardized(self._tau)**2
-        Q = [tauSq*kT for kT in kT_vectors]
-        invQ = [openmm.Vec3(*map(lambda x: 1/x if x > 0.0 else 0.0, q)) for q in Q]
-        self.setPerDofVariableByName('invQ', invQ)
+        kT_vectors = self.getPerDofVariableByName("kT")
+        tauSq = _standardized(self._tau) ** 2
+        Q = [tauSq * kT for kT in kT_vectors]
+        invQ = [openmm.Vec3(*map(lambda x: 1 / x if x > 0.0 else 0.0, q)) for q in Q]
+        self.setPerDofVariableByName("invQ", invQ)
 
     def _step_initialization(self):
-        self.addComputePerDof('c', f'sqrt({self._n}*kT/m)')
-        n = np.prod(self._respa_loops)*self._bath_loops
-        self.addComputeGlobal('aa', f'exp(-friction*dt/{n})')
-        self.addComputeGlobal('bb', 'omega*sqrt(1-aa^2)')
+        self.addComputePerDof("c", f"sqrt({self._n}*kT/m)")
+        n = np.prod(self._respa_loops) * self._bath_loops
+        self.addComputeGlobal("aa", f"exp(-friction*dt/{n})")
+        self.addComputeGlobal("bb", "omega*sqrt(1-aa^2)")
 
     def _translation(self, fraction):
         n = self._n
         if self._semi_regulated:
-            expression = f'0.5*m*v*c*tanh(v/c); c=sqrt({n}*kT/m)'
+            expression = f"0.5*m*v*c*tanh(v/c); c=sqrt({n}*kT/m)"
         else:
-            expression = f'{0.5*(n+1)/n}*m*(c*tanh(v/c))^2; c=sqrt({n}*kT/m)'
+            expression = f"{0.5*(n+1)/n}*m*(c*tanh(v/c))^2; c=sqrt({n}*kT/m)"
         self.setKineticEnergyExpression(expression)
-        self.addComputePerDof('x', f'x + c*tanh(v/c)*{fraction}*dt')
+        self.addComputePerDof("x", f"x + c*tanh(v/c)*{fraction}*dt")
 
     def _bath(self, fraction):
         n = self._n
 
         if self._semi_regulated:
-            G = '; G=(m*v*c*tanh(v/c) - kT)*invQ'
+            G = "; G=(m*v*c*tanh(v/c) - kT)*invQ"
         else:
-            G = f'; G=({(n+1)/n}*m*(c*tanh(v/c))^2 - kT)*invQ'
+            G = f"; G=({(n+1)/n}*m*(c*tanh(v/c))^2 - kT)*invQ"
 
         if self._split:
-            boost = f'v_eta + G*{0.5*fraction}*dt' + G
+            boost = f"v_eta + G*{0.5*fraction}*dt" + G
 
         if self._semi_regulated:
-            scaling = f'v*exp(-v_eta*{0.5*fraction}*dt)'
+            scaling = f"v*exp(-v_eta*{0.5*fraction}*dt)"
         else:
-            scaling = 'c*asinh_z'
-            scaling += '; asinh_z=(2*step(z)-1)*log(select(step(za-1E8),2*za,za+sqrt(1+z*z))); za=abs(z)'
-            scaling += f'; z=sinh(v/c)*exp(-v_eta*{0.5*fraction}*dt)'
+            scaling = "c*asinh_z"
+            scaling += (
+                "; asinh_z=(2*step(z)-1)*log(select(step(za-1E8),2*za,za+sqrt(1+z*z))); za=abs(z)"
+            )
+            scaling += f"; z=sinh(v/c)*exp(-v_eta*{0.5*fraction}*dt)"
 
         if self._split:
-            Ornstein_Uhlenbeck = 'v_eta*aa + bb*gaussian'
+            Ornstein_Uhlenbeck = "v_eta*aa + bb*gaussian"
         else:
-            Ornstein_Uhlenbeck = 'v_eta*aa + G*(1-aa)/friction + bb*gaussian' + G
+            Ornstein_Uhlenbeck = "v_eta*aa + G*(1-aa)/friction + bb*gaussian" + G
 
-        self._split and self.addComputePerDof('v_eta', boost)
-        self.addComputePerDof('v', scaling)
-        self.addComputePerDof('v_eta', Ornstein_Uhlenbeck)
-        self.addComputePerDof('v', scaling)
-        self._split and self.addComputePerDof('v_eta', boost)
+        self._split and self.addComputePerDof("v_eta", boost)
+        self.addComputePerDof("v", scaling)
+        self.addComputePerDof("v_eta", Ornstein_Uhlenbeck)
+        self.addComputePerDof("v", scaling)
+        self._split and self.addComputePerDof("v_eta", boost)

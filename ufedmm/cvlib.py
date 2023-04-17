@@ -16,17 +16,17 @@
 
 """
 
-import re
 import itertools
 import math
-import openmm
-
+import re
 from collections import namedtuple
+
+import openmm
 from openmm import unit
+
 from ufedmm.ufedmm import _standardized
 
-
-_ParamTuple = namedtuple('_ParamTuple', 'charge sigma epsilon')
+_ParamTuple = namedtuple("_ParamTuple", "charge sigma epsilon")
 
 
 class SquareRadiusOfGyration(openmm.CustomBondForce):
@@ -63,7 +63,7 @@ class SquareRadiusOfGyration(openmm.CustomBondForce):
     """
 
     def __init__(self, group):
-        super().__init__(f'r^2/{len(group)**2}')
+        super().__init__(f"r^2/{len(group)**2}")
         self.setUsesPeriodicBoundaryConditions(False)
         for i, j in itertools.combinations(group, 2):
             self.addBond(i, j)
@@ -103,12 +103,12 @@ class RadiusOfGyration(openmm.CustomCVForce):
     """
 
     def __init__(self, group):
-        RgSq = openmm.CustomBondForce('r^2')
+        RgSq = openmm.CustomBondForce("r^2")
         RgSq.setUsesPeriodicBoundaryConditions(False)
         for i, j in itertools.combinations(group, 2):
             RgSq.addBond(i, j)
-        super().__init__(f'sqrt(RgSq)/{len(group)}')
-        self.addCollectiveVariable('RgSq', RgSq)
+        super().__init__(f"sqrt(RgSq)/{len(group)}")
+        self.addCollectiveVariable("RgSq", RgSq)
 
 
 class CoordinationNumber(openmm.CustomNonbondedForce):
@@ -191,18 +191,18 @@ class CoordinationNumber(openmm.CustomNonbondedForce):
 
     """
 
-    def __init__(self, system, group1, group2, n=6, r0=4*unit.angstroms):
-        super().__init__(f'1/(1+(r/r0)^{n})')
+    def __init__(self, system, group1, group2, n=6, r0=4 * unit.angstroms):
+        super().__init__(f"1/(1+(r/r0)^{n})")
         if system.usesPeriodicBoundaryConditions():
             self.setNonbondedMethod(openmm.CustomNonbondedForce.CutoffPeriodic)
         else:
             self.setNonbondedMethod(openmm.CustomNonbondedForce.CutoffNonPeriodic)
         for i in range(system.getNumParticles()):
             self.addParticle([])
-        self.addGlobalParameter('r0', r0)
+        self.addGlobalParameter("r0", r0)
         self.setUseSwitchingFunction(True)
         self.setSwitchingDistance(r0)
-        self.setCutoffDistance(2*r0)
+        self.setCutoffDistance(2 * r0)
         self.setUseLongRangeCorrection(False)
         self.addInteractionGroup(group1, group2)
 
@@ -243,17 +243,18 @@ class HelixAngleContent(openmm.CustomAngleForce):
 
     """
 
-    def __init__(self, topology, first, last,
-                 n=6, theta_ref=88*unit.degrees, theta_tol=15*unit.degrees):
+    def __init__(
+        self, topology, first, last, n=6, theta_ref=88 * unit.degrees, theta_tol=15 * unit.degrees
+    ):
         residues = [r for r in topology.residues() if first <= r.index <= last]
         if len(set(r.chain.index for r in residues)) > 1:
-            raise ValueError('AngleHelixContent requires all residues in a single chain')
+            raise ValueError("AngleHelixContent requires all residues in a single chain")
         if n % 2 != 0:
             raise ValueError("AngleHelixContent requires n to be an even integer number")
-        super().__init__(f'1/({last-first-1}*(1+x^{n})); x=(theta - theta_ref)/theta_tol')
-        self.addGlobalParameter('theta_ref', theta_ref)
-        self.addGlobalParameter('theta_tol', theta_tol)
-        alpha_carbons = [atom.index for r in residues for atom in r.atoms() if atom.name == 'CA']
+        super().__init__(f"1/({last-first-1}*(1+x^{n})); x=(theta - theta_ref)/theta_tol")
+        self.addGlobalParameter("theta_ref", theta_ref)
+        self.addGlobalParameter("theta_tol", theta_tol)
+        alpha_carbons = [atom.index for r in residues for atom in r.atoms() if atom.name == "CA"]
         for i, j, k in zip(alpha_carbons[0:-2], alpha_carbons[1:-1], alpha_carbons[2:]):
             self.addAngle(i, j, k, [])
 
@@ -289,14 +290,14 @@ class HelixHydrogenBondContent(openmm.CustomBondForce):
 
     """
 
-    def __init__(self, topology, first, last, n=6, d0=3.3*unit.angstroms):
+    def __init__(self, topology, first, last, n=6, d0=3.3 * unit.angstroms):
         residues = [r for r in topology.residues() if first <= r.index <= last]
         if len(set(r.chain.index for r in residues)) > 1:
-            raise ValueError('HelixHydrogenBondContent requires all residues in a single chain')
-        super().__init__(f'1/({last-first-2}*(1+x^{n})); x=r/d0')
-        self.addGlobalParameter('d0', d0)
-        reH = re.compile('\\b(H|1H|HN1|HT1|H1|HN)\\b')
-        reO = re.compile('\\b(O|OCT1|OC1|OT1|O1)\\b')
+            raise ValueError("HelixHydrogenBondContent requires all residues in a single chain")
+        super().__init__(f"1/({last-first-2}*(1+x^{n})); x=r/d0")
+        self.addGlobalParameter("d0", d0)
+        reH = re.compile("\\b(H|1H|HN1|HT1|H1|HN)\\b")
+        reO = re.compile("\\b(O|OCT1|OC1|OT1|O1)\\b")
         oxygens = [atom.index for r in residues for atom in r.atoms() if re.match(reO, atom.name)]
         hydrogens = [atom.index for r in residues for atom in r.atoms() if re.match(reH, atom.name)]
         for i, j in zip(oxygens[:-3], hydrogens[3:]):
@@ -354,19 +355,26 @@ class HelixRamachandranContent(openmm.CustomTorsionForce):
 
     """
 
-    def __init__(self, topology, first, last, n=6,
-                 phi_ref=-63.8*unit.degrees, phi_tol=25*unit.degrees,
-                 psi_ref=-41.1*unit.degrees, psi_tol=25*unit.degrees):
-
+    def __init__(
+        self,
+        topology,
+        first,
+        last,
+        n=6,
+        phi_ref=-63.8 * unit.degrees,
+        phi_tol=25 * unit.degrees,
+        psi_ref=-41.1 * unit.degrees,
+        psi_tol=25 * unit.degrees,
+    ):
         residues = [r for r in topology.residues() if first <= r.index <= last]
         if len(set(r.chain.index for r in residues)) > 1:
-            raise ValueError('HelixRamachandranContent requires all residues in a single chain')
-        super().__init__(f'1/({2*(last-first)}*(1+x^{n})); x=(theta - theta_ref)/theta_tol')
-        self.addPerTorsionParameter('theta_ref')
-        self.addPerTorsionParameter('theta_tol')
-        C = [atom.index for r in residues for atom in r.atoms() if atom.name == 'C']
-        N = [atom.index for r in residues for atom in r.atoms() if atom.name == 'N']
-        CA = [atom.index for r in residues for atom in r.atoms() if atom.name == 'CA']
+            raise ValueError("HelixRamachandranContent requires all residues in a single chain")
+        super().__init__(f"1/({2*(last-first)}*(1+x^{n})); x=(theta - theta_ref)/theta_tol")
+        self.addPerTorsionParameter("theta_ref")
+        self.addPerTorsionParameter("theta_tol")
+        C = [atom.index for r in residues for atom in r.atoms() if atom.name == "C"]
+        N = [atom.index for r in residues for atom in r.atoms() if atom.name == "N"]
+        CA = [atom.index for r in residues for atom in r.atoms() if atom.name == "CA"]
         for i, j, k, l in zip(C[:-1], N[1:], CA[1:], C[1:]):
             self.addTorsion(i, j, k, l, [phi_ref, phi_tol])
         for i, j, k, l in zip(N[:-1], CA[:-1], C[:-1], N[1:]):
@@ -382,7 +390,7 @@ class HelixRamachandranContent(openmm.CustomTorsionForce):
                 The indices of the atoms in the :math:`\\psi` dihedrals.
 
         """
-        N = self.getNumTorsions()//2
+        N = self.getNumTorsions() // 2
         phi_indices = []
         psi_indices = []
         for index in range(N):
@@ -411,7 +419,7 @@ class _InOutForce(openmm.CustomNonbondedForce):
     def _get_parameters(self, nbforce):
         parameters = []
         for i in range(nbforce.getNumParticles()):
-            charge, sigma, epsilon = [p/p.unit for p in nbforce.getParticleParameters(i)]
+            charge, sigma, epsilon = [p / p.unit for p in nbforce.getParticleParameters(i)]
             parameters.append(_ParamTuple(charge, sigma if epsilon != 0.0 else 1.0, epsilon))
         return parameters
 
@@ -422,14 +430,14 @@ class _InOutForce(openmm.CustomNonbondedForce):
             i_in_group, j_in_group = i in group, j in group
             if i_in_group and j_in_group:
                 internal_exception_pairs.append(set([i, j]))
-            elif (i_in_group or j_in_group):
+            elif i_in_group or j_in_group:
                 raise ValueError("No exceptions are allowed for in-group/out-group interactions")
 
         for i, j in itertools.combinations(group, 2):
             if set([i, j]) not in internal_exception_pairs:
-                chargeprod = parameters[i].charge*parameters[j].charge
-                sigma = (parameters[i].sigma + parameters[j].sigma)/2
-                epsilon = unit.sqrt(parameters[i].epsilon*parameters[j].epsilon)
+                chargeprod = parameters[i].charge * parameters[j].charge
+                sigma = (parameters[i].sigma + parameters[j].sigma) / 2
+                epsilon = unit.sqrt(parameters[i].epsilon * parameters[j].epsilon)
                 nbforce.addException(i, j, chargeprod, sigma, epsilon)
 
         if pbc_for_exceptions:
@@ -492,18 +500,18 @@ class InOutLennardJonesForce(_InOutForce):
     """
 
     def __init__(self, group, nbforce, pbc_for_exceptions=False, softcore=False, keep_charges=True):
-        u_LJ = '4/x^2-4/x'
-        definitions = ['sigma=(sigma1+sigma2)/2', 'epsilon=sqrt(epsilon1*epsilon2)']
+        u_LJ = "4/x^2-4/x"
+        definitions = ["sigma=(sigma1+sigma2)/2", "epsilon=sqrt(epsilon1*epsilon2)"]
         if softcore:
-            equations = [f'lambda_vdw*epsilon*({u_LJ}); x=(r/sigma)^6+(1-lambda_vdw)/2']
+            equations = [f"lambda_vdw*epsilon*({u_LJ}); x=(r/sigma)^6+(1-lambda_vdw)/2"]
         else:
-            equations = [f'epsilon*({u_LJ}); x=(r/sigma)^6']
-        super().__init__(';'.join(equations + definitions))
+            equations = [f"epsilon*({u_LJ}); x=(r/sigma)^6"]
+        super().__init__(";".join(equations + definitions))
         if softcore:
-            self.addGlobalParameter('lambda_vdw', 1.0)
+            self.addGlobalParameter("lambda_vdw", 1.0)
         parameters = self._get_parameters(nbforce)
-        self.addPerParticleParameter('sigma')
-        self.addPerParticleParameter('epsilon')
+        self.addPerParticleParameter("sigma")
+        self.addPerParticleParameter("epsilon")
         for parameter in parameters:
             self.addParticle([parameter.sigma, parameter.epsilon])
         self._update_nonbonded_force(group, nbforce, parameters, pbc_for_exceptions)
@@ -549,20 +557,20 @@ class InOutLennardJonesForce(_InOutForce):
 
         """
 
-        u_LJ = '4/x^12-4/x^6'
+        u_LJ = "4/x^12-4/x^6"
         if m == 2:
-            u_cap = '126*x^4-176*x^3+50'
+            u_cap = "126*x^4-176*x^3+50"
         elif m == 3:
-            u_cap = '(-4340*x^6+10944*x^5-7200*x^4+596)/5'
+            u_cap = "(-4340*x^6+10944*x^5-7200*x^4+596)/5"
         elif m == 4:
-            u_cap = '(43365*x^8-155880*x^7+191065*x^6-80472*x^5+1922)/35'
+            u_cap = "(43365*x^8-155880*x^7+191065*x^6-80472*x^5+1922)/35"
         else:
             raise ValueError("Raised if an invalid `m` keyword value is passed.")
-        definitions = ['x=r/sigma', 'sigma=(sigma1+sigma2)/2', 'epsilon=sqrt(epsilon1*epsilon2)']
-        equations = [f'epsilon*select(step(1-x),{u_cap},{u_LJ})'] + definitions
-        force = openmm.CustomNonbondedForce(';'.join(equations))
-        force.addPerParticleParameter('sigma')
-        force.addPerParticleParameter('epsilon')
+        definitions = ["x=r/sigma", "sigma=(sigma1+sigma2)/2", "epsilon=sqrt(epsilon1*epsilon2)"]
+        equations = [f"epsilon*select(step(1-x),{u_cap},{u_LJ})"] + definitions
+        force = openmm.CustomNonbondedForce(";".join(equations))
+        force.addPerParticleParameter("sigma")
+        force.addPerParticleParameter("epsilon")
         for index in range(self.getNumParticles()):
             force.addParticle(self.getParticleParameters(index))
         for index in range(self.getNumExclusions()):
@@ -666,34 +674,39 @@ class InOutCoulombForce(_InOutForce):
 
     """
 
-    def __init__(self, group, nbforce, style='conductor-reaction-field',
-                 damping_coefficient=0.2/unit.angstroms,
-                 scaling_parameter_name='inOutCoulombScaling', pbc_for_exceptions=False):
-
+    def __init__(
+        self,
+        group,
+        nbforce,
+        style="conductor-reaction-field",
+        damping_coefficient=0.2 / unit.angstroms,
+        scaling_parameter_name="inOutCoulombScaling",
+        pbc_for_exceptions=False,
+    ):
         rc = _standardized(nbforce.getCutoffDistance())
-        alpha_c = _standardized(damping_coefficient)*rc
-        prefix = f'{138.935485/rc}*charge1*charge2'
-        if style == 'shifted':
-            u_C = '1/x - 1'
-        elif style == 'shifted-force':
-            u_C = '1/x + x - 2'
-        elif style == 'conductor-reaction-field':
-            u_C = '1/x + x^2/2 - 3/2'
-        elif style == 'reaction-field':
+        alpha_c = _standardized(damping_coefficient) * rc
+        prefix = f"{138.935485/rc}*charge1*charge2"
+        if style == "shifted":
+            u_C = "1/x - 1"
+        elif style == "shifted-force":
+            u_C = "1/x + x - 2"
+        elif style == "conductor-reaction-field":
+            u_C = "1/x + x^2/2 - 3/2"
+        elif style == "reaction-field":
             epsilon = nbforce.getReactionFieldDielectric()
-            krf = (epsilon - 1)/(2*epsilon + 1)
-            crf = 3*epsilon/(2*epsilon + 1)
-            u_C = f'1/x + {krf}*x^2 - {crf}'
-        elif style == 'damped':
-            u_C = f'erfc({alpha_c}*x)/x'
-        elif style == 'damped-shifted-force':
+            krf = (epsilon - 1) / (2 * epsilon + 1)
+            crf = 3 * epsilon / (2 * epsilon + 1)
+            u_C = f"1/x + {krf}*x^2 - {crf}"
+        elif style == "damped":
+            u_C = f"erfc({alpha_c}*x)/x"
+        elif style == "damped-shifted-force":
             A = math.erfc(alpha_c)
-            B = A + 2*alpha_c*math.exp(-alpha_c**2)/math.sqrt(math.pi)
-            u_C = f'erfc({alpha_c}*x)/x + {A+B}*x - {2*A+B}'
+            B = A + 2 * alpha_c * math.exp(-(alpha_c**2)) / math.sqrt(math.pi)
+            u_C = f"erfc({alpha_c}*x)/x + {A+B}*x - {2*A+B}"
         else:
             raise ValueError("Invalid cutoff electrostatic style")
 
-        super().__init__(f'{prefix}*({u_C}); x=r/{rc}')
+        super().__init__(f"{prefix}*({u_C}); x=r/{rc}")
         parameters = self._get_parameters(nbforce)
         offset_index = {}
         for index in range(nbforce.getNumParticleParameterOffsets()):
@@ -701,7 +714,7 @@ class InOutCoulombForce(_InOutForce):
             if variable == scaling_parameter_name:
                 offset_index[i] = index
                 parameters[i] = _ParamTuple(charge, parameters[i].sigma, parameters[i].epsilon)
-        self.addPerParticleParameter('charge')
+        self.addPerParticleParameter("charge")
         for parameter in parameters:
             self.addParticle([parameter.charge])
         self._update_nonbonded_force(group, nbforce, parameters, pbc_for_exceptions)
