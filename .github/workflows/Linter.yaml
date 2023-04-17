@@ -1,0 +1,60 @@
+name: Linter
+
+on:
+  push:
+    branches:
+      - "main"
+  pull_request:
+    branches:
+      - "main"
+
+jobs:
+  linter:
+    name: Linter
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ["3.10"]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Additional info about the build
+        shell: bash
+        run: |
+          uname -a
+          df -h
+          ulimit -a
+
+      # More info on options: https://github.com/marketplace/actions/provision-with-micromamba
+      - uses: mamba-org/provision-with-micromamba@main
+        with:
+          environment-file: devtools/conda-envs/lint_env.yaml
+          environment-name: linter
+          channels: conda-forge,defaults
+          extra-specs: |
+            python=${{ matrix.python-version }}
+
+      - name: Install package
+        # conda setup requires this special shell
+        shell: bash -l {0}
+        run: |
+          python -m pip install . --no-deps
+          micromamba list
+
+      - name: Run flake8
+        shell: bash -l {0}
+        run: flake8 --ignore=E203,W503 ufedmm/
+
+      - name: Run black
+        shell: bash -l {0}
+        run: black --line-length 100 --diff --color ufedmm/
+
+      - name: Run isort
+        shell: bash -l {0}
+        run: isort --check-only ufedmm/
+
+      # - name: Run pylint
+      #   shell: bash -l {0}
+      #   run: pylint --rcfile=devtools/linters/pylintrc ufedmm/

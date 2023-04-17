@@ -11,13 +11,13 @@
 """
 
 import sys
-import openmm
-import ufedmm
-import yaml
 
+import openmm
+import yaml
 from openmm import app, unit
-from ufedmm.ufedmm import _Metadynamics
-from ufedmm.ufedmm import _standardized
+
+import ufedmm
+from ufedmm.ufedmm import _Metadynamics, _standardized
 
 
 class Tee:
@@ -42,7 +42,7 @@ class Tee:
     def __init__(self, *files):
         self._files = list()
         for output in files:
-            self._files.append(open(output, 'w') if isinstance(output, str) else output)
+            self._files.append(open(output, "w") if isinstance(output, str) else output)
 
     def __del__(self):
         for output in self._files:
@@ -122,12 +122,13 @@ class StateDataReporter(app.StateDataReporter):
         -3.141592653589793,3.141592653589793,-3.141592653589793,3.141592653589793
 
     """
+
     def __init__(self, file, report_interval, **kwargs):
-        self._variables = kwargs.pop('variables', False)
-        self._multitemps = kwargs.pop('multipleTemperatures', False)
-        self._hill_heights = kwargs.pop('hillHeights', False)
-        self._collective_variables = kwargs.pop('collectiveVariables', False)
-        self._global_parameter_states = kwargs.pop('globalParameterStates', None)
+        self._variables = kwargs.pop("variables", False)
+        self._multitemps = kwargs.pop("multipleTemperatures", False)
+        self._hill_heights = kwargs.pop("hillHeights", False)
+        self._collective_variables = kwargs.pop("collectiveVariables", False)
+        self._global_parameter_states = kwargs.pop("globalParameterStates", None)
         super().__init__(file, report_interval, **kwargs)
         items = [self._volume, self._density, self._speed, self._elapsedTime, self._remainingTime]
         self._backSteps = -sum(items)
@@ -151,16 +152,22 @@ class StateDataReporter(app.StateDataReporter):
         self._extended_space = isinstance(simulation, ufedmm.ExtendedSpaceSimulation)
         if self._extended_space:
             force = simulation.context.driving_force
-            self._cv_names = [force.getCollectiveVariableName(i) for i in range(force.getNumCollectiveVariables())]
+            self._cv_names = [
+                force.getCollectiveVariableName(i) for i in range(force.getNumCollectiveVariables())
+            ]
             self._var_names = [v.id for v in simulation.context.variables]
             if self._hill_heights:
-                metadynamics_tasks = filter(lambda x: isinstance(x, _Metadynamics), simulation._periodic_tasks)
+                metadynamics_tasks = filter(
+                    lambda x: isinstance(x, _Metadynamics), simulation._periodic_tasks
+                )
                 try:
                     self._metadynamics = next(metadynamics_tasks)
                 except StopIteration:
-                    raise Exception("hillHeights keyword involked for simulation w/o metadynamics bias")
+                    raise Exception(
+                        "hillHeights keyword involked for simulation w/o metadynamics bias"
+                    )
                 bias_factor = self._metadynamics.bias_factor
-                self._height_scaling = 1 if bias_factor is None else bias_factor/(bias_factor - 1)
+                self._height_scaling = 1 if bias_factor is None else bias_factor / (bias_factor - 1)
 
             if self._multitemps:
                 system = simulation.context.getSystem()
@@ -168,15 +175,15 @@ class StateDataReporter(app.StateDataReporter):
                 Nt = system.getNumParticles()
                 Nv = len(simulation.context.variables)
                 ke_system = openmm.System()
-                for i in range(Nt-Nv, Nt):
+                for i in range(Nt - Nv, Nt):
                     ke_system.addParticle(system.getParticleMass(i))
                 ke_integrator = openmm.CustomIntegrator(0)
-                ke_integrator.addPerDofVariable('kT', 0)
-                ke_integrator.addComputePerDof('v', integrator.getKineticEnergyExpression())
+                ke_integrator.addPerDofVariable("kT", 0)
+                ke_integrator.addComputePerDof("v", integrator.getKineticEnergyExpression())
                 self._ke_context = openmm.Context(ke_system, ke_integrator)
                 if integrator._up_to_date:
-                    kT = integrator.getPerDofVariableByName('kT')
-                    ke_integrator.setPerDofVariableByName('kT', kT[Nt-Nv:Nt])
+                    kT = integrator.getPerDofVariableByName("kT")
+                    ke_integrator.setPerDofVariableByName("kT", kT[Nt - Nv : Nt])
                 else:
                     raise ValueError("Integrator temperatures were not set")
 
@@ -188,21 +195,21 @@ class StateDataReporter(app.StateDataReporter):
         headers = super()._constructHeaders()
         if self._extended_space:
             if self._multitemps:
-                self._add_item(headers, 'T[atoms] (K)')
+                self._add_item(headers, "T[atoms] (K)")
                 for var in self._var_names:
-                    self._add_item(headers, f'T[{var}] (K)')
+                    self._add_item(headers, f"T[{var}] (K)")
             if self._variables:
                 for cv in self._cv_names:
                     self._add_item(headers, cv)
             if self._hill_heights:
-                self._add_item(headers, 'Height (kJ/mole)')
+                self._add_item(headers, "Height (kJ/mole)")
         if self._collective_variables:
             for force in self._cv_forces:
                 for index in range(force.getNumCollectiveVariables()):
                     self._add_item(headers, force.getCollectiveVariableName(index))
         if self._global_parameter_states is not None:
             for index in self._global_parameter_states.index:
-                self._add_item(headers, f'Energy[{index}] (kJ/mole)')
+                self._add_item(headers, f"Energy[{index}] (kJ/mole)")
         return headers
 
     def _constructReportValues(self, simulation, state):
@@ -213,26 +220,30 @@ class StateDataReporter(app.StateDataReporter):
                 ke_context = self._ke_context
                 Nt = system.getNumParticles()
                 Nv = ke_context.getSystem().getNumParticles()
-                ke_context.setVelocities(state.getVelocities(extended=True)[Nt-Nv:Nt])
+                ke_context.setVelocities(state.getVelocities(extended=True)[Nt - Nv : Nt])
                 ke_context.getIntegrator().step(1)
                 ke_values = ke_context.getState(getVelocities=True).getVelocities()
                 xvar_ke = sum(ke.x + ke.y + ke.z for ke in ke_values)
                 total_ke = _standardized(state.getKineticEnergy())
                 kB = _standardized(unit.MOLAR_GAS_CONSTANT_R)
-                self._add_item(values, 2*(total_ke-xvar_ke)/((self._dof-3*Nv)*kB))
+                self._add_item(values, 2 * (total_ke - xvar_ke) / ((self._dof - 3 * Nv) * kB))
                 for ke in ke_values:
-                    self._add_item(values, 2*ke.x/kB)
+                    self._add_item(values, 2 * ke.x / kB)
             if self._variables:
-                for cv in simulation.context.driving_force.getCollectiveVariableValues(simulation.context):
+                for cv in simulation.context.driving_force.getCollectiveVariableValues(
+                    simulation.context
+                ):
                     self._add_item(values, cv)
             if self._hill_heights:
-                self._add_item(values, self._metadynamics.height*self._height_scaling)
+                self._add_item(values, self._metadynamics.height * self._height_scaling)
         if self._collective_variables:
             for force in self._cv_forces:
                 for cv in force.getCollectiveVariableValues(simulation.context):
                     self._add_item(values, cv)
         if self._global_parameter_states is not None:
-            originals = list(map(simulation.context.getParameter, self._global_parameter_states.columns))
+            originals = list(
+                map(simulation.context.getParameter, self._global_parameter_states.columns)
+            )
             for index, row in self._global_parameter_states.iterrows():
                 for name, value in row.items():
                     simulation.context.setParameter(name, value)
@@ -250,7 +261,7 @@ def serialize(object, file):
     """
     dump = yaml.dump(object, Dumper=yaml.CDumper)
     if isinstance(file, str):
-        with open(file, 'w') as f:
+        with open(file, "w") as f:
             f.write(dump)
     else:
         file.write(dump)
@@ -262,7 +273,7 @@ def deserialize(file):
 
     """
     if isinstance(file, str):
-        with open(file, 'r') as f:
+        with open(file, "r") as f:
             object = yaml.load(f.read(), Loader=yaml.CLoader)
     else:
         object = yaml.load(file.read(), Loader=yaml.CLoader)

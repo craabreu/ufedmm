@@ -8,30 +8,30 @@
 """
 
 import itertools
-import openmm
+from collections import namedtuple
 
 import numpy as np
-
-from collections import namedtuple
+import openmm
 from scipy import stats
-from ufedmm.ufedmm import _standardized, _get_energy_function, _get_parameters
+
+from ufedmm.ufedmm import _get_energy_function, _get_parameters, _standardized
 
 
 class _RBFContext(openmm.Context):
     def __init__(self, variables, variances, centers, weights, platform, properties):
-        num_particles = (len(variables) + 2)//3
-        coordinates = [f'{x}{i+1}' for i in range(num_particles) for x in 'xyz']
+        num_particles = (len(variables) + 2) // 3
+        coordinates = [f"{x}{i+1}" for i in range(num_particles) for x in "xyz"]
         exponents = []
         for v, variance, x in zip(variables, variances, coordinates):
             if v.periodic:  # von Mises
-                factor = 2*np.pi/v._range
-                exponents.append(f'{1.0/(variance*factor**2)}*(cos({factor}*({v.id}-{x}))-1)')
+                factor = 2 * np.pi / v._range
+                exponents.append(f"{1.0/(variance*factor**2)}*(cos({factor}*({v.id}-{x}))-1)")
             else:  # Gauss
-                exponents.append(f'(-{0.5/variance})*({v.id}-{x})^2')
+                exponents.append(f"(-{0.5/variance})*({v.id}-{x})^2")
         expression = f'weight*exp({"+".join(exponents)})'
 
         force = openmm.CustomCompoundBondForce(num_particles, expression)
-        force.addPerBondParameter('weight')
+        force.addPerBondParameter("weight")
         for v in variables:
             force.addGlobalParameter(v.id, 0)
             force.addEnergyParameterDerivative(v.id)
@@ -42,7 +42,7 @@ class _RBFContext(openmm.Context):
             for position in np.resize(center, (num_particles, 3)):
                 system.addParticle(1.0)
                 positions.append(openmm.Vec3(*position))
-            force.addBond(range(i*num_particles, (i+1)*num_particles), [weight])
+            force.addBond(range(i * num_particles, (i + 1) * num_particles), [weight])
 
         system.addForce(force)
         integrator = openmm.CustomIntegrator(0)
@@ -63,6 +63,7 @@ class FreeEnergyAnalyzer(object):
             A data frame containing sampled sets of collective variables and driver parameters.
 
     """
+
     def __init__(self, ufed, dataframe):
         self._ufed = ufed
         self._dataframe = dataframe
@@ -80,13 +81,13 @@ class FreeEnergyAnalyzer(object):
                 The free energy function.
 
         """
-        Variable = namedtuple('Variable', 'sigma factor periodic centers')
+        Variable = namedtuple("Variable", "sigma factor periodic centers")
         variables = [
-            Variable(v.sigma, 2*np.pi/v._range, v.periodic, self._dataframe[v.id].values)
+            Variable(v.sigma, 2 * np.pi / v._range, v.periodic, self._dataframe[v.id].values)
             for v in self._bias_variables
         ]
         try:
-            heights = self._dataframe['Height (kJ/mole)'].values
+            heights = self._dataframe["Height (kJ/mole)"].values
         except KeyError:
             heights = self._ufed.height
 
@@ -94,10 +95,12 @@ class FreeEnergyAnalyzer(object):
             exponents = 0.0
             for v, x in zip(variables, position):
                 if v.periodic:
-                    exponents += (np.cos(v.factor*(v.centers - x)) - 1.0)/(v.factor*v.sigma)**2
+                    exponents += (np.cos(v.factor * (v.centers - x)) - 1.0) / (
+                        v.factor * v.sigma
+                    ) ** 2
                 else:
-                    exponents += -0.5*((v.centers - x)/v.sigma)**2
-            return -np.sum(heights*np.exp(exponents))
+                    exponents += -0.5 * ((v.centers - x) / v.sigma) ** 2
+            return -np.sum(heights * np.exp(exponents))
 
         return np.vectorize(free_energy)
 
@@ -134,24 +137,26 @@ class FreeEnergyAnalyzer(object):
         forces = self._compute_forces()
         ranges = [(v.min_value, v.max_value) for v in variables]
 
-        counts = stats.binned_statistic_dd(sample, [], statistic='count', bins=bins, range=ranges)
+        counts = stats.binned_statistic_dd(sample, [], statistic="count", bins=bins, range=ranges)
         index = np.where(counts.statistic.flatten() >= min_count)
 
         n = len(variables)
         if adjust_centers:
             means = stats.binned_statistic_dd(sample, sample + forces, bins=bins, range=ranges)
             centers = [means.statistic[i].flatten()[index] for i in range(n)]
-            mean_forces = [means.statistic[n+i].flatten()[index] for i in range(n)]
+            mean_forces = [means.statistic[n + i].flatten()[index] for i in range(n)]
         else:
             means = stats.binned_statistic_dd(sample, forces, bins=bins, range=ranges)
-            bin_centers = [0.5*(edges[1:] + edges[:-1]) for edges in counts.bin_edges]
+            bin_centers = [0.5 * (edges[1:] + edges[:-1]) for edges in counts.bin_edges]
             center_points = np.stack([np.array(point) for point in itertools.product(*bin_centers)])
             centers = [center_points[:, i][index] for i in range(n)]
             mean_forces = [statistic.flatten()[index] for statistic in means.statistic]
 
         return centers, mean_forces
 
-    def mean_force_free_energy(self, centers, mean_forces, sigma, platform_name='Reference', properties={}):
+    def mean_force_free_energy(
+        self, centers, mean_forces, sigma, platform_name="Reference", properties={}
+    ):
         """
         Returns Python functions for evaluating the potential of mean force and their originating
         mean forces as a function of the collective variables.
@@ -185,32 +190,32 @@ class FreeEnergyAnalyzer(object):
         variables = self._ufed.variables
         n = len(variables)
         try:
-            variances = [_standardized(value)**2 for value in sigma]
+            variances = [_standardized(value) ** 2 for value in sigma]
         except TypeError:
-            variances = [_standardized(sigma)**2]*n
+            variances = [_standardized(sigma) ** 2] * n
 
         exponent = []
         derivative = []
         for v, variance in zip(variables, variances):
             if v.periodic:  # von Mises
-                factor = 2*np.pi/v._range
-                exponent.append(lambda x: (np.cos(factor*x)-1.0)/(factor*factor*variance))
-                derivative.append(lambda x: -np.sin(factor*x)/(factor*variance))
+                factor = 2 * np.pi / v._range
+                exponent.append(lambda x: (np.cos(factor * x) - 1.0) / (factor * factor * variance))
+                derivative.append(lambda x: -np.sin(factor * x) / (factor * variance))
             else:  # Gauss
-                exponent.append(lambda x: -0.5*x**2/variance)
-                derivative.append(lambda x: -x/variance)
+                exponent.append(lambda x: -0.5 * x**2 / variance)
+                derivative.append(lambda x: -x / variance)
 
         def kernel(x):
             return np.exp(np.sum(exponent[i](x[i]) for i in range(n)))
 
         def gradient(x, i):
-            return kernel(x)*derivative[i](x[i])
+            return kernel(x) * derivative[i](x[i])
 
         grid_points = [np.array(xc) for xc in zip(*centers)]
         coefficients = []
         for i in range(n):
             for x in grid_points:
-                coefficients.append(np.array([gradient(x-xc, i) for xc in grid_points]))
+                coefficients.append(np.array([gradient(x - xc, i) for xc in grid_points]))
 
         M = np.vstack(coefficients)
         F = -np.hstack(mean_forces)
@@ -252,7 +257,7 @@ class FreeEnergyAnalyzer(object):
         system = openmm.System()
         system.addForce(force)
         system.addParticle(0)
-        platform = openmm.Platform.getPlatformByName('Reference')
+        platform = openmm.Platform.getPlatformByName("Reference")
         context = openmm.Context(system, openmm.CustomIntegrator(0), platform)
         context.setPositions([openmm.Vec3(0, 0, 0)])
 
@@ -293,12 +298,13 @@ class Analyzer(FreeEnergyAnalyzer):
             internal points istead of its geometric center.
 
     """
+
     def __init__(self, ufed, dataframe, bins, min_count=1, adjust_centers=False):
         super().__init__(ufed, dataframe)
         try:
             self._bins = [bin for bin in bins]
         except TypeError:
-            self._bins = [bins]*len(ufed.variables)
+            self._bins = [bins] * len(ufed.variables)
         self._min_count = min_count
         self._adjust_centers = adjust_centers
 
@@ -335,11 +341,11 @@ class Analyzer(FreeEnergyAnalyzer):
         )
         variables = self._ufed.variables
         if sigma is None:
-            sigmas = [factor*v._range/bin for v, bin in zip(variables, self._bins)]
+            sigmas = [factor * v._range / bin for v, bin in zip(variables, self._bins)]
         else:
             try:
                 sigmas = [_standardized(value) for value in sigma]
             except TypeError:
-                sigmas = [_standardized(sigma)]*len(variables)
+                sigmas = [_standardized(sigma)] * len(variables)
 
         return self.mean_force_free_energy(self.centers, self.mean_forces, sigmas)
