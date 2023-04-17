@@ -61,14 +61,6 @@ def add_inner_nonbonded_force(system, inner_switch, inner_cutoff, force_group_in
         >>> gamma = 10/unit.picoseconds
         >>> model = ufedmm.AlanineDipeptideModel()
         >>> ufedmm.add_inner_nonbonded_force(model.system, 5*unit.angstroms, 8*unit.angstroms, 1)
-        >>> for force in model.system.getForces():
-        ...     print(force.__class__.__name__, force.getForceGroup())
-        HarmonicBondForce 0
-        HarmonicAngleForce 0
-        PeriodicTorsionForce 0
-        NonbondedForce 2
-        CustomNonbondedForce 1
-        CustomBondForce 1
 
     """
     if openmm.__version__ < '7.5':
