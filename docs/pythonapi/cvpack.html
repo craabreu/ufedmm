@@ -1,0 +1,188 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>collective variable package &#8212; UFED for OpenMM  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <script src="../_static/clipboard.min.js"></script>
+    <script src="../_static/copybutton.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="analysis" href="analysis.html" />
+    <link rel="prev" title="ufedmm" href="ufedmm.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="collective-variable-package">
+<h1>collective variable package<a class="headerlink" href="#collective-variable-package" title="Permalink to this heading">¶</a></h1>
+<p>This module provides access to <a class="reference external" href="https://cvpack.readthedocs.io/en/latest/">CVPack</a>,
+an external library of useful collective variables.</p>
+<p>Some examples of collective variables implemented in <code class="docutils literal notranslate"><span class="pre">CVPack</span></code> are:</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt><a class="reference external" href="https://cvpack.readthedocs.io/en/latest/api/Angle.html">Angle</a>:</dt><dd><p>angle formed by three atoms</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference external" href="https://cvpack.readthedocs.io/en/latest/api/AtomicFunction.html">Atomic Function</a>:</dt><dd><p>a user-defined function of the coordinates of a group of atoms</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference external" href="https://cvpack.readthedocs.io/en/latest/api/AttractionStrength.html">Attraction Strength</a>:</dt><dd><p>strength of the attraction between two groups of atoms</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference external" href="https://cvpack.readthedocs.io/en/latest/api/CentroidFunction.html">Centroid Function</a>:</dt><dd><p>a user-defined function of the centroids of groups of atoms</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference external" href="https://cvpack.readthedocs.io/en/latest/api/Distance.html">Distance</a>:</dt><dd><p>distance between two atoms</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference external" href="https://cvpack.readthedocs.io/en/latest/api/HelixAngleContent.html">Helix angle content</a>:</dt><dd><p>alpha-helix angle content of a sequence of residues</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference external" href="https://cvpack.readthedocs.io/en/latest/api/HelixHBondContent.html">Helix H-bond content</a>:</dt><dd><p>alpha-helix hydrogen-bond content of a sequence of residues</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference external" href="https://cvpack.readthedocs.io/en/latest/api/HelixRMSDContent.html">Helix RMSD content</a>:</dt><dd><p>alpha-helix RMSD content of a sequence of residues</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference external" href="https://cvpack.readthedocs.io/en/latest/api/HelixTorsionContent.html">Helix torsion content</a>:</dt><dd><p>alpha-helix Ramachandran content of a sequence of residues</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference external" href="https://cvpack.readthedocs.io/en/latest/api/NumberOfContacts.html">Number of contacts</a>:</dt><dd><p>number of contacts between two groups of atoms</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference external" href="https://cvpack.readthedocs.io/en/latest/api/RadiusOfGyration.html">Radius of gyration</a>:</dt><dd><p>radius of gyration of a group of atoms</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference external" href="https://cvpack.readthedocs.io/en/latest/api/RMSD.html">RMSD</a>:</dt><dd><p>root-mean-square deviation of atoms with respect to a reference structure</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference external" href="https://cvpack.readthedocs.io/en/latest/api/Torsion.html">Torsion</a>:</dt><dd><p>torsion angle formed by four atoms</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference external" href="https://cvpack.readthedocs.io/en/latest/api/TorsionSimilarity.html">Torsion similarity</a>:</dt><dd><p>degree of similarity between pairs of torsion angles</p>
+</dd>
+</dl>
+</li>
+</ul>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">UFED for OpenMM</a></h1>
+
+
+
+
+
+
+
+
+
+
+
+<h3><a href="../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../readme.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html">Usage</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Python API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="ufedmm.html">ufedmm</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">collective variable package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="analysis.html">analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrators.html">integrators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="io.html">input/output</a></li>
+<li class="toctree-l2"><a class="reference internal" href="testmodels.html">testmodels</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../authors.html">Authors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../glossary.html">Glossary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">Bibliography</a></li>
+</ul>
+
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Charlles Abreu. Project structure based on the Computational Molecular Science Python Cookiecutter version 1.0.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 6.1.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="../_sources/pythonapi/cvpack.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
