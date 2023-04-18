@@ -5,7 +5,7 @@ Python API
     :glob:
 
     ufedmm
-    cvlib
+    cvpack
     analysis
     integrators
     io
