@@ -73,19 +73,12 @@ reconstruction of free energy (hyper)surfaces.
 
 ## Collective Variable Package (cvpack)
 
-In OpenMM, a collective variable (CV) involved in a [CustomCVForce] are
-nothing but objects of some `Force` (or, particularly, `CustomForce`)
-subclass. The user is free to define any CV for a [UFED] simulation. For
-convenience, through, UFEDMM provides a module with several predefined
-CV's, such as:
-
-* Square radius of gyration of a group of atoms
-* Number of contacts between two groups of atoms
-* Different flavors of alpha-helix content measures, based on angles,
-dihedrals, and hydrogen bonds
-
-The `ufedmm.cvpack` module can be viewed as a standalone package of
-general applicability, not restricted to `ufedmm` simulations.
+In OpenMM, a collective variable (CV) involved in a [CustomCVForce] is
+nothing but an instance of some `Force` subclass. The user is free to define any
+CV for a [UFED] simulation. For convenience, though, UFEDMM provides access to
+an external library of useful collective variables named
+[CVPack](https://cvpack.readthedocs.io/en/latest/). It can be accessed via
+the `ufedmm.cvpack` module.
 
 ## Documentation
 
