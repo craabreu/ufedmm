@@ -5,12 +5,18 @@
 
 .. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
 
-.. _Context: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html
-.. _CustomCVForce: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html
-.. _CustomIntegrator: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomIntegrator.html
-.. _Force: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Force.html
-.. _NonbondedForce: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html
-.. _System: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html
+.. _Context:
+    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html
+.. _CustomCVForce:
+    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html
+.. _CustomIntegrator:
+    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomIntegrator.html
+.. _Force:
+    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Force.html
+.. _NonbondedForce:
+    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html
+.. _System:
+    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html
 
 """
 
@@ -261,9 +267,10 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
             e^{\\frac{\\Delta t}{2}\\mathcal{L}^{[1]}_v}
 
     Each exponential operator is the solution of a particular subsystem of equations.
-    If :math:`\\mathrm{bath}(T_i, v_i) = 0`, the scheme above is time-reversible, measure-preserving,
-    and symplectic. It is referred to as the ``VV-Middle`` scheme :cite:`Zhang_2019`, where VV
-    stands for Velocity Verlet. An alternative approach is also available, which is:
+    If :math:`\\mathrm{bath}(T_i, v_i) = 0`, the scheme above is time-reversible,
+    measure-preserving, and symplectic. It is referred to as the ``VV-Middle`` scheme
+    :cite:`Zhang_2019`, where VV stands for Velocity Verlet. An alternative approach
+    is also available, which is:
 
     .. math::
         e^{\\Delta t\\mathcal{L}} =
@@ -328,12 +335,18 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
         ...         self.addGlobalVariable('scaling', 1)
         ...     def _bath(self, fraction):
         ...         self.addComputeSum('twoK', 'm*v*v')
-        ...         self.addComputeGlobal('v_eta', f'v_eta + {0.5*fraction}*dt*(twoK - gkT)/Q')
+        ...         self.addComputeGlobal(
+        ...             'v_eta', f'v_eta + {0.5*fraction}*dt*(twoK - gkT)/Q'
+        ...         )
         ...         self.addComputeGlobal('scaling', f'exp(-{fraction}*dt*v_eta)')
         ...         self.addComputePerDof('v', f'v*scaling')
-        ...         self.addComputeGlobal('v_eta', f'v_eta + {0.5*fraction}*dt*(scaling^2*twoK - gkT)/Q')
-        >>> integrator = MiddleNoseHooverIntegrator(500, 10*unit.femtoseconds, 300*unit.kelvin,
-        ...                                         1*unit.femtoseconds, num_rattles=0)
+        ...         self.addComputeGlobal(
+        ...             'v_eta', f'v_eta + {0.5*fraction}*dt*(scaling^2*twoK - gkT)/Q'
+        ...         )
+        >>> integrator = MiddleNoseHooverIntegrator(
+        ...     500, 10*unit.femtoseconds, 300*unit.kelvin,
+        ...     1*unit.femtoseconds, num_rattles=0
+        ... )
         >>> print(integrator)
         Per-dof variables:
           kT
@@ -584,7 +597,9 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
     -------
         >>> import ufedmm
         >>> temp, tau, dt = 300*unit.kelvin, 10*unit.femtoseconds, 2*unit.femtoseconds
-        >>> integrator = ufedmm.MiddleMassiveNHCIntegrator(temp, tau, dt, respa_loops=[4, 1], unroll_loops=False)
+        >>> integrator = ufedmm.MiddleMassiveNHCIntegrator(
+        ...     temp, tau, dt, respa_loops=[4, 1], unroll_loops=False
+        ... )
         >>> print(integrator)
         Per-dof variables:
           kT, Q, v1, v2
@@ -733,9 +748,10 @@ class MiddleMassiveGGMTIntegrator(AbstractMiddleRespaIntegrator):
 class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
     """
     A regulated version of the massive Nose-Hoover-Langevin :cite:`Samoletov_2007,Leimkuhler_2009`
-    method. Regulation means that the system Hamiltonian is modified so that velocities remain below
-    a temperature-dependent limit. This is closely related to the SIN(R) method :cite:`Leimkuhler_2013`
-    and allows multiple time-scale integration with very large outer time steps, without resonance.
+    method. Regulation means that the system Hamiltonian is modified so that velocities remain
+    below a temperature-dependent limit. This is closely related to the SIN(R) method
+    :cite:`Leimkuhler_2013` and allows multiple time-scale integration with very large outer time
+    steps, without resonance.
 
     .. info:
         If `regulation_parameter = 1` (default), this method is equivalent to SIN(R) with a single

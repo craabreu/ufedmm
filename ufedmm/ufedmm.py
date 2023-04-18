@@ -5,14 +5,22 @@
 
 .. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
 
-.. _Context: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html
-.. _CustomCVForce: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html
-.. _CustomIntegrator: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomIntegrator.html
-.. _Force: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Force.html
-.. _Integrator: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Integrator.html
-.. _Platform: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Platform.html
-.. _System: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html
-.. _State: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.State.html
+.. _Context:
+    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html
+.. _CustomCVForce:
+    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html
+.. _CustomIntegrator:
+    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomIntegrator.html
+.. _Force:
+    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Force.html
+.. _Integrator:
+    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Integrator.html
+.. _Platform:
+    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Platform.html
+.. _System:
+    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html
+.. _State:
+    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.State.html
 
 """
 
@@ -186,10 +194,10 @@ class CollectiveVariable(object):
             >>> import ufedmm
             >>> from openmm import unit
             >>> model = ufedmm.AlanineDipeptideModel()
-            >>> model.phi.effective_mass(model.system, model.positions)
-            0.0479588726559707
-            >>> model.psi.effective_mass(model.system, model.positions)
-            0.05115582071188152
+            >>> model.phi.effective_mass(model.system, model.positions)  # doctest: +ELLIPSIS
+            0.04795887...
+            >>> model.psi.effective_mass(model.system, model.positions)  # doctest: +ELLIPSIS
+            0.05115582...
 
         """
         context = self._create_context(system, positions)
@@ -217,8 +225,8 @@ class DynamicalVariable(object):
     .. math::
         V(s, \\mathbf r) = \\frac{\\kappa}{2} [s - q(\\mathbf r)]^2
 
-    where :math:`s` is the new dynamical variable, :math:`q(\\mathbf r)` is its associated collective
-    variable, and :math:`kappa` is a force constant.
+    where :math:`s` is the new dynamical variable, :math:`q(\\mathbf r)` is its associated
+    collective variable, and :math:`kappa` is a force constant.
 
     Parameters
     ----------

@@ -5,14 +5,22 @@
 
 .. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
 
-.. _Context: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html
-.. _CustomCVForce: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html
-.. _CustomIntegrator: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomIntegrator.html
-.. _Force: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Force.html
-.. _NonbondedForce: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html
-.. _System: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html
-.. _coordination: https://www.plumed.org/doc-v2.6/user-doc/html/_c_o_o_r_d_i_n_a_t_i_o_n.html
-.. _PLUMED: https://www.plumed.org
+.. _Context:
+    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html
+.. _CustomCVForce:
+    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html
+.. _CustomIntegrator:
+    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomIntegrator.html
+.. _Force:
+    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Force.html
+.. _NonbondedForce:
+    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html
+.. _System:
+    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html
+.. _coordination:
+    https://www.plumed.org/doc-v2.6/user-doc/html/_c_o_o_r_d_i_n_a_t_i_o_n.html
+.. _PLUMED:
+    https://www.plumed.org
 
 """
 
@@ -177,8 +185,16 @@ class CoordinationNumber(openmm.CustomNonbondedForce):
         >>> from openmm import app
         >>> from ufedmm import cvlib
         >>> model = ufedmm.AlanineDipeptideModel()
-        >>> carbons = [atom.index for atom in model.topology.atoms() if atom.element == app.element.carbon]
-        >>> oxygens = [atom.index for atom in model.topology.atoms() if atom.element == app.element.carbon]
+        >>> carbons = [
+        ...     atom.index
+        ...     for atom in model.topology.atoms()
+        ...     if atom.element == app.element.carbon
+        ... ]
+        >>> oxygens = [
+        ...     atom.index
+        ...     for atom in model.topology.atoms()
+        ...     if atom.element == app.element.carbon
+        ... ]
         >>> N = cvlib.CoordinationNumber(model.system, carbons, oxygens)
         >>> N.setForceGroup(1)
         >>> model.system.addForce(N)
@@ -544,9 +560,12 @@ class InOutLennardJonesForce(_InOutForce):
 
         .. math::
             u_\\mathrm{cap}(x) = \\left\\{ \\begin{array}{ccc}
-                126 x^4 - 176 x^3 + 50 & \\mathrm{if} & m = 2 \\\\
-                \\frac{-4340 x^6 + 10944 x^5 - 7200 x^4 + 596}{5} & \\mathrm{if} & m = 3 \\\\
-                \\frac{43365 x^8 - 155880 x^7 + 191065 x^6 - 80472 x^5 + 1922}{35} & \\mathrm{if} & m = 4
+                126 x^4 - 176 x^3 + 50 &
+                    \\mathrm{if} & m = 2 \\\\
+                \\frac{-4340 x^6 + 10944 x^5 - 7200 x^4 + 596}{5} &
+                    \\mathrm{if} & m = 3 \\\\
+                \\frac{43365 x^8 - 155880 x^7 + 191065 x^6 - 80472 x^5 + 1922}{35} &
+                    \\mathrm{if} & m = 4
             \\end{array}\\right.
 
         Keyword Args

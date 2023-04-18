@@ -5,8 +5,10 @@
 
 .. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
 
-.. _CustomCVForce: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html
-.. _StateDataReporter: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.StateDataReporter.html
+.. _CustomCVForce:
+    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html
+.. _StateDataReporter:
+    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.StateDataReporter.html
 
 """
 
