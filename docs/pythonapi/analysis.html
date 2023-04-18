@@ -1,0 +1,260 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+    <title>analysis &#8212; UFED for OpenMM  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/clipboard.min.js"></script>
+    <script src="../_static/copybutton.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="integrators" href="integrators.html" />
+    <link rel="prev" title="collective variable library" href="cvlib.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-ufedmm.analysis">
+<span id="analysis"></span><h1>analysis<a class="headerlink" href="#module-ufedmm.analysis" title="Permalink to this heading">¶</a></h1>
+<span class="target" id="module-analysis"></span><dl class="py class">
+<dt class="sig sig-object py" id="ufedmm.analysis.Analyzer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ufedmm.analysis.</span></span><span class="sig-name descname"><span class="pre">Analyzer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ufed</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataframe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bins</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_count</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adjust_centers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/analysis.html#Analyzer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.analysis.Analyzer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#ufedmm.analysis.FreeEnergyAnalyzer" title="ufedmm.analysis.FreeEnergyAnalyzer"><code class="xref py py-class docutils literal notranslate"><span class="pre">FreeEnergyAnalyzer</span></code></a></p>
+<p>UFED Analyzer.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This class is obsolete and will be discontinued. Use <a class="reference internal" href="#ufedmm.analysis.FreeEnergyAnalyzer" title="ufedmm.analysis.FreeEnergyAnalyzer"><code class="xref py py-class docutils literal notranslate"><span class="pre">FreeEnergyAnalyzer</span></code></a> instead.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ufed</strong> (<a class="reference internal" href="ufedmm.html#ufedmm.ufedmm.UnifiedFreeEnergyDynamics" title="ufedmm.ufedmm.UnifiedFreeEnergyDynamics"><code class="xref py py-class docutils literal notranslate"><span class="pre">UnifiedFreeEnergyDynamics</span></code></a>) – The UFED object.</p></li>
+<li><p><strong>dataframe</strong> (<em>pandas.DataFrame</em>) – A data frame containing sampled sets of collective variables and driver parameters.</p></li>
+<li><p><strong>bins</strong> (<em>int</em><em> or </em><em>list</em><em>(</em><em>int</em><em>)</em>) – The number of bins in each direction.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>min_count</strong> (<em>int</em><em>, </em><em>default=1</em>) – The miminum number of hits for a given bin to be considered in the analysis.</p></li>
+<li><p><strong>adjust_centers</strong> (<em>bool</em><em>, </em><em>default=False</em>) – Whether to consider the center of a bin as the mean value of the its sampled
+internal points istead of its geometric center.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.analysis.Analyzer.free_energy_functions">
+<span class="sig-name descname"><span class="pre">free_energy_functions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/analysis.html#Analyzer.free_energy_functions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.analysis.Analyzer.free_energy_functions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns Python functions for evaluating the potential of mean force and their originating
+mean forces as a function of the collective variables.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sigma</strong> (<em>float</em><em> or </em><em>unit.Quantity</em><em>, </em><em>default=None</em>) – The standard deviation of kernels. If this is <cite>None</cite>, then values will be
+determined from the distances between nodes.</p></li>
+<li><p><strong>factor</strong> (<em>float</em><em>, </em><em>default=8</em>) – If <code class="docutils literal notranslate"><span class="pre">sigma</span></code> is not explicitly provided, then it will be computed as
+<code class="docutils literal notranslate"><span class="pre">sigma</span> <span class="pre">=</span> <span class="pre">factor*range/bins</span></code> for each direction.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>potential</strong> (<em>function</em>) – A Python function whose arguments are collective variable values and whose result
+is the potential of mean force at that values.</p></li>
+<li><p><strong>mean_force</strong> (<em>function</em>) – A Python function whose arguments are collective variable values and whose result
+is the mean force at that values regarding a given direction. Such direction must
+be defined through a keyword argument <cite>dir</cite>, whose default value is <cite>0</cite> (meaning
+the direction of the first collective variable).</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ufedmm.analysis.FreeEnergyAnalyzer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ufedmm.analysis.</span></span><span class="sig-name descname"><span class="pre">FreeEnergyAnalyzer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ufed</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataframe</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/analysis.html#FreeEnergyAnalyzer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.analysis.FreeEnergyAnalyzer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Calculate free energy landscapes from UFED simulation results.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ufed</strong> (<a class="reference internal" href="ufedmm.html#ufedmm.ufedmm.UnifiedFreeEnergyDynamics" title="ufedmm.ufedmm.UnifiedFreeEnergyDynamics"><code class="xref py py-class docutils literal notranslate"><span class="pre">UnifiedFreeEnergyDynamics</span></code></a>) – The UFED object.</p></li>
+<li><p><strong>dataframe</strong> (<em>pandas.DataFrame</em>) – A data frame containing sampled sets of collective variables and driver parameters.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.analysis.FreeEnergyAnalyzer.centers_and_mean_forces">
+<span class="sig-name descname"><span class="pre">centers_and_mean_forces</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bins</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_count</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adjust_centers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/analysis.html#FreeEnergyAnalyzer.centers_and_mean_forces"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.analysis.FreeEnergyAnalyzer.centers_and_mean_forces" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs binned statistics with the UFED simulation data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>bins</strong> (<em>list</em><em>(</em><em>int</em><em>) or </em><em>int</em>) – The number of bins in each direction. If a single integer is passed, then the same
+number of bins will be considered for all directions.</p>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>min_count</strong> (<em>int</em><em>, </em><em>default=1</em>) – The miminum number of hits for any bin to be considered in the analysis.</p></li>
+<li><p><strong>adjust_centers</strong> (<em>bool</em><em>, </em><em>default=False</em>) – Whether to consider the center of a bin as the mean value of the its sampled
+internal points instead of its geometric center.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><ul class="simple">
+<li><p><strong>centers</strong> (<em>list(numpy.array)</em>) – A list of Numpy arrays, each one containing the values of an extended-space
+variable at the centers of all bins that satisfy the minimum-count criterion.</p></li>
+<li><p><strong>mean_forces</strong> (<em>list(numpy.array)</em>) – A list of Numpy arrays, each one containing the mean forces in the direction of
+an extended-space variable.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.analysis.FreeEnergyAnalyzer.mean_force_free_energy">
+<span class="sig-name descname"><span class="pre">mean_force_free_energy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">centers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_forces</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">platform_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Reference'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">properties</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/analysis.html#FreeEnergyAnalyzer.mean_force_free_energy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.analysis.FreeEnergyAnalyzer.mean_force_free_energy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns Python functions for evaluating the potential of mean force and their originating
+mean forces as a function of the collective variables.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>centers</strong> (<em>list</em><em>(</em><em>numpy.array</em><em>)</em>) – The bin centers.</p></li>
+<li><p><strong>mean_forces</strong> (<em>list</em><em>(</em><em>numpy.array</em><em>)</em>) – The mean forces.</p></li>
+<li><p><strong>sigmas</strong> (<em>float</em><em> or </em><em>unit.Quantity</em><em> or </em><em>list</em>) – The standard deviation of kernels.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>platform_name</strong> (<em>string</em><em>, </em><em>default='Reference'</em>) – The name of the OpenMM Platform to be used for potential and mean-force evaluations.</p></li>
+<li><p><strong>properties</strong> (<em>dict</em><em>, </em><em>default={}</em>) – A set of values for platform-specific properties. Keys are the property names.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><ul class="simple">
+<li><p><strong>potential</strong> (<em>function</em>) – A Python function whose arguments are collective variable values and whose result
+is the potential of mean force at that values.</p></li>
+<li><p><strong>mean_force</strong> (<em>function</em>) – A Python function whose arguments are collective variable values and whose result
+is the mean force at those values.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.analysis.FreeEnergyAnalyzer.metadynamics_bias_free_energy">
+<span class="sig-name descname"><span class="pre">metadynamics_bias_free_energy</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/analysis.html#FreeEnergyAnalyzer.metadynamics_bias_free_energy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.analysis.FreeEnergyAnalyzer.metadynamics_bias_free_energy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a Python function which, in turn, receives the values of extended-space variables
+and returns the energy estimated from a Metadynamics bias potential reconstructed from the
+simulation data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The free energy function.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>function</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">UFED for OpenMM</a></h1>
+
+
+
+
+
+
+
+
+
+
+
+<h3><a href="../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../readme.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html">Usage</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Python API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="ufedmm.html">ufedmm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cvlib.html">collective variable library</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrators.html">integrators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="io.html">input/output</a></li>
+<li class="toctree-l2"><a class="reference internal" href="testmodels.html">testmodels</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../authors.html">Authors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../glossary.html">Glossary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">Bibliography</a></li>
+</ul>
+
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Charlles Abreu. Project structure based on the Computational Molecular Science Python Cookiecutter version 1.0.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.0.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/pythonapi/analysis.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

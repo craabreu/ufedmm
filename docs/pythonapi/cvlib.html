@@ -1,0 +1,554 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+    <title>collective variable library &#8212; UFED for OpenMM  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/clipboard.min.js"></script>
+    <script src="../_static/copybutton.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="analysis" href="analysis.html" />
+    <link rel="prev" title="ufedmm" href="ufedmm.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-ufedmm.cvlib">
+<span id="collective-variable-library"></span><h1>collective variable library<a class="headerlink" href="#module-ufedmm.cvlib" title="Permalink to this heading">¶</a></h1>
+<span class="target" id="module-cvlib"></span><dl class="py class">
+<dt class="sig sig-object py" id="ufedmm.cvlib.CoordinationNumber">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ufedmm.cvlib.</span></span><span class="sig-name descname"><span class="pre">CoordinationNumber</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">system</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">r0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Quantity(value=4,</span> <span class="pre">unit=angstrom)</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/cvlib.html#CoordinationNumber"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.cvlib.CoordinationNumber" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">CustomNonbondedForce</span></code></p>
+<blockquote>
+<div><p>A continuos approximation for the number of neighbor pairs among atoms of two groups,
+defined as:</p>
+</div></blockquote>
+<div class="math notranslate nohighlight">
+\[N_{\mathbf{g}_1, \mathbf{g}_2}(\mathbf{r}) =
+             \sum_{i \in \mathbf{g}_1} \sum_{j \in \mathbf{g}_2}
+             S\left(\frac{r_{i,j}}{r_0}-1\right) F_n \left(\frac{r_{i,j}}{r_0}\right)\]</div>
+<p>where <span class="math notranslate nohighlight">\(r_0\)</span> is a threshold distance and <span class="math notranslate nohighlight">\(r_{ij}\)</span> is the distance between atoms
+<span class="math notranslate nohighlight">\(i \in \mathbf{g}_1\)</span> and <span class="math notranslate nohighlight">\(j \in \mathbf{g}_2\)</span>.
+The function <span class="math notranslate nohighlight">\(F_n(x)\)</span> is a continuous step function defined as</p>
+<div class="math notranslate nohighlight">
+\[F_n(x) = \frac{1}{1+x^n}\]</div>
+<p>where <span class="math notranslate nohighlight">\(n\)</span> is a sharpness parameter. With <span class="math notranslate nohighlight">\(n = 6\)</span> (default), this is the same
+function defined in <span id="id1">[<a class="reference internal" href="../references.html#id25" title="Marcella Iannuzzi, Alessandro Laio, and Michele Parrinello. Efficient exploration of reactive potential energy surfaces using car-parrinello molecular dynamics. Physical Review Letters, jun 2003. doi:10.1103/physrevlett.90.238302.">2</a>]</span>.
+It is also a special case with <span class="math notranslate nohighlight">\(d_0 = 0\)</span> and <span class="math notranslate nohighlight">\(m=2n\)</span> of the <a class="reference external" href="https://www.plumed.org/doc-v2.6/user-doc/html/_c_o_o_r_d_i_n_a_t_i_o_n.html">coordination</a> collective
+variable defined in <a class="reference external" href="https://www.plumed.org">PLUMED</a>.
+It has the following shape for varying <cite>n</cite> values:</p>
+<img alt="../_images/coordination_number.png" class="align-center" src="../_images/coordination_number.png" />
+<p>Besides, <span class="math notranslate nohighlight">\(S(x)\)</span> is a switching function given by</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}S(x) = \begin{cases}
+           1 &amp; x &lt; 0 \\
+           1-6x^5+15x^4-10x^3 &amp; 0 \leq x \leq 1 \\
+           0 &amp; x &gt; 1
+       \end{cases}\end{split}\]</div>
+<p>Thus, the amount summed up for each atom pair decays smoothly to zero throughout the interval
+<span class="math notranslate nohighlight">\(r_{i,j} \in [r_0, 2 r_0]\)</span>, meaning that <span class="math notranslate nohighlight">\(2 r_0\)</span> is an actual cutoff distance.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If the two specified atom groups share atoms, each pair <cite>i,j</cite> among these atoms will be
+counted only once.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>system</strong> (<em>openmm.System</em>) – The system for which this collective variable will be computed.</p></li>
+<li><p><strong>group1</strong> (<em>list</em><em>(</em><em>int</em><em>)</em>) – The indices of the atoms in the first group.</p></li>
+<li><p><strong>group2</strong> (<em>list</em><em>(</em><em>int</em><em>)</em>) – The indices of the atoms in the second group.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>n</strong> (<em>int</em><em> or </em><em>float</em><em>, </em><em>default=6</em>) – Exponent that controls the sharpness of the sigmoidal function.</p></li>
+<li><p><strong>r0</strong> (<em>unit.Quantity</em><em>, </em><em>default=4*unit.angstroms</em>) – The threshold distance, which is also half the actual cutoff distance.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">openmm</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">ufedmm</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">openmm</span> <span class="kn">import</span> <span class="n">app</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ufedmm</span> <span class="kn">import</span> <span class="n">cvlib</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">AlanineDipeptideModel</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">carbons</span> <span class="o">=</span> <span class="p">[</span><span class="n">atom</span><span class="o">.</span><span class="n">index</span> <span class="k">for</span> <span class="n">atom</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">atoms</span><span class="p">()</span> <span class="k">if</span> <span class="n">atom</span><span class="o">.</span><span class="n">element</span> <span class="o">==</span> <span class="n">app</span><span class="o">.</span><span class="n">element</span><span class="o">.</span><span class="n">carbon</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">oxygens</span> <span class="o">=</span> <span class="p">[</span><span class="n">atom</span><span class="o">.</span><span class="n">index</span> <span class="k">for</span> <span class="n">atom</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">atoms</span><span class="p">()</span> <span class="k">if</span> <span class="n">atom</span><span class="o">.</span><span class="n">element</span> <span class="o">==</span> <span class="n">app</span><span class="o">.</span><span class="n">element</span><span class="o">.</span><span class="n">carbon</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">N</span> <span class="o">=</span> <span class="n">cvlib</span><span class="o">.</span><span class="n">CoordinationNumber</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span> <span class="n">carbons</span><span class="p">,</span> <span class="n">oxygens</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">N</span><span class="o">.</span><span class="n">setForceGroup</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="o">.</span><span class="n">addForce</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+<span class="go">4</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">platform</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">Platform</span><span class="o">.</span><span class="n">getPlatformByName</span><span class="p">(</span><span class="s1">&#39;Reference&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">context</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">Context</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span> <span class="n">openmm</span><span class="o">.</span><span class="n">CustomIntegrator</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">platform</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">setPositions</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">positions</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">getState</span><span class="p">(</span><span class="n">getEnergy</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="p">{</span><span class="mi">1</span><span class="p">})</span><span class="o">.</span><span class="n">getPotentialEnergy</span><span class="p">()</span><span class="o">.</span><span class="n">_value</span>
+<span class="go">9.461968618078124</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ufedmm.cvlib.HelixAngleContent">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ufedmm.cvlib.</span></span><span class="sig-name descname"><span class="pre">HelixAngleContent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topology</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">first</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta_ref</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Quantity(value=88,</span> <span class="pre">unit=degree)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta_tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Quantity(value=15,</span> <span class="pre">unit=degree)</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/cvlib.html#HelixAngleContent"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.cvlib.HelixAngleContent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">CustomAngleForce</span></code></p>
+<blockquote>
+<div><p>Fractional alpha-helix content of a sequence of residues in a protein chain based on the
+angles between consecutive alpha-carbon atoms, defined as follows:</p>
+</div></blockquote>
+<div class="math notranslate nohighlight">
+\[\alpha_\theta(r_M,\cdots,r_N) = \frac{1}{N-M-1} \sum_{i=M+1}^{N-1} F_n\left(
+\frac{\theta(\mathrm{C}_\alpha^{i-1},\mathrm{C}_\alpha^i,\mathrm{C}_\alpha^{i+1})
+- \theta_\mathrm{ref}}{\theta_\mathrm{tol}}\right)\]</div>
+<p>where <span class="math notranslate nohighlight">\(\theta(\mathrm{C}_\alpha^{i-1},\mathrm{C}_\alpha^i,\mathrm{C}_\alpha^{i+1})\)</span>
+is the angle between three consecutive alpha-carbon atoms, <span class="math notranslate nohighlight">\(\theta_\mathrm{ref}\)</span> is the
+reference value of this angle, and <span class="math notranslate nohighlight">\(\theta_\mathrm{tol}\)</span> is the tolerance threshold
+around this reference.</p>
+<p>The function <span class="math notranslate nohighlight">\(F_n(x)\)</span> is defined as in <a class="reference internal" href="#ufedmm.cvlib.CoordinationNumber" title="ufedmm.cvlib.CoordinationNumber"><code class="xref py py-class docutils literal notranslate"><span class="pre">CoordinationNumber</span></code></a>, but only even integer
+values are accepted for <cite>n</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>topology</strong> (<em>openmm.app.Topology</em>) – The topology of the system for which this collective variable will be computed.</p></li>
+<li><p><strong>first</strong> (<em>int</em>) – The indices of the first and last residues involved in the alpha helix.</p></li>
+<li><p><strong>last</strong> (<em>int</em>) – The indices of the first and last residues involved in the alpha helix.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>n</strong> (<em>even integer</em><em>, </em><em>default=6</em>) – Exponent that controls the sharpness of the sigmoidal function.</p></li>
+<li><p><strong>theta_ref</strong> (<em>unit.Quantity</em><em>, </em><em>default=88*unit.degrees</em>) – The reference value of the alpha carbon angle in the alpha helix.</p></li>
+<li><p><strong>theta_tol</strong> (<em>unit.Quantity</em><em>, </em><em>default=*unit.degrees</em>) – The tolerance for the deviation from the alpha carbon angle.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ufedmm.cvlib.HelixHydrogenBondContent">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ufedmm.cvlib.</span></span><span class="sig-name descname"><span class="pre">HelixHydrogenBondContent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topology</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">first</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Quantity(value=3.3,</span> <span class="pre">unit=angstrom)</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/cvlib.html#HelixHydrogenBondContent"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.cvlib.HelixHydrogenBondContent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">CustomBondForce</span></code></p>
+<blockquote>
+<div><p>Fractional alpha-helix content of a sequence of residues in a protein chain based on the
+hydrogen bonds between oxygen atoms and H-N groups located four residues apart, defined as
+follows:</p>
+</div></blockquote>
+<div class="math notranslate nohighlight">
+\[\alpha_\mathrm{hb}(r_M,\cdots,r_N) = \frac{1}{M-N-2} \sum_{i=M+2}^{N-2} F_n\left(
+\frac{d(\mathrm{O}^{i-2}, \mathrm{H}^{i+2})}{d_0}\right)\]</div>
+<p>where <span class="math notranslate nohighlight">\(d(\mathrm{O}^{i-2}, \mathrm{H}^{i+2})\)</span> is the distance between the oxygen and
+hydrogen atoms and <span class="math notranslate nohighlight">\(d_0\)</span> is the threshold distance for characterizing a hydrogen bond.</p>
+<p>The function <span class="math notranslate nohighlight">\(F_n(x)\)</span> is defined as in <a class="reference internal" href="#ufedmm.cvlib.CoordinationNumber" title="ufedmm.cvlib.CoordinationNumber"><code class="xref py py-class docutils literal notranslate"><span class="pre">CoordinationNumber</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>topology</strong> (<em>openmm.app.Topology</em>) – The topology of the system for which this collective variable will be computed.</p></li>
+<li><p><strong>first</strong> (<em>int</em>) – The indices of the first and last residues involved in the alpha helix.</p></li>
+<li><p><strong>last</strong> (<em>int</em>) – The indices of the first and last residues involved in the alpha helix.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>n</strong> (<em>int</em><em> or </em><em>float</em><em>, </em><em>default=6</em>) – Exponent that controls the sharpness of the sigmoidal function.</p></li>
+<li><p><strong>d0</strong> (<em>unit.Quantity</em><em>, </em><em>default=4*unit.angstroms</em>) – The threshold distance, which is also half the actual cutoff distance.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ufedmm.cvlib.HelixRamachandranContent">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ufedmm.cvlib.</span></span><span class="sig-name descname"><span class="pre">HelixRamachandranContent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topology</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">first</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phi_ref</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Quantity(value=-</span> <span class="pre">63.8,</span> <span class="pre">unit=degree)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phi_tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Quantity(value=25,</span> <span class="pre">unit=degree)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">psi_ref</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Quantity(value=-</span> <span class="pre">41.1,</span> <span class="pre">unit=degree)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">psi_tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Quantity(value=25,</span> <span class="pre">unit=degree)</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/cvlib.html#HelixRamachandranContent"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.cvlib.HelixRamachandranContent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">CustomTorsionForce</span></code></p>
+<blockquote>
+<div><p>Fractional alpha-helix content of a sequence of residues in a protein chain based on the
+Ramachandran dihedral angles, defined as follows:</p>
+</div></blockquote>
+<div class="math notranslate nohighlight">
+\[\begin{split}\alpha_{\phi,\psi}(r_M,\cdots,r_N) = \frac{1}{2(N-M-1)} \sum_{i=M+1}^{N-1} \Bigg[
+    F_n\left(
+        \frac{\phi(\mathrm{C}^{i-1},\mathrm{N}^i,\mathrm{C}_\alpha^i, \mathrm{C}^i)
+        - \phi_\mathrm{ref}}{\phi_\mathrm{tol}}
+    \right) + \\
+    F_n\left(
+        \frac{\psi(\mathrm{N}^i,\mathrm{C}_\alpha^i, \mathrm{C}^i, \mathrm{N}^{i+1})
+        - \psi_\mathrm{ref}}{\psi_\mathrm{tol}}
+    \right)
+\Bigg]\end{split}\]</div>
+<p>where <span class="math notranslate nohighlight">\(\phi(\mathrm{C}^{i-1},\mathrm{N}^i,\mathrm{C}_\alpha^i, \mathrm{C}^i)\)</span> and
+<span class="math notranslate nohighlight">\(\psi(\mathrm{N}^i,\mathrm{C}_\alpha^i, \mathrm{C}^i, \mathrm{N}^{i+1})\)</span> are the
+Ramachandran dihedral angles, <span class="math notranslate nohighlight">\(\phi_\mathrm{ref}\)</span> and <span class="math notranslate nohighlight">\(\psi_\mathrm{ref}\)</span> are
+their reference values in an alpha helix, and <span class="math notranslate nohighlight">\(\phi_\mathrm{tol}\)</span> and
+<span class="math notranslate nohighlight">\(\psi_\mathrm{tol}\)</span> are the threshold tolerances around these refenrences.</p>
+<p>The function <span class="math notranslate nohighlight">\(F_n(x)\)</span> is defined as in <a class="reference internal" href="#ufedmm.cvlib.CoordinationNumber" title="ufedmm.cvlib.CoordinationNumber"><code class="xref py py-class docutils literal notranslate"><span class="pre">CoordinationNumber</span></code></a>, but only even integer
+values are accepted for <cite>n</cite>.</p>
+<p>Default values are the overall average alpha-helix dihedral angles and their dispersions
+reported in <span id="id2">[<a class="reference internal" href="../references.html#id26" title="Sven Hovmöller, Tuping Zhou, and Tomas Ohlson. Conformations of amino acids in proteins. Acta Crystallographica Section D Biological Crystallography, 58(5):768–776, apr 2002. doi:10.1107/s0907444902003359.">3</a>]</span>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>topology</strong> (<em>openmm.app.Topology</em>) – The topology of the system for which this collective variable will be computed.</p></li>
+<li><p><strong>first</strong> (<em>int</em>) – The indices of the first and last residues involved in the alpha helix.</p></li>
+<li><p><strong>last</strong> (<em>int</em>) – The indices of the first and last residues involved in the alpha helix.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>n</strong> (<em>even integer</em><em>, </em><em>default=6</em>) – Exponent that controls the sharpness of the sigmoidal function.</p></li>
+<li><p><strong>phi_ref</strong> (<em>unit.Quantity</em><em>, </em><em>default=-63.8*unit.degrees</em>) – The reference value of the Ramachandran <span class="math notranslate nohighlight">\(\phi\)</span> dihedral angle in the alpha helix.</p></li>
+<li><p><strong>phi_tol</strong> (<em>unit.Quantity</em><em>, </em><em>default=25*unit.degrees</em>) – The tolerance for the deviation from the Ramachandran <span class="math notranslate nohighlight">\(\phi\)</span> dihedral angle.</p></li>
+<li><p><strong>psi_ref</strong> (<em>unit.Quantity</em><em>, </em><em>default=-41.1*unit.degrees</em>) – The reference value of the Ramachandran <span class="math notranslate nohighlight">\(\psi\)</span> dihedral angle in the alpha helix.</p></li>
+<li><p><strong>psi_tol</strong> (<em>unit.Quantity</em><em>, </em><em>default=25*unit.degrees</em>) – The tolerance for the deviation from the Ramachandran <span class="math notranslate nohighlight">\(\psi\)</span> dihedral angle.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.cvlib.HelixRamachandranContent.atom_indices">
+<span class="sig-name descname"><span class="pre">atom_indices</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/cvlib.html#HelixRamachandranContent.atom_indices"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.cvlib.HelixRamachandranContent.atom_indices" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><ul class="simple">
+<li><p><strong>phi_indices</strong> (<em>list of tuples</em>) – The indices of the atoms in the <span class="math notranslate nohighlight">\(\phi\)</span> dihedrals.</p></li>
+<li><p><strong>psi_indices</strong> (<em>list of tuples</em>) – The indices of the atoms in the <span class="math notranslate nohighlight">\(\psi\)</span> dihedrals.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ufedmm.cvlib.InOutCoulombForce">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ufedmm.cvlib.</span></span><span class="sig-name descname"><span class="pre">InOutCoulombForce</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">group</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nbforce</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">style='conductor-reaction-field'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">damping_coefficient=Quantity(value=0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unit=/angstrom)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scaling_parameter_name='inOutCoulombScaling'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pbc_for_exceptions=False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/cvlib.html#InOutCoulombForce"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.cvlib.InOutCoulombForce" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">_InOutForce</span></code></p>
+<p>Cut-off, pairwise Coulomb interactions between the atoms of a specified group and al other atoms
+in the system, referred to as in/out Coulomb interactions. All charges are imported from a
+provided <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html">NonbondedForce</a> object, which is then modified so that all in-group interactions are
+treated as exceptions and all charges of the group atoms are scaled by a newly created <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html">Context</a>
+global parameter whose default value is 0.0.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>No exceptions which involve in/out atom pairs are allowed.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<dl class="simple">
+<dt>side effect:</dt><dd><p>The constructor of this class modifies the passed <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html">NonbondedForce</a> object.</p>
+</dd>
+</dl>
+</div>
+<p>The model equation is</p>
+<div class="math notranslate nohighlight">
+\[V_\mathrm{coul}(\mathbf{r}) = \sum_{i \in \mathcal{G}} \sum_{j \notin \mathcal{G}}
+    \frac{q_i q_j}{4 \pi \epsilon_0 r_c} u\left(\frac{r}{r_c}\right)\]</div>
+<p>where <span class="math notranslate nohighlight">\(\mathcal{G}\)</span> is the specified group and the function <span class="math notranslate nohighlight">\(u(x)\)</span> can be
+chosen from a number of different styles:</p>
+<ol class="arabic simple">
+<li><p>Shifted:</p></li>
+</ol>
+<div class="math notranslate nohighlight">
+\[u(x) = \frac{1}{x} - 1\]</div>
+<ol class="arabic simple" start="2">
+<li><p>Shifted-force:</p></li>
+</ol>
+<div class="math notranslate nohighlight">
+\[u(x) = \frac{1}{x} + x - 2\]</div>
+<ol class="arabic" start="3">
+<li><p>Conductor Reaction-field (default):</p>
+<blockquote>
+<div><div class="math notranslate nohighlight">
+\[u(x) = \frac{1}{x} + \frac{x^2}{2} - \frac{3}{2}\]</div>
+</div></blockquote>
+</li>
+<li><p>Reaction-field (with finite dielectric constant <span class="math notranslate nohighlight">\(\epsilon\)</span>):</p>
+<blockquote>
+<div><div class="math notranslate nohighlight">
+\[u(x) = \frac{1}{x} + \frac{(2\epsilon-1)x^2-3\epsilon}{2\epsilon+1}\]</div>
+</div></blockquote>
+</li>
+<li><p>Damped:</p></li>
+</ol>
+<div class="math notranslate nohighlight">
+\[u(x) = \frac{\mathrm{erfc}(\alpha_c x)}{x}\]</div>
+<ol class="arabic simple" start="6">
+<li><p>Damped-shifted-force (DSF), with <span class="math notranslate nohighlight">\(\alpha_c = \alpha r_c\)</span>:</p></li>
+</ol>
+<div class="math notranslate nohighlight">
+\[u(x) = \frac{\mathrm{erfc}(\alpha_c x)}{x} - \mathrm{erfc}(\alpha_c) +
+\left[\mathrm{erfc}(\alpha_c) +
+\frac{2\alpha_c e^{-\alpha_c^2}}{\sqrt{\pi}}\right]\left(x - 1\right)\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>group</strong> (<em>list of int</em>) – The atoms in the specified group.</p></li>
+<li><p><strong>nbforce</strong> (<em>openmm.NonbondedForce</em>) – The <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html">NonbondedForce</a> object from which the atom charges are imported.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>style</strong> (<em>str</em><em>, </em><em>default='conductor-reaction-field'</em>) – The style of cutoff electrostatic potential to be used. Valid options are <cite>shifted</cite>,
+<cite>shifted-force</cite>, <cite>reaction-field</cite>, <cite>conductor-reaction-field</cite>, <cite>damped</cite>, and
+<cite>damped-shifted-force</cite>.</p></li>
+<li><p><strong>damping_coefficient</strong> (<em>float</em><em> or </em><em>unit.Quantity</em><em>, </em><em>default=0.2/unit.angstroms</em>) – The damping coefficient <span class="math notranslate nohighlight">\(\alpha\)</span> in inverse distance unit.</p></li>
+<li><p><strong>scaling_parameter_name</strong> (<em>str</em><em>, </em><em>default='inOutCoulombScaling'</em>) – A <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html">Context</a> global parameter whose value will multiply, in the passed <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html">NonbondedForce</a>
+object, the epsilon parameters of all atoms in the specified group.</p></li>
+<li><p><strong>pbc_for_exceptions</strong> (<em>bool</em><em>, </em><em>default=False</em>) – Whether to consider periodic boundary conditions for exceptions in the <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html">NonbondedForce</a>
+object. This might be necessary if the specified group contains several detached
+molecules or one long molecule.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ValueError:</strong> – Raised if there are any exceptions in the <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html">NonbondedForce</a> object involving
+    cross-group (i.e. in/out) atom pairs.</p></li>
+<li><p><strong>ValueError:</strong> – Raised if an invalid <cite>style</cite> keyword value is passed.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ufedmm.cvlib.InOutLennardJonesForce">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ufedmm.cvlib.</span></span><span class="sig-name descname"><span class="pre">InOutLennardJonesForce</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">group</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nbforce</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pbc_for_exceptions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">softcore</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keep_charges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/cvlib.html#InOutLennardJonesForce"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.cvlib.InOutLennardJonesForce" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">_InOutForce</span></code></p>
+<p>Lennard-Jones (LJ) interactions between the atoms of a specified group and all other atoms
+in the system, referred to as in/out LJ interactions. All LJ parameters are imported from a
+provided <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html">NonbondedForce</a> object, which is then modified so that all in-group interactions are
+treated as exceptions and all atoms of the group are removed from regular LJ interactions.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>No exceptions which involve in/out atom pairs are allowed.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<dl class="simple">
+<dt>side effect:</dt><dd><p>The constructor of this class modifies the passed <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html">NonbondedForce</a> object.</p>
+</dd>
+</dl>
+</div>
+<p>The model equation is:</p>
+<div class="math notranslate nohighlight">
+\[V_\mathrm{LJ}(\mathbf{r}) = \sum_{i \in \mathcal{G}} \sum_{j \notin \mathcal{G}}
+\epsilon_{ij} u_\mathrm{LJ}\left(\frac{r_{ij}}{\sigma_{ij}}\right)\]</div>
+<p>where <span class="math notranslate nohighlight">\(\mathcal{G}\)</span> is the specified group and</p>
+<div class="math notranslate nohighlight">
+\[u_\mathrm{LJ}(x) = 4(x^{-12} - x^{-6})\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>group</strong> (<em>list of int</em>) – The atoms in the specified group.</p></li>
+<li><p><strong>nbforce</strong> (<em>openmm.NonbondedForce</em>) – The <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html">NonbondedForce</a> object from which the atom parameters are imported.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>pbc_for_exceptions</strong> (<em>bool</em><em>, </em><em>default=False</em>) – Whether to consider periodic boundary conditions for exceptions in the <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html">NonbondedForce</a>
+object. This might be necessary if the specified group contains several detached
+molecules or one long molecule.</p></li>
+<li><p><strong>softcore</strong> (<em>bool</em><em>, </em><em>default=False</em>) – Whether to include a softcore version <span id="id3">[<a class="reference internal" href="../references.html#id2" title="Thomas C. Beutler, Alan E. Mark, René C. van Schaik, Paul R. Gerber, and Wilfred F. van Gunsteren. Avoiding singularities and numerical instabilities in free energy calculations based on molecular simulations. Chemical Physics Letters, 222(6):529–539, June 1994. doi:10.1016/0009-2614(94)00397-1.">4</a>]</span> of the Lennard-Jones
+potential. In this case, a global variable <cite>lambda_vdw</cite> is added to the constructed
+object.</p></li>
+<li><p><strong>keep_charges</strong> (<em>bool</em><em>, </em><em>default=True</em>) – Whether to keep the charges of the solute atoms. Otherwise, the charges of all solute
+atoms will be set to zero.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ValueError:</strong> – Raised if there are any exceptions in the <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html">NonbondedForce</a> object involving
+    cross-group (i.e. in/out) atom pairs.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.cvlib.InOutLennardJonesForce.capped_version">
+<span class="sig-name descname"><span class="pre">capped_version</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">m</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/cvlib.html#InOutLennardJonesForce.capped_version"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.cvlib.InOutLennardJonesForce.capped_version" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a capped (Buelens-Grubmüller-type) version of the in/out Lennard-Jones force.</p>
+<p>The model equation is</p>
+<div class="math notranslate nohighlight">
+\[V_\mathrm{BG}(\mathbf{r}) = \sum_{i \in \mathcal{G}} \sum_{j \notin \mathcal{G}}
+    \epsilon_{ij} u_\mathrm{BG}\left(\frac{r_{ij}}{\sigma_{ij}}\right)\]</div>
+<p>where</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}u_\mathrm{BG}(x) = \left\{ \begin{array}{ccc}
+    u_\mathrm{cap}(x) &amp; \mathrm{if} &amp; x &lt; 1 \\
+    4(x^{-12} - x^{-6}) &amp; \mathrm{if} &amp; x \geq 1
+\end{array}\right.\end{split}\]</div>
+<p>with</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}u_\mathrm{cap}(x) = \left\{ \begin{array}{ccc}
+    126 x^4 - 176 x^3 + 50 &amp; \mathrm{if} &amp; m = 2 \\
+    \frac{-4340 x^6 + 10944 x^5 - 7200 x^4 + 596}{5} &amp; \mathrm{if} &amp; m = 3 \\
+    \frac{43365 x^8 - 155880 x^7 + 191065 x^6 - 80472 x^5 + 1922}{35} &amp; \mathrm{if} &amp; m = 4
+\end{array}\right.\end{split}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>m</strong> (<em>int</em><em>, </em><em>default=2</em>) – The highest order of derivatives to be zero at <span class="math notranslate nohighlight">\(r=0\)</span> and to match the
+Lennard-Jones values at <span class="math notranslate nohighlight">\(r=\sigma\)</span>. Valid options are 2, 3, and 4.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ufedmm.cvlib.RadiusOfGyration">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ufedmm.cvlib.</span></span><span class="sig-name descname"><span class="pre">RadiusOfGyration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">group</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/cvlib.html#RadiusOfGyration"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.cvlib.RadiusOfGyration" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">CustomCVForce</span></code></p>
+<p>The radius of gyration of a group of atoms, defined as:</p>
+<div class="math notranslate nohighlight">
+\[R_g = \frac{1}{n} \sqrt{\sum_i \sum_{j&gt;i} r_{i,j}^2},\]</div>
+<p>where <span class="math notranslate nohighlight">\(n\)</span> is the number of atoms in the group and <span class="math notranslate nohighlight">\(r_{i,j}\)</span> is the distance between
+atoms <cite>i</cite> and <cite>j</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>group</strong> (<em>list</em><em>(</em><em>int</em><em>)</em>) – The indices of the atoms in the group.</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">openmm</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">ufedmm</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ufedmm</span> <span class="kn">import</span> <span class="n">cvlib</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">AlanineDipeptideModel</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Rg</span> <span class="o">=</span> <span class="n">cvlib</span><span class="o">.</span><span class="n">RadiusOfGyration</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="o">.</span><span class="n">getNumParticles</span><span class="p">()))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Rg</span><span class="o">.</span><span class="n">setForceGroup</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="o">.</span><span class="n">addForce</span><span class="p">(</span><span class="n">Rg</span><span class="p">)</span>
+<span class="go">4</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">platform</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">Platform</span><span class="o">.</span><span class="n">getPlatformByName</span><span class="p">(</span><span class="s1">&#39;Reference&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">context</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">Context</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span> <span class="n">openmm</span><span class="o">.</span><span class="n">CustomIntegrator</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">platform</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">setPositions</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">positions</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">getState</span><span class="p">(</span><span class="n">getEnergy</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="p">{</span><span class="mi">1</span><span class="p">})</span><span class="o">.</span><span class="n">getPotentialEnergy</span><span class="p">()</span><span class="o">.</span><span class="n">_value</span>
+<span class="go">0.2951510848575048</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ufedmm.cvlib.SquareRadiusOfGyration">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ufedmm.cvlib.</span></span><span class="sig-name descname"><span class="pre">SquareRadiusOfGyration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">group</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/cvlib.html#SquareRadiusOfGyration"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.cvlib.SquareRadiusOfGyration" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">CustomBondForce</span></code></p>
+<p>The square of the radius of gyration of a group of atoms, defined as:</p>
+<div class="math notranslate nohighlight">
+\[R_g^2 = \frac{1}{n^2} \sum_i \sum_{j&gt;i} r_{i,j}^2,\]</div>
+<p>where <span class="math notranslate nohighlight">\(n\)</span> is the number of atoms in the group and <span class="math notranslate nohighlight">\(r_{i,j}\)</span> is the distance between
+atoms <cite>i</cite> and <cite>j</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>group</strong> (<em>list</em><em>(</em><em>int</em><em>)</em>) – The indices of the atoms in the group.</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">openmm</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">ufedmm</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ufedmm</span> <span class="kn">import</span> <span class="n">cvlib</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">AlanineDipeptideModel</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">RgSq</span> <span class="o">=</span> <span class="n">cvlib</span><span class="o">.</span><span class="n">SquareRadiusOfGyration</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="o">.</span><span class="n">getNumParticles</span><span class="p">()))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">RgSq</span><span class="o">.</span><span class="n">setForceGroup</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="o">.</span><span class="n">addForce</span><span class="p">(</span><span class="n">RgSq</span><span class="p">)</span>
+<span class="go">4</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">platform</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">Platform</span><span class="o">.</span><span class="n">getPlatformByName</span><span class="p">(</span><span class="s1">&#39;Reference&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">context</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">Context</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span> <span class="n">openmm</span><span class="o">.</span><span class="n">CustomIntegrator</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">platform</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">setPositions</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">positions</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">getState</span><span class="p">(</span><span class="n">getEnergy</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="p">{</span><span class="mi">1</span><span class="p">})</span><span class="o">.</span><span class="n">getPotentialEnergy</span><span class="p">()</span><span class="o">.</span><span class="n">_value</span>
+<span class="go">0.08711416289256209</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">UFED for OpenMM</a></h1>
+
+
+
+
+
+
+
+
+
+
+
+<h3><a href="../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../readme.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html">Usage</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Python API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="ufedmm.html">ufedmm</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">collective variable library</a></li>
+<li class="toctree-l2"><a class="reference internal" href="analysis.html">analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrators.html">integrators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="io.html">input/output</a></li>
+<li class="toctree-l2"><a class="reference internal" href="testmodels.html">testmodels</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../authors.html">Authors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../glossary.html">Glossary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">Bibliography</a></li>
+</ul>
+
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Charlles Abreu. Project structure based on the Computational Molecular Science Python Cookiecutter version 1.0.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.0.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/pythonapi/cvlib.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

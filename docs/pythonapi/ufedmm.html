@@ -1,0 +1,642 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+    <title>ufedmm &#8212; UFED for OpenMM  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/clipboard.min.js"></script>
+    <script src="../_static/copybutton.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="collective variable library" href="cvlib.html" />
+    <link rel="prev" title="Python API" href="index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-ufedmm.ufedmm">
+<span id="ufedmm"></span><h1>ufedmm<a class="headerlink" href="#module-ufedmm.ufedmm" title="Permalink to this heading">¶</a></h1>
+<span class="target" id="module-ufedmm"></span><dl class="py class">
+<dt class="sig sig-object py" id="ufedmm.ufedmm.CollectiveVariable">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ufedmm.ufedmm.</span></span><span class="sig-name descname"><span class="pre">CollectiveVariable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#CollectiveVariable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ufedmm.CollectiveVariable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A function of the particle coordinates, evaluated by means of an OpenMM <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Force.html">Force</a> object.</p>
+<p>Quoting OpenMM’s <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html">CustomCVForce</a> manual entry:</p>
+<blockquote>
+<div><p>“Each collective variable is defined by a Force object. The Force’s potential energy is
+computed, and that becomes the value of the variable. This provides enormous flexibility
+in defining collective variables, especially by using custom forces. Anything that can
+be computed as a potential function can also be used as a collective variable.”</p>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>id</strong> (<em>str</em>) – A valid identifier string for this collective variable.</p></li>
+<li><p><strong>force</strong> (<em>openmm.Force</em>) – An OpenMM <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Force.html">Force</a> object whose energy function is used to evaluate this collective
+variable.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">openmm</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">ufedmm</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">openmm</span> <span class="kn">import</span> <span class="n">unit</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cv</span> <span class="o">=</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">CollectiveVariable</span><span class="p">(</span><span class="s1">&#39;psi&#39;</span><span class="p">,</span> <span class="n">openmm</span><span class="o">.</span><span class="n">CustomTorsionForce</span><span class="p">(</span><span class="s1">&#39;theta&#39;</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cv</span><span class="o">.</span><span class="n">force</span><span class="o">.</span><span class="n">addTorsion</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="p">[])</span>
+<span class="go">0</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.ufedmm.CollectiveVariable.effective_mass">
+<span class="sig-name descname"><span class="pre">effective_mass</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">system</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">positions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cv_unit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#CollectiveVariable.effective_mass"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ufedmm.CollectiveVariable.effective_mass" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the effective mass of the collective variable for a given system and a given set of
+particle coordinates.</p>
+<p>The effective mass of a collective variable <span class="math notranslate nohighlight">\(q(\mathbf{r})\)</span> is defined as
+<span id="id1">[<a class="reference internal" href="../references.html#id27" title="Michel A. Cuendet and Mark E. Tuckerman. Free energy reconstruction from metadynamics or adiabatic free energy dynamics simulations. Journal of Chemical Theory and Computation, 10(8):2975–2986, jul 2014. doi:10.1021/ct500012b.">1</a>]</span>:</p>
+<div class="math notranslate nohighlight">
+\[m_\mathrm{eff} = \left(
+    \sum_{j=1}^N \frac{1}{m_j} \left\|\frac{dq}{d\mathbf{r}_j}\right\|^2
+\right)^{-1}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>system</strong> (<em>openmm.System</em>) – The system for which the collective variable will be evaluated.</p></li>
+<li><p><strong>positions</strong> (<em>list of openmm.Vec3</em>) – A list whose size equals the number of particles in the system and which contains
+the coordinates of these particles.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>cv_unit</strong> (<em>unit.Unit</em><em>, </em><em>default=None</em>) – The unity of measurement of the collective variable. If this is <cite>None</cite>, then a
+numerical value is returned based on the OpenMM default units.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or unit.Quantity</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">ufedmm</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">openmm</span> <span class="kn">import</span> <span class="n">unit</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">AlanineDipeptideModel</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span><span class="o">.</span><span class="n">phi</span><span class="o">.</span><span class="n">effective_mass</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">positions</span><span class="p">)</span>
+<span class="go">0.0479588726559707</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span><span class="o">.</span><span class="n">psi</span><span class="o">.</span><span class="n">effective_mass</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">positions</span><span class="p">)</span>
+<span class="go">0.05115582071188152</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.ufedmm.CollectiveVariable.evaluate">
+<span class="sig-name descname"><span class="pre">evaluate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">system</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">positions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cv_unit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#CollectiveVariable.evaluate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ufedmm.CollectiveVariable.evaluate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the value of the collective variable for a given system and a given set of particle
+coordinates.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>system</strong> (<em>openmm.System</em>) – The system for which the collective variable will be evaluated.</p></li>
+<li><p><strong>positions</strong> (<em>list of openmm.Vec3</em>) – A list whose size equals the number of particles in the system and which contains
+the coordinates of these particles.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>cv_unit</strong> (<em>unit.Unit</em><em>, </em><em>default=None</em>) – The unity of measurement of the collective variable. If this is <cite>None</cite>, then a
+numerical value is returned based on the OpenMM default units.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or unit.Quantity</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">ufedmm</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">openmm</span> <span class="kn">import</span> <span class="n">unit</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">AlanineDipeptideModel</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span><span class="o">.</span><span class="n">phi</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">positions</span><span class="p">)</span>
+<span class="go">3.141592653589793</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span><span class="o">.</span><span class="n">psi</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">positions</span><span class="p">)</span>
+<span class="go">3.141592653589793</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ufedmm.ufedmm.DynamicalVariable">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ufedmm.ufedmm.</span></span><span class="sig-name descname"><span class="pre">DynamicalVariable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mass</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colvars</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">potential</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">periodic</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">parameters</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#DynamicalVariable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ufedmm.DynamicalVariable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>An extended phase-space variable, whose dynamics is coupled to that of one of more collective
+variables of a system.</p>
+<p>The coupling occurs in the form of a potential energy term involving this dynamical variable
+and its associated collective variables.</p>
+<p>The default potential is a harmonic driving of the type:</p>
+<div class="math notranslate nohighlight">
+\[V(s, \mathbf r) = \frac{\kappa}{2} [s - q(\mathbf r)]^2\]</div>
+<p>where <span class="math notranslate nohighlight">\(s\)</span> is the new dynamical variable, <span class="math notranslate nohighlight">\(q(\mathbf r)\)</span> is its associated collective
+variable, and <span class="math notranslate nohighlight">\(kappa\)</span> is a force constant.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>id</strong> (<em>str</em>) – A valid identifier string for this dynamical variable.</p></li>
+<li><p><strong>min_value</strong> (<em>float</em><em> or </em><em>unit.Quantity</em>) – The minimum allowable value for this dynamical variable.</p></li>
+<li><p><strong>max_value</strong> (<em>float</em><em> or </em><em>unit.Quantity</em>) – The maximum allowable value for this dynamical variable.</p></li>
+<li><p><strong>mass</strong> (<em>float</em><em> or </em><em>unit.Quantity</em>) – The mass assigned to this dynamical variable, whose unit of measurement must be
+compatible with <cite>unit.dalton*(unit.nanometers/X)**2</cite>, where <cite>X</cite> is the unit of
+measurement of the dynamical variable itself.</p></li>
+<li><p><strong>temperature</strong> (<em>float</em><em> or </em><em>unit.Quantity</em>) – The temperature of the heat bath attached to this variable.</p></li>
+<li><p><strong>colvars</strong> (<a class="reference internal" href="#ufedmm.ufedmm.CollectiveVariable" title="ufedmm.ufedmm.CollectiveVariable"><code class="xref py py-class docutils literal notranslate"><span class="pre">CollectiveVariable</span></code></a> or list thereof) – Either a single colective variable or a list.</p></li>
+<li><p><strong>potential</strong> (<em>float</em><em> or </em><em>unit.Quantity</em><em> or </em><em>str</em>) – Either the value of the force constant of a harmonic driving potential or an algebraic
+expression giving the energy of the system as a function of this dynamical variable and
+its associated collective variable. Such expression can also contain a set of global
+parameters, whose values must be passed as keyword arguments (see below).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>periodic</strong> (<em>bool</em><em>, </em><em>default=True</em>) – Whether the collective variable is periodic with period <cite>L=max_value-min_value</cite>.</p></li>
+<li><p><strong>sigma</strong> (<em>float</em><em> or </em><em>unit.Quantity</em><em>, </em><em>default=None</em>) – The standard deviation. If this is <cite>None</cite>, then no bias will be considered.</p></li>
+<li><p><strong>grid_size</strong> (<em>int</em><em>, </em><em>default=None</em>) – The grid size. If this is <cite>None</cite> and <cite>sigma</cite> is finite, then a convenient value will be
+automatically chosen.</p></li>
+<li><p><strong>**parameters</strong> – Names and values of global parameters present in the algebraic expression defined as
+<cite>potential</cite> (see above).</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">openmm</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">ufedmm</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">openmm</span> <span class="kn">import</span> <span class="n">unit</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cv</span> <span class="o">=</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">CollectiveVariable</span><span class="p">(</span><span class="s1">&#39;psi&#39;</span><span class="p">,</span> <span class="n">openmm</span><span class="o">.</span><span class="n">CustomTorsionForce</span><span class="p">(</span><span class="s1">&#39;theta&#39;</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cv</span><span class="o">.</span><span class="n">force</span><span class="o">.</span><span class="n">addTorsion</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="p">[])</span>
+<span class="go">0</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mass</span> <span class="o">=</span> <span class="mi">50</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">dalton</span><span class="o">*</span><span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span><span class="o">/</span><span class="n">unit</span><span class="o">.</span><span class="n">radians</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">K</span> <span class="o">=</span> <span class="mi">1000</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">kilojoules_per_mole</span><span class="o">/</span><span class="n">unit</span><span class="o">.</span><span class="n">radians</span><span class="o">**</span><span class="mi">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Ts</span> <span class="o">=</span> <span class="mi">1500</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ufedmm</span><span class="o">.</span><span class="n">DynamicalVariable</span><span class="p">(</span><span class="s1">&#39;s_psi&#39;</span><span class="p">,</span> <span class="o">-</span><span class="mi">180</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">degrees</span><span class="p">,</span> <span class="mi">180</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">degrees</span><span class="p">,</span> <span class="n">mass</span><span class="p">,</span> <span class="n">Ts</span><span class="p">,</span> <span class="n">cv</span><span class="p">,</span> <span class="n">K</span><span class="p">)</span>
+<span class="go">&lt;s_psi in [-3.141592653589793, 3.141592653589793], periodic, m=50, T=1500&gt;</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.ufedmm.DynamicalVariable.evaluate">
+<span class="sig-name descname"><span class="pre">evaluate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Lx</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#DynamicalVariable.evaluate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ufedmm.DynamicalVariable.evaluate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the value of this dynamical variable for a given x coordinate and a given length of
+the simulation box in the x direction.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>float</em><em> or </em><em>unit.Quantity</em>) – The x coordinate.</p></li>
+<li><p><strong>Lx</strong> (<em>float</em><em> or </em><em>unit.Quantity</em>) – The length of the simulation box in the x direction.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ufedmm.ufedmm.ExtendedSpaceContext">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ufedmm.ufedmm.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">system</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ufedmm.ExtendedSpaceContext" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Context</span></code></p>
+<p>An extension of OpenMM’s <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html">Context</a> class.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>variables</strong> (<em>list</em><em>(</em><a class="reference internal" href="#ufedmm.ufedmm.DynamicalVariable" title="ufedmm.ufedmm.DynamicalVariable"><em>DynamicalVariable</em></a><em>)</em>) – The dynamical variables to be added to the system’s phase space.</p></li>
+<li><p><strong>system</strong> (<em>openmm.System</em>) – The <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html">System</a> which will be simulated</p></li>
+<li><p><strong>integrator</strong> (<em>openmm.Integrator</em>) – The <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Integrator.html">Integrator</a> which will be used to simulate the <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html">System</a>.</p></li>
+<li><p><strong>platform</strong> (<em>openmm.Platform</em>) – The <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Platform.html">Platform</a> to use for calculations.</p></li>
+<li><p><strong>properties</strong> (<em>dict</em><em>(</em><em>str: str</em><em>)</em>) – A set of values for platform-specific properties. Keys are the property names.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Variables<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>variables</strong> (<em>list</em><em>(</em><a class="reference internal" href="#ufedmm.ufedmm.DynamicalVariable" title="ufedmm.ufedmm.DynamicalVariable"><em>DynamicalVariable</em></a><em>)</em>) – The dynamical variables added to the system’s phase space.</p></li>
+<li><p><strong>driving_force</strong> (<em>openmm.CustomCVForce</em>) – A <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html">CustomCVForce</a> object responsible for evaluating the potential energy terms
+which couples the extra dynamical variables to their associated collective
+variables.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.ufedmm.ExtendedSpaceContext.getState">
+<span class="sig-name descname"><span class="pre">getState</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceContext.getState"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ufedmm.ExtendedSpaceContext.getState" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a <a class="reference internal" href="#ufedmm.ufedmm.ExtendedSpaceState" title="ufedmm.ufedmm.ExtendedSpaceState"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtendedSpaceState</span></code></a> object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>**kwargs</strong> – See <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html#openmm.openmm.Context.getState#noqa:E501">getState</a>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.ufedmm.ExtendedSpaceContext.setPeriodicBoxVectors">
+<span class="sig-name descname"><span class="pre">setPeriodicBoxVectors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceContext.setPeriodicBoxVectors"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ufedmm.ExtendedSpaceContext.setPeriodicBoxVectors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the vectors defining the axes of the periodic box.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Only orthorhombic boxes are allowed.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>a</strong> (<em>openmm.Vec3</em>) – The vector defining the first edge of the periodic box.</p></li>
+<li><p><strong>b</strong> (<em>openmm.Vec3</em>) – The vector defining the second edge of the periodic box.</p></li>
+<li><p><strong>c</strong> (<em>openmm.Vec3</em>) – The vector defining the third edge of the periodic box.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.ufedmm.ExtendedSpaceContext.setPositions">
+<span class="sig-name descname"><span class="pre">setPositions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">positions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extended_positions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceContext.setPositions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ufedmm.ExtendedSpaceContext.setPositions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the positions of all particles and extended-space variables in
+this context. If the latter are not provided, then suitable values
+are automatically determined from the particle positions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>positions</strong> (<em>list of openmm.Vec3</em>) – The positions of physical particles.</p>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>extended_positions</strong> (<em>list of float</em><em> or </em><em>unit.Quantity</em>) – The positions of extended-space particles.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.ufedmm.ExtendedSpaceContext.setVelocitiesToTemperature">
+<span class="sig-name descname"><span class="pre">setVelocitiesToTemperature</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">randomSeed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceContext.setVelocitiesToTemperature"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ufedmm.ExtendedSpaceContext.setVelocitiesToTemperature" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the velocities of all particles in the system to random values chosen from a
+Maxwell-Boltzmann distribution at a given temperature.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The velocities of the extended-space variables are set to values consistent with the
+distribution at its own specified temperature.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>temperature</strong> (<em>float</em><em> or </em><em>unit.Quantity</em>) – The temperature of the system.</p>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>randomSeed</strong> (<em>int</em><em>, </em><em>default=None</em>) – A seed for the random number generator.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ufedmm.ufedmm.ExtendedSpaceSimulation">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ufedmm.ufedmm.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceSimulation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">topology</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">system</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">integrator</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">platform</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">platformProperties</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceSimulation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ufedmm.ExtendedSpaceSimulation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Simulation</span></code></p>
+<p>A simulation involving extended phase-space variables.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>variables</strong> (<em>list of DynamicalVariable</em>) – The dynamical variables to be added to the system’s phase space.</p></li>
+<li><p><strong>topology</strong> (<em>openmm.app.Topology</em>) – A Topology describing the system to be simulated.</p></li>
+<li><p><strong>system</strong> (<em>openmm.System</em>) – The OpenMM <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html">System</a> object to be simulated.</p></li>
+<li><p><strong>integrator</strong> (<em>openmm.Integrator</em>) – The OpenMM Integrator to use for simulating the system dynamics.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>platform</strong> (<em>openmm.Platform</em><em>, </em><em>default=None</em>) – If not None, the OpenMM <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Platform.html">Platform</a> to use.</p></li>
+<li><p><strong>platformProperties</strong> (<em>dict</em><em>, </em><em>default=None</em>) – If not None, a set of platform-specific properties to pass to the Context’s constructor.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.ufedmm.ExtendedSpaceSimulation.add_periodic_task">
+<span class="sig-name descname"><span class="pre">add_periodic_task</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">task</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_group</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceSimulation.add_periodic_task"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ufedmm.ExtendedSpaceSimulation.add_periodic_task" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a task to be executed periodically along this simulation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>task</strong> (<em>PeriodicTask</em>) – A <code class="xref py py-class docutils literal notranslate"><span class="pre">PeriodicTask</span></code> object.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.ufedmm.ExtendedSpaceSimulation.loadCheckpoint">
+<span class="sig-name descname"><span class="pre">loadCheckpoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceSimulation.loadCheckpoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ufedmm.ExtendedSpaceSimulation.loadCheckpoint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load a checkpoint file that was created with saveCheckpoint().</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>file</strong> (<em>string</em><em> or </em><em>file</em>) – a File-like object to load the checkpoint from, or alternatively a
+filename</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.ufedmm.ExtendedSpaceSimulation.saveCheckpoint">
+<span class="sig-name descname"><span class="pre">saveCheckpoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceSimulation.saveCheckpoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ufedmm.ExtendedSpaceSimulation.saveCheckpoint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save a checkpoint of the simulation to a file.</p>
+<p>The output is a binary file that contains a complete representation of the current state of the Simulation.
+It includes both publicly visible data such as the particle positions and velocities, and also internal data
+such as the states of random number generators.  Reloading the checkpoint will put the Simulation back into
+precisely the same state it had before, so it can be exactly continued.</p>
+<p>A checkpoint file is highly specific to the Simulation it was created from.  It can only be loaded into
+another Simulation that has an identical System, uses the same Platform and OpenMM version, and is running on
+identical hardware.  If you need a more portable way to resume simulations, consider using saveState() instead.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>file</strong> (<em>string</em><em> or </em><em>file</em>) – a File-like object to write the checkpoint to, or alternatively a
+filename</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.ufedmm.ExtendedSpaceSimulation.step">
+<span class="sig-name descname"><span class="pre">step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">steps</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceSimulation.step"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ufedmm.ExtendedSpaceSimulation.step" title="Permalink to this definition">¶</a></dt>
+<dd><p>Executed a given number of simulation steps.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>steps</strong> (<em>int</em>) – The number of steps to be executed.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ufedmm.ufedmm.ExtendedSpaceState">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ufedmm.ufedmm.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceState</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceState"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ufedmm.ExtendedSpaceState" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">State</span></code></p>
+<p>An extension of OpenMM’s <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.State.html">State</a> class.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.ufedmm.ExtendedSpaceState.getDynamicalVariables">
+<span class="sig-name descname"><span class="pre">getDynamicalVariables</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceState.getDynamicalVariables"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ufedmm.ExtendedSpaceState.getDynamicalVariables" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the values of the extended-space dynamical variables.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list(float)</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>Exception</strong> – If positions were not requested in the <code class="docutils literal notranslate"><span class="pre">context.getState()</span></code> call.</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">ufedmm</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">AlanineDipeptideModel</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span> <span class="o">=</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">CustomIntegrator</span><span class="p">(</span><span class="mi">300</span><span class="p">,</span> <span class="mf">0.001</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">1500</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">phi</span><span class="p">,</span> <span class="mi">1000</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s_phi</span> <span class="o">=</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">DynamicalVariable</span><span class="p">(</span><span class="s1">&#39;s_phi&#39;</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s_psi</span> <span class="o">=</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">DynamicalVariable</span><span class="p">(</span><span class="s1">&#39;s_psi&#39;</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">context</span> <span class="o">=</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">ExtendedSpaceContext</span><span class="p">([</span><span class="n">s_phi</span><span class="p">,</span> <span class="n">s_psi</span><span class="p">],</span> <span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span> <span class="n">integrator</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">setPositions</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">positions</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">getState</span><span class="p">(</span><span class="n">getPositions</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">getDynamicalVariables</span><span class="p">()</span>
+<span class="go">[-3.141592653589793, -3.141592653589793]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.ufedmm.ExtendedSpaceState.getPositions">
+<span class="sig-name descname"><span class="pre">getPositions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">asNumpy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extended</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceState.getPositions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ufedmm.ExtendedSpaceState.getPositions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the positions of all physical particles and optionally also gets the positions
+of the extra particles from which the extended-space dynamical variables are computed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>asNumpy</strong> (<em>bool</em><em>, </em><em>default=False</em>) – Whether to return Numpy arrays instead of lists of openmm.Vec3.</p></li>
+<li><p><strong>extended</strong> (<em>bool</em><em>, </em><em>default=False</em>) – Whether to include the positions of the extra particles from which the
+extended-space dynamical variables are computed.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><em>list(openmm.Vec3)</em> – If <cite>asNumpy=False</cite> and <cite>extended=False</cite>.</p></li>
+<li><p><em>numpy.ndarray</em> – If <cite>asNumpy=True</cite> and <cite>extended=False</cite>.</p></li>
+<li><p><em>list(openmm.Vec3), list(float)</em> – If <cite>asNumpy=False</cite> and <cite>extended=True</cite>.</p></li>
+<li><p><em>numpy.ndarray, numpy.ndarray</em> – If <cite>asNumpy=True</cite> and <cite>extended=True</cite>.</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Exception</strong> – If positions were not requested in the <code class="docutils literal notranslate"><span class="pre">context.getState()</span></code> call.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.ufedmm.ExtendedSpaceState.getVelocities">
+<span class="sig-name descname"><span class="pre">getVelocities</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">asNumpy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extended</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceState.getVelocities"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ufedmm.ExtendedSpaceState.getVelocities" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the velocities of all physical particles and optionally also gets the velocities
+of the extra particles associated to the extended-space dynamical variables.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>asNumpy</strong> (<em>bool</em><em>, </em><em>default=False</em>) – Whether to return Numpy arrays instead of lists of openmm.Vec3.</p></li>
+<li><p><strong>extended</strong> (<em>bool</em><em>, </em><em>default=False</em>) – Whether to include the velocities of the extra particles.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><em>list(openmm.Vec3)</em> – If <cite>asNumpy=False</cite> and <cite>extended=False</cite>.</p></li>
+<li><p><em>numpy.ndarray</em> – If <cite>asNumpy=True</cite> and <cite>extended=False</cite>.</p></li>
+<li><p><em>list(openmm.Vec3), list(float)</em> – If <cite>asNumpy=False</cite> and <cite>extended=True</cite>.</p></li>
+<li><p><em>numpy.ndarray, numpy.ndarray</em> – If <cite>asNumpy=True</cite> and <cite>extended=True</cite>.</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Exception</strong> – If velocities were not requested in the <code class="docutils literal notranslate"><span class="pre">context.getState()</span></code> call.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ufedmm.ufedmm.UnifiedFreeEnergyDynamics">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ufedmm.ufedmm.</span></span><span class="sig-name descname"><span class="pre">UnifiedFreeEnergyDynamics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">height</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frequency</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bias_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_expansion</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enforce_gridless</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#UnifiedFreeEnergyDynamics"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ufedmm.UnifiedFreeEnergyDynamics" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A Unified Free-Energy Dynamics (UFED) setup.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>variables</strong> (<em>list of DynamicalVariable</em>) – The variables.</p></li>
+<li><p><strong>temperature</strong> (<em>float</em><em> or </em><em>unit.Quantity</em>) – The temperature.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>height</strong> (<em>float</em><em> or </em><em>unit.Quantity</em><em>, </em><em>default=None</em>) – The height.</p></li>
+<li><p><strong>frequency</strong> (<em>int</em><em>, </em><em>default=None</em>) – The frequency.</p></li>
+<li><p><strong>bias_factor</strong> (<em>float</em><em>, </em><em>default=None</em>) – Scales the height of the hills added to the metadynamics bias potential. If it is
+<cite>None</cite>, then the hills will have a constant height over time. For a bias factor to be
+applicable, all bias variables must be at the same temperature T. The extended-space
+dynamical variables are sampled as if the effective temperature were T*bias_factor.</p></li>
+<li><p><strong>grid_expansion</strong> (<em>int</em><em>, </em><em>default=20</em>) – The grid expansion.</p></li>
+<li><p><strong>enforce_gridless</strong> (<em>bool</em><em>, </em><em>default=False</em>) – If this is <cite>True</cite>, gridless metadynamics is enforced even for 1D to 3D problems.</p></li>
+<li><p><strong>buffer_size</strong> (<em>int</em><em>, </em><em>default=100</em>) – The buffer size.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">ufedmm</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">openmm</span> <span class="kn">import</span> <span class="n">unit</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">AlanineDipeptideModel</span><span class="p">(</span><span class="n">water</span><span class="o">=</span><span class="s1">&#39;tip3p&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mass</span> <span class="o">=</span> <span class="mi">50</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">dalton</span><span class="o">*</span><span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span><span class="o">/</span><span class="n">unit</span><span class="o">.</span><span class="n">radians</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Ks</span> <span class="o">=</span> <span class="mi">1000</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">kilojoules_per_mole</span><span class="o">/</span><span class="n">unit</span><span class="o">.</span><span class="n">radians</span><span class="o">**</span><span class="mi">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Ts</span> <span class="o">=</span> <span class="mi">1500</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">limit</span> <span class="o">=</span> <span class="mi">180</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">degrees</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s_phi</span> <span class="o">=</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">DynamicalVariable</span><span class="p">(</span><span class="s1">&#39;s_phi&#39;</span><span class="p">,</span> <span class="o">-</span><span class="n">limit</span><span class="p">,</span> <span class="n">limit</span><span class="p">,</span> <span class="n">mass</span><span class="p">,</span> <span class="n">Ts</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">phi</span><span class="p">,</span> <span class="n">Ks</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s_psi</span> <span class="o">=</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">DynamicalVariable</span><span class="p">(</span><span class="s1">&#39;s_psi&#39;</span><span class="p">,</span> <span class="o">-</span><span class="n">limit</span><span class="p">,</span> <span class="n">limit</span><span class="p">,</span> <span class="n">mass</span><span class="p">,</span> <span class="n">Ts</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">psi</span><span class="p">,</span> <span class="n">Ks</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ufedmm</span><span class="o">.</span><span class="n">UnifiedFreeEnergyDynamics</span><span class="p">([</span><span class="n">s_phi</span><span class="p">,</span> <span class="n">s_psi</span><span class="p">],</span> <span class="mi">300</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">)</span>
+<span class="go">&lt;variables=[s_phi, s_psi], temperature=300, height=None, frequency=None&gt;</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.ufedmm.UnifiedFreeEnergyDynamics.simulation">
+<span class="sig-name descname"><span class="pre">simulation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topology</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">system</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">integrator</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">platform</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">platformProperties</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#UnifiedFreeEnergyDynamics.simulation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ufedmm.UnifiedFreeEnergyDynamics.simulation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a ExtendedSpaceSimulation object.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If the temperature of any driving parameter is different from the particle-system
+temperature, then the passed integrator must be a <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomIntegrator.html">CustomIntegrator</a> object
+containing a per-dof variable <cite>kT</cite> whose content is the Boltzmann constant times
+the temperature associated to each degree of freedom.
+This is true for all integrators available in <a class="reference internal" href="integrators.html#module-ufedmm.integrators" title="ufedmm.integrators"><code class="xref py py-mod docutils literal notranslate"><span class="pre">ufedmm.integrators</span></code></a>, which are
+subclasses of <a class="reference internal" href="integrators.html#ufedmm.integrators.CustomIntegrator" title="ufedmm.integrators.CustomIntegrator"><code class="xref py py-class docutils literal notranslate"><span class="pre">ufedmm.integrators.CustomIntegrator</span></code></a>.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>topology</strong> (<em>openmm.app.Topology</em>) – The topology.</p></li>
+<li><p><strong>system</strong> (<em>openmm.System</em>) – The system.</p></li>
+<li><p><strong>integrator</strong> – The integrator.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>platform</strong> (<em>openmm.Platform</em><em>, </em><em>default=None</em>) – The platform.</p></li>
+<li><p><strong>platformProperties</strong> (<em>dict</em><em>, </em><em>default=None</em>) – The platform properties.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">ufedmm</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">openmm</span> <span class="kn">import</span> <span class="n">unit</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">AlanineDipeptideModel</span><span class="p">(</span><span class="n">water</span><span class="o">=</span><span class="s1">&#39;tip3p&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mass</span> <span class="o">=</span> <span class="mi">50</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">dalton</span><span class="o">*</span><span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span><span class="o">/</span><span class="n">unit</span><span class="o">.</span><span class="n">radians</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Ks</span> <span class="o">=</span> <span class="mi">1000</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">kilojoules_per_mole</span><span class="o">/</span><span class="n">unit</span><span class="o">.</span><span class="n">radians</span><span class="o">**</span><span class="mi">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Ts</span> <span class="o">=</span> <span class="mi">1500</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dt</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">femtoseconds</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gamma</span> <span class="o">=</span> <span class="mi">10</span><span class="o">/</span><span class="n">unit</span><span class="o">.</span><span class="n">picoseconds</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">limit</span> <span class="o">=</span> <span class="mi">180</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">degrees</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s_phi</span> <span class="o">=</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">DynamicalVariable</span><span class="p">(</span><span class="s1">&#39;s_phi&#39;</span><span class="p">,</span> <span class="o">-</span><span class="n">limit</span><span class="p">,</span> <span class="n">limit</span><span class="p">,</span> <span class="n">mass</span><span class="p">,</span> <span class="n">Ts</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">phi</span><span class="p">,</span> <span class="n">Ks</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s_psi</span> <span class="o">=</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">DynamicalVariable</span><span class="p">(</span><span class="s1">&#39;s_psi&#39;</span><span class="p">,</span> <span class="o">-</span><span class="n">limit</span><span class="p">,</span> <span class="n">limit</span><span class="p">,</span> <span class="n">mass</span><span class="p">,</span> <span class="n">Ts</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">psi</span><span class="p">,</span> <span class="n">Ks</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ufed</span> <span class="o">=</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">UnifiedFreeEnergyDynamics</span><span class="p">([</span><span class="n">s_phi</span><span class="p">,</span> <span class="n">s_psi</span><span class="p">],</span> <span class="mi">300</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span> <span class="o">=</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">GeodesicLangevinIntegrator</span><span class="p">(</span><span class="mi">300</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">dt</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">simulation</span> <span class="o">=</span> <span class="n">ufed</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">topology</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span> <span class="n">integrator</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">UFED for OpenMM</a></h1>
+
+
+
+
+
+
+
+
+
+
+
+<h3><a href="../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../readme.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html">Usage</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Python API</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">ufedmm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cvlib.html">collective variable library</a></li>
+<li class="toctree-l2"><a class="reference internal" href="analysis.html">analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrators.html">integrators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="io.html">input/output</a></li>
+<li class="toctree-l2"><a class="reference internal" href="testmodels.html">testmodels</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../authors.html">Authors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../glossary.html">Glossary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">Bibliography</a></li>
+</ul>
+
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Charlles Abreu. Project structure based on the Computational Molecular Science Python Cookiecutter version 1.0.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.0.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/pythonapi/ufedmm.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

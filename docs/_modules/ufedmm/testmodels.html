@@ -1,0 +1,192 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ufedmm.testmodels &#8212; UFED for OpenMM  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/clipboard.min.js"></script>
+    <script src="../../_static/copybutton.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for ufedmm.testmodels</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">.. module:: testmodels</span>
+<span class="sd">   :platform: Unix, Windows</span>
+<span class="sd">   :synopsis: Unified Free Energy Dynamics Test Model Systems</span>
+
+<span class="sd">.. moduleauthor:: Charlles Abreu &lt;abreu@eq.ufrj.br&gt;</span>
+
+<span class="sd">.. _System: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html</span>
+<span class="sd">.. _Topology: http://docs.openmm.org/latest/api-python/generated/openmm.app.topology.Topology.html</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">import</span> <span class="nn">openmm</span>
+<span class="kn">from</span> <span class="nn">openmm</span> <span class="kn">import</span> <span class="n">app</span><span class="p">,</span> <span class="n">unit</span>
+
+<span class="kn">import</span> <span class="nn">ufedmm</span>
+
+
+<div class="viewcode-block" id="AlanineDipeptideModel"><a class="viewcode-back" href="../../pythonapi/testmodels.html#ufedmm.testmodels.AlanineDipeptideModel">[docs]</a><span class="k">class</span> <span class="nc">AlanineDipeptideModel</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A system consisting of a single alanine-dipeptide molecule in a vacuum or solvated in explicit</span>
+<span class="sd">    water.</span>
+
+<span class="sd">    Keyword Args</span>
+<span class="sd">    ------------</span>
+<span class="sd">        force_field : str, default=&quot;amber03&quot;</span>
+<span class="sd">            The force field to be used for the alanine dipeptide molecule.</span>
+<span class="sd">        water : str, default=None</span>
+<span class="sd">            The water model to be used if the alanine dipeptide is supposed to be solvated.</span>
+<span class="sd">            Available options are &quot;spce&quot;, &quot;tip3p&quot;, &quot;tip4pew&quot;, and &quot;tip5p&quot;.</span>
+<span class="sd">        box_length : unit.Quantity, default=25*unit.angstroms</span>
+<span class="sd">            The size of the simulation box. This is only effective if water is not `None`.</span>
+<span class="sd">        constraints : object, default=`openmm.app.HBonds`</span>
+<span class="sd">            Specifies which bonds and angles should be implemented with constraints. Allowed</span>
+<span class="sd">            values are `None`, `openmm.app.HBonds`, `openmm.app.AllBonds`, or</span>
+<span class="sd">            `openmm.app.HAngles`.</span>
+<span class="sd">        rigidWater : bool, boolean=True</span>
+<span class="sd">            Whether water molecules will be fully rigid regardless of the value passed for the</span>
+<span class="sd">            constraints argument.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">        system : openmm.System</span>
+<span class="sd">            The system.</span>
+<span class="sd">        topology : openmm.app.Topology</span>
+<span class="sd">            The topology.</span>
+<span class="sd">        positions : list of openmm.Vec3</span>
+<span class="sd">            The positions.</span>
+<span class="sd">        phi : openm.CustomTorsionForce</span>
+<span class="sd">            The Ramachandran dihedral angle :math:`\\phi` of the alanine dipeptide molecule.</span>
+<span class="sd">        psi : openm.CustomTorsionForce</span>
+<span class="sd">            The Ramachandran dihedral angle :math:`\\psi` of the alanine dipeptide molecule.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">force_field</span><span class="o">=</span><span class="s2">&quot;amber03&quot;</span><span class="p">,</span>
+        <span class="n">water</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">box_length</span><span class="o">=</span><span class="mi">25</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">angstroms</span><span class="p">,</span>
+        <span class="n">constraints</span><span class="o">=</span><span class="n">openmm</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">HBonds</span><span class="p">,</span>
+        <span class="n">rigidWater</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="n">pdb</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">PDBFile</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">ufedmm</span><span class="o">.</span><span class="n">__path__</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="s2">&quot;alanine-dipeptide.pdb&quot;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">water</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">force_field</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">ForceField</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">force_field</span><span class="si">}</span><span class="s2">.xml&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">topology</span> <span class="o">=</span> <span class="n">pdb</span><span class="o">.</span><span class="n">topology</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">positions</span> <span class="o">=</span> <span class="n">pdb</span><span class="o">.</span><span class="n">positions</span>
+            <span class="n">L</span> <span class="o">=</span> <span class="n">box_length</span><span class="o">.</span><span class="n">value_in_unit</span><span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">nanometers</span><span class="p">)</span>
+            <span class="n">vectors</span> <span class="o">=</span> <span class="p">[</span><span class="n">openmm</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">openmm</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">openmm</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">L</span><span class="p">)]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">setPeriodicBoxVectors</span><span class="p">(</span><span class="n">vectors</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">force_field</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">ForceField</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">force_field</span><span class="si">}</span><span class="s2">.xml&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">water</span><span class="si">}</span><span class="s2">.xml&quot;</span><span class="p">)</span>
+            <span class="n">modeller</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">Modeller</span><span class="p">(</span><span class="n">pdb</span><span class="o">.</span><span class="n">topology</span><span class="p">,</span> <span class="n">pdb</span><span class="o">.</span><span class="n">positions</span><span class="p">)</span>
+            <span class="n">modeller</span><span class="o">.</span><span class="n">addSolvent</span><span class="p">(</span><span class="n">force_field</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">water</span><span class="p">,</span> <span class="n">boxSize</span><span class="o">=</span><span class="n">box_length</span> <span class="o">*</span> <span class="n">openmm</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">topology</span> <span class="o">=</span> <span class="n">modeller</span><span class="o">.</span><span class="n">topology</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">positions</span> <span class="o">=</span> <span class="n">modeller</span><span class="o">.</span><span class="n">positions</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">system</span> <span class="o">=</span> <span class="n">force_field</span><span class="o">.</span><span class="n">createSystem</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">topology</span><span class="p">,</span>
+            <span class="n">nonbondedMethod</span><span class="o">=</span><span class="n">app</span><span class="o">.</span><span class="n">NoCutoff</span> <span class="k">if</span> <span class="n">water</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">app</span><span class="o">.</span><span class="n">PME</span><span class="p">,</span>
+            <span class="n">constraints</span><span class="o">=</span><span class="n">constraints</span><span class="p">,</span>
+            <span class="n">rigidWater</span><span class="o">=</span><span class="n">rigidWater</span><span class="p">,</span>
+            <span class="n">removeCMMotion</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">atoms</span> <span class="o">=</span> <span class="p">[(</span><span class="n">a</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">a</span><span class="o">.</span><span class="n">residue</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">atoms</span><span class="p">()]</span>
+        <span class="n">phi_atoms</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">&quot;C&quot;</span><span class="p">,</span> <span class="s2">&quot;ACE&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;N&quot;</span><span class="p">,</span> <span class="s2">&quot;ALA&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;CA&quot;</span><span class="p">,</span> <span class="s2">&quot;ALA&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;C&quot;</span><span class="p">,</span> <span class="s2">&quot;ALA&quot;</span><span class="p">)]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">phi</span> <span class="o">=</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">CollectiveVariable</span><span class="p">(</span><span class="s2">&quot;phi&quot;</span><span class="p">,</span> <span class="n">openmm</span><span class="o">.</span><span class="n">CustomTorsionForce</span><span class="p">(</span><span class="s2">&quot;theta&quot;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">phi</span><span class="o">.</span><span class="n">force</span><span class="o">.</span><span class="n">addTorsion</span><span class="p">(</span><span class="o">*</span><span class="p">[</span><span class="n">atoms</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">phi_atoms</span><span class="p">],</span> <span class="p">[])</span>
+        <span class="n">psi_atoms</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">&quot;N&quot;</span><span class="p">,</span> <span class="s2">&quot;ALA&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;CA&quot;</span><span class="p">,</span> <span class="s2">&quot;ALA&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;C&quot;</span><span class="p">,</span> <span class="s2">&quot;ALA&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;N&quot;</span><span class="p">,</span> <span class="s2">&quot;NME&quot;</span><span class="p">)]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">psi</span> <span class="o">=</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">CollectiveVariable</span><span class="p">(</span><span class="s2">&quot;psi&quot;</span><span class="p">,</span> <span class="n">openmm</span><span class="o">.</span><span class="n">CustomTorsionForce</span><span class="p">(</span><span class="s2">&quot;theta&quot;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">psi</span><span class="o">.</span><span class="n">force</span><span class="o">.</span><span class="n">addTorsion</span><span class="p">(</span><span class="o">*</span><span class="p">[</span><span class="n">atoms</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">psi_atoms</span><span class="p">],</span> <span class="p">[])</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">UFED for OpenMM</a></h1>
+
+
+
+
+
+
+
+
+
+
+
+<h3><a href="../../index.html">Table of Contents</a></h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../readme.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../pythonapi/index.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../authors.html">Authors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../glossary.html">Glossary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">Bibliography</a></li>
+</ul>
+
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Charlles Abreu. Project structure based on the Computational Molecular Science Python Cookiecutter version 1.0.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.0.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

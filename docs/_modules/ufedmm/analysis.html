@@ -1,0 +1,450 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ufedmm.analysis &#8212; UFED for OpenMM  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/clipboard.min.js"></script>
+    <script src="../../_static/copybutton.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for ufedmm.analysis</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">.. module:: analysis</span>
+<span class="sd">   :platform: Unix, Windows</span>
+<span class="sd">   :synopsis: Unified Free Energy Dynamics with OpenMM</span>
+
+<span class="sd">.. moduleauthor:: Charlles Abreu &lt;abreu@eq.ufrj.br&gt;</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">openmm</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">stats</span>
+
+<span class="kn">from</span> <span class="nn">ufedmm.ufedmm</span> <span class="kn">import</span> <span class="n">_get_energy_function</span><span class="p">,</span> <span class="n">_get_parameters</span><span class="p">,</span> <span class="n">_standardized</span>
+
+
+<span class="k">class</span> <span class="nc">_RBFContext</span><span class="p">(</span><span class="n">openmm</span><span class="o">.</span><span class="n">Context</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">variables</span><span class="p">,</span> <span class="n">variances</span><span class="p">,</span> <span class="n">centers</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">platform</span><span class="p">,</span> <span class="n">properties</span><span class="p">):</span>
+        <span class="n">num_particles</span> <span class="o">=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">variables</span><span class="p">)</span> <span class="o">+</span> <span class="mi">2</span><span class="p">)</span> <span class="o">//</span> <span class="mi">3</span>
+        <span class="n">coordinates</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">x</span><span class="si">}{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_particles</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="s2">&quot;xyz&quot;</span><span class="p">]</span>
+        <span class="n">exponents</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">v</span><span class="p">,</span> <span class="n">variance</span><span class="p">,</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">variables</span><span class="p">,</span> <span class="n">variances</span><span class="p">,</span> <span class="n">coordinates</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">periodic</span><span class="p">:</span>  <span class="c1"># von Mises</span>
+                <span class="n">factor</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">v</span><span class="o">.</span><span class="n">_range</span>
+                <span class="n">exponents</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="mf">1.0</span><span class="o">/</span><span class="p">(</span><span class="n">variance</span><span class="o">*</span><span class="n">factor</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="si">}</span><span class="s2">*(cos(</span><span class="si">{</span><span class="n">factor</span><span class="si">}</span><span class="s2">*(</span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="s2">))-1)&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>  <span class="c1"># Gauss</span>
+                <span class="n">exponents</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;(-</span><span class="si">{</span><span class="mf">0.5</span><span class="o">/</span><span class="n">variance</span><span class="si">}</span><span class="s2">)*(</span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="s2">)^2&quot;</span><span class="p">)</span>
+        <span class="n">expression</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;weight*exp(</span><span class="si">{</span><span class="s2">&quot;+&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">exponents</span><span class="p">)</span><span class="si">}</span><span class="s1">)&#39;</span>
+
+        <span class="n">force</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">CustomCompoundBondForce</span><span class="p">(</span><span class="n">num_particles</span><span class="p">,</span> <span class="n">expression</span><span class="p">)</span>
+        <span class="n">force</span><span class="o">.</span><span class="n">addPerBondParameter</span><span class="p">(</span><span class="s2">&quot;weight&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">variables</span><span class="p">:</span>
+            <span class="n">force</span><span class="o">.</span><span class="n">addGlobalParameter</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">force</span><span class="o">.</span><span class="n">addEnergyParameterDerivative</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+
+        <span class="n">system</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">System</span><span class="p">()</span>
+        <span class="n">positions</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">weight</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">centers</span><span class="p">,</span> <span class="n">weights</span><span class="p">)):</span>
+            <span class="k">for</span> <span class="n">position</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="p">(</span><span class="n">num_particles</span><span class="p">,</span> <span class="mi">3</span><span class="p">)):</span>
+                <span class="n">system</span><span class="o">.</span><span class="n">addParticle</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span>
+                <span class="n">positions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">openmm</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="o">*</span><span class="n">position</span><span class="p">))</span>
+            <span class="n">force</span><span class="o">.</span><span class="n">addBond</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="n">num_particles</span><span class="p">,</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">num_particles</span><span class="p">),</span> <span class="p">[</span><span class="n">weight</span><span class="p">])</span>
+
+        <span class="n">system</span><span class="o">.</span><span class="n">addForce</span><span class="p">(</span><span class="n">force</span><span class="p">)</span>
+        <span class="n">integrator</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">CustomIntegrator</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">system</span><span class="p">,</span> <span class="n">integrator</span><span class="p">,</span> <span class="n">platform</span><span class="p">,</span> <span class="n">properties</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span> <span class="o">=</span> <span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">variables</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setPositions</span><span class="p">(</span><span class="n">positions</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="FreeEnergyAnalyzer"><a class="viewcode-back" href="../../pythonapi/analysis.html#ufedmm.analysis.FreeEnergyAnalyzer">[docs]</a><span class="k">class</span> <span class="nc">FreeEnergyAnalyzer</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate free energy landscapes from UFED simulation results.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">        ufed : :class:`~ufedmm.ufedmm.UnifiedFreeEnergyDynamics`</span>
+<span class="sd">            The UFED object.</span>
+<span class="sd">        dataframe : pandas.DataFrame</span>
+<span class="sd">            A data frame containing sampled sets of collective variables and driver parameters.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ufed</span><span class="p">,</span> <span class="n">dataframe</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ufed</span> <span class="o">=</span> <span class="n">ufed</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dataframe</span> <span class="o">=</span> <span class="n">dataframe</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_bias_variables</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">v</span><span class="o">.</span><span class="n">sigma</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ufed</span><span class="o">.</span><span class="n">variables</span><span class="p">)</span>
+
+<div class="viewcode-block" id="FreeEnergyAnalyzer.metadynamics_bias_free_energy"><a class="viewcode-back" href="../../pythonapi/analysis.html#ufedmm.analysis.FreeEnergyAnalyzer.metadynamics_bias_free_energy">[docs]</a>    <span class="k">def</span> <span class="nf">metadynamics_bias_free_energy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a Python function which, in turn, receives the values of extended-space variables</span>
+<span class="sd">        and returns the energy estimated from a Metadynamics bias potential reconstructed from the</span>
+<span class="sd">        simulation data.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">            function</span>
+<span class="sd">                The free energy function.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">Variable</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;Variable&quot;</span><span class="p">,</span> <span class="s2">&quot;sigma factor periodic centers&quot;</span><span class="p">)</span>
+        <span class="n">variables</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">Variable</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">sigma</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">v</span><span class="o">.</span><span class="n">_range</span><span class="p">,</span> <span class="n">v</span><span class="o">.</span><span class="n">periodic</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataframe</span><span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bias_variables</span>
+        <span class="p">]</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">heights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataframe</span><span class="p">[</span><span class="s2">&quot;Height (kJ/mole)&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="n">heights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ufed</span><span class="o">.</span><span class="n">height</span>
+
+        <span class="k">def</span> <span class="nf">free_energy</span><span class="p">(</span><span class="o">*</span><span class="n">position</span><span class="p">):</span>
+            <span class="n">exponents</span> <span class="o">=</span> <span class="mf">0.0</span>
+            <span class="k">for</span> <span class="n">v</span><span class="p">,</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">variables</span><span class="p">,</span> <span class="n">position</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">periodic</span><span class="p">:</span>
+                    <span class="n">exponents</span> <span class="o">+=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">factor</span> <span class="o">*</span> <span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">centers</span> <span class="o">-</span> <span class="n">x</span><span class="p">))</span> <span class="o">-</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span>
+                        <span class="n">v</span><span class="o">.</span><span class="n">factor</span> <span class="o">*</span> <span class="n">v</span><span class="o">.</span><span class="n">sigma</span>
+                    <span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">exponents</span> <span class="o">+=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">((</span><span class="n">v</span><span class="o">.</span><span class="n">centers</span> <span class="o">-</span> <span class="n">x</span><span class="p">)</span> <span class="o">/</span> <span class="n">v</span><span class="o">.</span><span class="n">sigma</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+            <span class="k">return</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">heights</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">exponents</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="n">free_energy</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="FreeEnergyAnalyzer.centers_and_mean_forces"><a class="viewcode-back" href="../../pythonapi/analysis.html#ufedmm.analysis.FreeEnergyAnalyzer.centers_and_mean_forces">[docs]</a>    <span class="k">def</span> <span class="nf">centers_and_mean_forces</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bins</span><span class="p">,</span> <span class="n">min_count</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">adjust_centers</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Performs binned statistics with the UFED simulation data.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">            bins : list(int) or int</span>
+<span class="sd">                The number of bins in each direction. If a single integer is passed, then the same</span>
+<span class="sd">                number of bins will be considered for all directions.</span>
+
+<span class="sd">        Keyword Args</span>
+<span class="sd">        ------------</span>
+<span class="sd">            min_count : int, default=1</span>
+<span class="sd">                The miminum number of hits for any bin to be considered in the analysis.</span>
+<span class="sd">            adjust_centers : bool, default=False</span>
+<span class="sd">                Whether to consider the center of a bin as the mean value of the its sampled</span>
+<span class="sd">                internal points instead of its geometric center.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">            centers : list(numpy.array)</span>
+<span class="sd">                A list of Numpy arrays, each one containing the values of an extended-space</span>
+<span class="sd">                variable at the centers of all bins that satisfy the minimum-count criterion.</span>
+<span class="sd">            mean_forces : list(numpy.array)</span>
+<span class="sd">                A list of Numpy arrays, each one containing the mean forces in the direction of</span>
+<span class="sd">                an extended-space variable.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">variables</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ufed</span><span class="o">.</span><span class="n">variables</span>
+        <span class="n">sample</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_dataframe</span><span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">variables</span><span class="p">]</span>
+        <span class="n">forces</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_forces</span><span class="p">()</span>
+        <span class="n">ranges</span> <span class="o">=</span> <span class="p">[(</span><span class="n">v</span><span class="o">.</span><span class="n">min_value</span><span class="p">,</span> <span class="n">v</span><span class="o">.</span><span class="n">max_value</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">variables</span><span class="p">]</span>
+
+        <span class="n">counts</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">binned_statistic_dd</span><span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="p">[],</span> <span class="n">statistic</span><span class="o">=</span><span class="s2">&quot;count&quot;</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="n">bins</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="n">ranges</span><span class="p">)</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">counts</span><span class="o">.</span><span class="n">statistic</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="n">min_count</span><span class="p">)</span>
+
+        <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">variables</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">adjust_centers</span><span class="p">:</span>
+            <span class="n">means</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">binned_statistic_dd</span><span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="n">sample</span> <span class="o">+</span> <span class="n">forces</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="n">bins</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="n">ranges</span><span class="p">)</span>
+            <span class="n">centers</span> <span class="o">=</span> <span class="p">[</span><span class="n">means</span><span class="o">.</span><span class="n">statistic</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()[</span><span class="n">index</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">)]</span>
+            <span class="n">mean_forces</span> <span class="o">=</span> <span class="p">[</span><span class="n">means</span><span class="o">.</span><span class="n">statistic</span><span class="p">[</span><span class="n">n</span> <span class="o">+</span> <span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()[</span><span class="n">index</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">)]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">means</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">binned_statistic_dd</span><span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="n">forces</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="n">bins</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="n">ranges</span><span class="p">)</span>
+            <span class="n">bin_centers</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">edges</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">+</span> <span class="n">edges</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">edges</span> <span class="ow">in</span> <span class="n">counts</span><span class="o">.</span><span class="n">bin_edges</span><span class="p">]</span>
+            <span class="n">center_points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">point</span><span class="p">)</span> <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="o">*</span><span class="n">bin_centers</span><span class="p">)])</span>
+            <span class="n">centers</span> <span class="o">=</span> <span class="p">[</span><span class="n">center_points</span><span class="p">[:,</span> <span class="n">i</span><span class="p">][</span><span class="n">index</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">)]</span>
+            <span class="n">mean_forces</span> <span class="o">=</span> <span class="p">[</span><span class="n">statistic</span><span class="o">.</span><span class="n">flatten</span><span class="p">()[</span><span class="n">index</span><span class="p">]</span> <span class="k">for</span> <span class="n">statistic</span> <span class="ow">in</span> <span class="n">means</span><span class="o">.</span><span class="n">statistic</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">centers</span><span class="p">,</span> <span class="n">mean_forces</span></div>
+
+<div class="viewcode-block" id="FreeEnergyAnalyzer.mean_force_free_energy"><a class="viewcode-back" href="../../pythonapi/analysis.html#ufedmm.analysis.FreeEnergyAnalyzer.mean_force_free_energy">[docs]</a>    <span class="k">def</span> <span class="nf">mean_force_free_energy</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">centers</span><span class="p">,</span> <span class="n">mean_forces</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">platform_name</span><span class="o">=</span><span class="s2">&quot;Reference&quot;</span><span class="p">,</span> <span class="n">properties</span><span class="o">=</span><span class="p">{}</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns Python functions for evaluating the potential of mean force and their originating</span>
+<span class="sd">        mean forces as a function of the collective variables.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">            centers : list(numpy.array)</span>
+<span class="sd">                The bin centers.</span>
+<span class="sd">            mean_forces : list(numpy.array)</span>
+<span class="sd">                The mean forces.</span>
+<span class="sd">            sigmas : float or unit.Quantity or list</span>
+<span class="sd">                The standard deviation of kernels.</span>
+
+<span class="sd">        Keyword Args</span>
+<span class="sd">        ------------</span>
+<span class="sd">            platform_name : string, default=&#39;Reference&#39;</span>
+<span class="sd">                The name of the OpenMM Platform to be used for potential and mean-force evaluations.</span>
+<span class="sd">            properties : dict, default={}</span>
+<span class="sd">                A set of values for platform-specific properties. Keys are the property names.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">            potential : function</span>
+<span class="sd">                A Python function whose arguments are collective variable values and whose result</span>
+<span class="sd">                is the potential of mean force at that values.</span>
+<span class="sd">            mean_force : function</span>
+<span class="sd">                A Python function whose arguments are collective variable values and whose result</span>
+<span class="sd">                is the mean force at those values.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">variables</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ufed</span><span class="o">.</span><span class="n">variables</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">variables</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">variances</span> <span class="o">=</span> <span class="p">[</span><span class="n">_standardized</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">sigma</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+            <span class="n">variances</span> <span class="o">=</span> <span class="p">[</span><span class="n">_standardized</span><span class="p">(</span><span class="n">sigma</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">n</span>
+
+        <span class="n">exponent</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">derivative</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">v</span><span class="p">,</span> <span class="n">variance</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">variables</span><span class="p">,</span> <span class="n">variances</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">periodic</span><span class="p">:</span>  <span class="c1"># von Mises</span>
+                <span class="n">factor</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">v</span><span class="o">.</span><span class="n">_range</span>
+                <span class="n">exponent</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">factor</span> <span class="o">*</span> <span class="n">x</span><span class="p">)</span> <span class="o">-</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">factor</span> <span class="o">*</span> <span class="n">factor</span> <span class="o">*</span> <span class="n">variance</span><span class="p">))</span>
+                <span class="n">derivative</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">factor</span> <span class="o">*</span> <span class="n">x</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">factor</span> <span class="o">*</span> <span class="n">variance</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>  <span class="c1"># Gauss</span>
+                <span class="n">exponent</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="n">variance</span><span class="p">)</span>
+                <span class="n">derivative</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="o">-</span><span class="n">x</span> <span class="o">/</span> <span class="n">variance</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">kernel</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">exponent</span><span class="p">[</span><span class="n">i</span><span class="p">](</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">)))</span>
+
+        <span class="k">def</span> <span class="nf">gradient</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">kernel</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">*</span> <span class="n">derivative</span><span class="p">[</span><span class="n">i</span><span class="p">](</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+
+        <span class="n">grid_points</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">xc</span><span class="p">)</span> <span class="k">for</span> <span class="n">xc</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">centers</span><span class="p">)]</span>
+        <span class="n">coefficients</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">grid_points</span><span class="p">:</span>
+                <span class="n">coefficients</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">gradient</span><span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">xc</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">xc</span> <span class="ow">in</span> <span class="n">grid_points</span><span class="p">]))</span>
+
+        <span class="n">M</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">coefficients</span><span class="p">)</span>
+        <span class="n">F</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">(</span><span class="n">mean_forces</span><span class="p">)</span>
+        <span class="n">A</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">lstsq</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">F</span><span class="p">,</span> <span class="n">rcond</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+
+        <span class="n">platform</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">Platform</span><span class="o">.</span><span class="n">getPlatformByName</span><span class="p">(</span><span class="n">platform_name</span><span class="p">)</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="n">_RBFContext</span><span class="p">(</span><span class="n">variables</span><span class="p">,</span> <span class="n">variances</span><span class="p">,</span> <span class="n">grid_points</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">platform</span><span class="p">,</span> <span class="n">properties</span><span class="p">)</span>
+        <span class="n">minimum</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+        <span class="k">def</span> <span class="nf">potential</span><span class="p">(</span><span class="o">*</span><span class="n">x</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">parameter</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">parameters</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+                <span class="n">context</span><span class="o">.</span><span class="n">setParameter</span><span class="p">(</span><span class="n">parameter</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">getState</span><span class="p">(</span><span class="n">getEnergy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">state</span><span class="o">.</span><span class="n">getPotentialEnergy</span><span class="p">()</span><span class="o">.</span><span class="n">_value</span> <span class="o">-</span> <span class="n">minimum</span>
+
+        <span class="k">def</span> <span class="nf">mean_force</span><span class="p">(</span><span class="o">*</span><span class="n">x</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">parameter</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">parameters</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+                <span class="n">context</span><span class="o">.</span><span class="n">setParameter</span><span class="p">(</span><span class="n">parameter</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">getState</span><span class="p">(</span><span class="n">getParameterDerivatives</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">return</span> <span class="o">-</span><span class="n">state</span><span class="o">.</span><span class="n">getEnergyParameterDerivatives</span><span class="p">()</span><span class="o">.</span><span class="n">_value</span>
+
+        <span class="n">minimum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">([</span><span class="n">potential</span><span class="p">(</span><span class="o">*</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">grid_points</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="n">potential</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="n">mean_force</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_compute_forces</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">variables</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ufed</span><span class="o">.</span><span class="n">variables</span>
+        <span class="n">collective_variables</span> <span class="o">=</span> <span class="p">[</span><span class="n">colvar</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">variables</span> <span class="k">for</span> <span class="n">colvar</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">colvars</span><span class="p">]</span>
+        <span class="n">extended_variables</span> <span class="o">=</span> <span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">variables</span><span class="p">]</span>
+        <span class="n">all_variables</span> <span class="o">=</span> <span class="n">collective_variables</span> <span class="o">+</span> <span class="n">extended_variables</span>
+
+        <span class="n">force</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">CustomCVForce</span><span class="p">(</span><span class="n">_get_energy_function</span><span class="p">(</span><span class="n">variables</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">_get_parameters</span><span class="p">(</span><span class="n">variables</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">force</span><span class="o">.</span><span class="n">addGlobalParameter</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">variable</span> <span class="ow">in</span> <span class="n">all_variables</span><span class="p">:</span>
+            <span class="n">force</span><span class="o">.</span><span class="n">addGlobalParameter</span><span class="p">(</span><span class="n">variable</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">xv</span> <span class="ow">in</span> <span class="n">extended_variables</span><span class="p">:</span>
+            <span class="n">force</span><span class="o">.</span><span class="n">addEnergyParameterDerivative</span><span class="p">(</span><span class="n">xv</span><span class="p">)</span>
+
+        <span class="n">system</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">System</span><span class="p">()</span>
+        <span class="n">system</span><span class="o">.</span><span class="n">addForce</span><span class="p">(</span><span class="n">force</span><span class="p">)</span>
+        <span class="n">system</span><span class="o">.</span><span class="n">addParticle</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">platform</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">Platform</span><span class="o">.</span><span class="n">getPlatformByName</span><span class="p">(</span><span class="s2">&quot;Reference&quot;</span><span class="p">)</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">Context</span><span class="p">(</span><span class="n">system</span><span class="p">,</span> <span class="n">openmm</span><span class="o">.</span><span class="n">CustomIntegrator</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">platform</span><span class="p">)</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">setPositions</span><span class="p">([</span><span class="n">openmm</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)])</span>
+
+        <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dataframe</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+        <span class="n">forces</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">xv</span> <span class="ow">in</span> <span class="n">extended_variables</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataframe</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">variable</span> <span class="ow">in</span> <span class="n">all_variables</span><span class="p">:</span>
+                <span class="n">context</span><span class="o">.</span><span class="n">setParameter</span><span class="p">(</span><span class="n">variable</span><span class="p">,</span> <span class="n">row</span><span class="p">[</span><span class="n">variable</span><span class="p">])</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">getState</span><span class="p">(</span><span class="n">getParameterDerivatives</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">derivatives</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">getEnergyParameterDerivatives</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">xv</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">extended_variables</span><span class="p">):</span>
+                <span class="n">forces</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">derivatives</span><span class="p">[</span><span class="n">xv</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">forces</span></div>
+
+
+<div class="viewcode-block" id="Analyzer"><a class="viewcode-back" href="../../pythonapi/analysis.html#ufedmm.analysis.Analyzer">[docs]</a><span class="k">class</span> <span class="nc">Analyzer</span><span class="p">(</span><span class="n">FreeEnergyAnalyzer</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    UFED Analyzer.</span>
+
+<span class="sd">    .. warning::</span>
+<span class="sd">        This class is obsolete and will be discontinued. Use :class:`FreeEnergyAnalyzer` instead.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">        ufed : :class:`~ufedmm.ufedmm.UnifiedFreeEnergyDynamics`</span>
+<span class="sd">            The UFED object.</span>
+<span class="sd">        dataframe : pandas.DataFrame</span>
+<span class="sd">            A data frame containing sampled sets of collective variables and driver parameters.</span>
+<span class="sd">        bins : int or list(int)</span>
+<span class="sd">            The number of bins in each direction.</span>
+
+<span class="sd">    Keyword Args</span>
+<span class="sd">    ------------</span>
+<span class="sd">        min_count : int, default=1</span>
+<span class="sd">            The miminum number of hits for a given bin to be considered in the analysis.</span>
+<span class="sd">        adjust_centers : bool, default=False</span>
+<span class="sd">            Whether to consider the center of a bin as the mean value of the its sampled</span>
+<span class="sd">            internal points istead of its geometric center.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ufed</span><span class="p">,</span> <span class="n">dataframe</span><span class="p">,</span> <span class="n">bins</span><span class="p">,</span> <span class="n">min_count</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">adjust_centers</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">ufed</span><span class="p">,</span> <span class="n">dataframe</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_bins</span> <span class="o">=</span> <span class="p">[</span><span class="nb">bin</span> <span class="k">for</span> <span class="nb">bin</span> <span class="ow">in</span> <span class="n">bins</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_bins</span> <span class="o">=</span> <span class="p">[</span><span class="n">bins</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">ufed</span><span class="o">.</span><span class="n">variables</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_min_count</span> <span class="o">=</span> <span class="n">min_count</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_adjust_centers</span> <span class="o">=</span> <span class="n">adjust_centers</span>
+
+<div class="viewcode-block" id="Analyzer.free_energy_functions"><a class="viewcode-back" href="../../pythonapi/analysis.html#ufedmm.analysis.Analyzer.free_energy_functions">[docs]</a>    <span class="k">def</span> <span class="nf">free_energy_functions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">factor</span><span class="o">=</span><span class="mi">8</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns Python functions for evaluating the potential of mean force and their originating</span>
+<span class="sd">        mean forces as a function of the collective variables.</span>
+
+<span class="sd">        Keyword Args</span>
+<span class="sd">        ------------</span>
+<span class="sd">            sigma : float or unit.Quantity, default=None</span>
+<span class="sd">                The standard deviation of kernels. If this is `None`, then values will be</span>
+<span class="sd">                determined from the distances between nodes.</span>
+<span class="sd">            factor : float, default=8</span>
+<span class="sd">                If ``sigma`` is not explicitly provided, then it will be computed as</span>
+<span class="sd">                ``sigma = factor*range/bins`` for each direction.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">            potential : function</span>
+<span class="sd">                A Python function whose arguments are collective variable values and whose result</span>
+<span class="sd">                is the potential of mean force at that values.</span>
+<span class="sd">            mean_force : function</span>
+<span class="sd">                A Python function whose arguments are collective variable values and whose result</span>
+<span class="sd">                is the mean force at that values regarding a given direction. Such direction must</span>
+<span class="sd">                be defined through a keyword argument `dir`, whose default value is `0` (meaning</span>
+<span class="sd">                the direction of the first collective variable).</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">centers</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_forces</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">centers_and_mean_forces</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_bins</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_min_count</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_adjust_centers</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">variables</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ufed</span><span class="o">.</span><span class="n">variables</span>
+        <span class="k">if</span> <span class="n">sigma</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">sigmas</span> <span class="o">=</span> <span class="p">[</span><span class="n">factor</span> <span class="o">*</span> <span class="n">v</span><span class="o">.</span><span class="n">_range</span> <span class="o">/</span> <span class="nb">bin</span> <span class="k">for</span> <span class="n">v</span><span class="p">,</span> <span class="nb">bin</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">variables</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bins</span><span class="p">)]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">sigmas</span> <span class="o">=</span> <span class="p">[</span><span class="n">_standardized</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">sigma</span><span class="p">]</span>
+            <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+                <span class="n">sigmas</span> <span class="o">=</span> <span class="p">[</span><span class="n">_standardized</span><span class="p">(</span><span class="n">sigma</span><span class="p">)]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">variables</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_force_free_energy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">centers</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_forces</span><span class="p">,</span> <span class="n">sigmas</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">UFED for OpenMM</a></h1>
+
+
+
+
+
+
+
+
+
+
+
+<h3><a href="../../index.html">Table of Contents</a></h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../readme.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../pythonapi/index.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../authors.html">Authors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../glossary.html">Glossary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">Bibliography</a></li>
+</ul>
+
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Charlles Abreu. Project structure based on the Computational Molecular Science Python Cookiecutter version 1.0.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.0.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,379 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ufedmm.io &#8212; UFED for OpenMM  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/clipboard.min.js"></script>
+    <script src="../../_static/copybutton.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for ufedmm.io</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">.. module:: io</span>
+<span class="sd">   :platform: Unix, Windows</span>
+<span class="sd">   :synopsis: Unified Free Energy Dynamics Outputs</span>
+
+<span class="sd">.. moduleauthor:: Charlles Abreu &lt;abreu@eq.ufrj.br&gt;</span>
+
+<span class="sd">.. _CustomCVForce: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html</span>
+<span class="sd">.. _StateDataReporter: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.StateDataReporter.html</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="kn">import</span> <span class="nn">openmm</span>
+<span class="kn">import</span> <span class="nn">yaml</span>
+<span class="kn">from</span> <span class="nn">openmm</span> <span class="kn">import</span> <span class="n">app</span><span class="p">,</span> <span class="n">unit</span>
+
+<span class="kn">import</span> <span class="nn">ufedmm</span>
+<span class="kn">from</span> <span class="nn">ufedmm.ufedmm</span> <span class="kn">import</span> <span class="n">_Metadynamics</span><span class="p">,</span> <span class="n">_standardized</span>
+
+
+<div class="viewcode-block" id="Tee"><a class="viewcode-back" href="../../pythonapi/io.html#ufedmm.io.Tee">[docs]</a><span class="k">class</span> <span class="nc">Tee</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Allows the use of multiple outputs in an OpenMM Reporter.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">        A list of valid outputs (file names and/or output streams).</span>
+
+<span class="sd">    Example</span>
+<span class="sd">    -------</span>
+<span class="sd">        &gt;&gt;&gt; import ufedmm</span>
+<span class="sd">        &gt;&gt;&gt; import tempfile</span>
+<span class="sd">        &gt;&gt;&gt; from sys import stdout</span>
+<span class="sd">        &gt;&gt;&gt; file = tempfile.TemporaryFile(mode=&#39;w+t&#39;)</span>
+<span class="sd">        &gt;&gt;&gt; print(&#39;test&#39;, file=ufedmm.Tee(stdout, file))</span>
+<span class="sd">        test</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">files</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_files</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">output</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="n">output</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">output</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_files</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">output</span> <span class="o">!=</span> <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span> <span class="ow">and</span> <span class="n">output</span> <span class="o">!=</span> <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">:</span>
+                <span class="n">output</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">output</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_files</span><span class="p">:</span>
+            <span class="n">output</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">flush</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">output</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_files</span><span class="p">:</span>
+            <span class="n">output</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="StateDataReporter"><a class="viewcode-back" href="../../pythonapi/io.html#ufedmm.io.StateDataReporter">[docs]</a><span class="k">class</span> <span class="nc">StateDataReporter</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">StateDataReporter</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    An extension of OpenMM&#39;s StateDataReporter_ class, which outputs information about a simulation,</span>
+<span class="sd">    such as energy, temperature, etc.</span>
+
+<span class="sd">    All original functionalities of StateDataReporter_ are preserved.</span>
+
+<span class="sd">    Besides, if it is added to an :class:`~ufedmm.ufedmm.ExtendedSpaceSimulation` object, e.g. one</span>
+<span class="sd">    created through the :func:`~ufedmm.ufedmm.UnifiedFreeEnergyDynamics.simulation` method, then a</span>
+<span class="sd">    new set of keywords are available.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">        file : str or stream or afed.temperature</span>
+<span class="sd">            The file to write to, specified as a file name, file object, or</span>
+<span class="sd">            :class:`~ufedmm.io.Tee` object.</span>
+<span class="sd">        report_interval : int</span>
+<span class="sd">            The interval (in time steps) at which to report state data.</span>
+
+<span class="sd">    Keyword Args</span>
+<span class="sd">    ------------</span>
+<span class="sd">        variables : bool, default=False</span>
+<span class="sd">            Whether to report all dynamical variables related to the extended-space simulation and</span>
+<span class="sd">            their associated collective variables.</span>
+<span class="sd">        multipleTemperatures : bool, default=False</span>
+<span class="sd">            Whether to separately report the temperature estimates for the atoms and for the</span>
+<span class="sd">            extended-space dynamical variables.</span>
+<span class="sd">        hillHeights : bool, default=False</span>
+<span class="sd">            Whether to report the height of the latest deposited metadynamics hill.</span>
+<span class="sd">        collectiveVariables : bool, default=False</span>
+<span class="sd">            Whether to report the collective variables in all CustomCVForce_ objects in the system.</span>
+<span class="sd">        globalParameterStates : pandas.DataFrame, default=None</span>
+<span class="sd">            A DataFrame containing context global parameters (column names) and sets of values</span>
+<span class="sd">            thereof. If it is provided, then the potential energy will be reported for every state</span>
+<span class="sd">            defined by these values.</span>
+
+<span class="sd">    Example</span>
+<span class="sd">    -------</span>
+<span class="sd">        &gt;&gt;&gt; import openmm</span>
+<span class="sd">        &gt;&gt;&gt; import ufedmm</span>
+<span class="sd">        &gt;&gt;&gt; from openmm import unit</span>
+<span class="sd">        &gt;&gt;&gt; from sys import stdout</span>
+<span class="sd">        &gt;&gt;&gt; model = ufedmm.AlanineDipeptideModel(water=&#39;tip3p&#39;)</span>
+<span class="sd">        &gt;&gt;&gt; mass = 50*unit.dalton*(unit.nanometer/unit.radians)**2</span>
+<span class="sd">        &gt;&gt;&gt; Ks = 1000*unit.kilojoules_per_mole/unit.radians**2</span>
+<span class="sd">        &gt;&gt;&gt; T = 300*unit.kelvin</span>
+<span class="sd">        &gt;&gt;&gt; Ts = 1500*unit.kelvin</span>
+<span class="sd">        &gt;&gt;&gt; dt = 2*unit.femtoseconds</span>
+<span class="sd">        &gt;&gt;&gt; gamma = 10/unit.picoseconds</span>
+<span class="sd">        &gt;&gt;&gt; limit = 180*unit.degrees</span>
+<span class="sd">        &gt;&gt;&gt; s_phi = ufedmm.DynamicalVariable(&#39;s_phi&#39;, -limit, limit, mass, Ts, model.phi, Ks)</span>
+<span class="sd">        &gt;&gt;&gt; s_psi = ufedmm.DynamicalVariable(&#39;s_psi&#39;, -limit, limit, mass, Ts, model.psi, Ks)</span>
+<span class="sd">        &gt;&gt;&gt; ufed = ufedmm.UnifiedFreeEnergyDynamics([s_phi, s_psi], T)</span>
+<span class="sd">        &gt;&gt;&gt; integrator = ufedmm.GeodesicLangevinIntegrator(T, gamma, dt)</span>
+<span class="sd">        &gt;&gt;&gt; platform = openmm.Platform.getPlatformByName(&#39;Reference&#39;)</span>
+<span class="sd">        &gt;&gt;&gt; simulation = ufed.simulation(model.topology, model.system, integrator, platform)</span>
+<span class="sd">        &gt;&gt;&gt; simulation.context.setPositions(model.positions)</span>
+<span class="sd">        &gt;&gt;&gt; simulation.context.setVelocitiesToTemperature(300*unit.kelvin, 1234)</span>
+<span class="sd">        &gt;&gt;&gt; reporter = ufedmm.StateDataReporter(stdout, 1, variables=True)</span>
+<span class="sd">        &gt;&gt;&gt; reporter.report(simulation, simulation.context.getState())</span>
+<span class="sd">        #&quot;s_phi&quot;,&quot;phi&quot;,&quot;s_psi&quot;,&quot;psi&quot;</span>
+<span class="sd">        -3.141592653589793,3.141592653589793,-3.141592653589793,3.141592653589793</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file</span><span class="p">,</span> <span class="n">report_interval</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_variables</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;variables&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_multitemps</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;multipleTemperatures&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_hill_heights</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;hillHeights&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_collective_variables</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;collectiveVariables&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_global_parameter_states</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;globalParameterStates&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">report_interval</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">items</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_volume</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_density</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_speed</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_elapsedTime</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_remainingTime</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_backSteps</span> <span class="o">=</span> <span class="o">-</span><span class="nb">sum</span><span class="p">(</span><span class="n">items</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_multitemps</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_needsVelocities</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_needEnergy</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="k">def</span> <span class="nf">_add_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lst</span><span class="p">,</span> <span class="n">item</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_backSteps</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">lst</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">lst</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_backSteps</span><span class="p">,</span> <span class="n">item</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_initializeConstants</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_multitemps</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_temperature</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_temperature</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_initializeConstants</span><span class="p">(</span><span class="n">simulation</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_temperature</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_initializeConstants</span><span class="p">(</span><span class="n">simulation</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_extended_space</span> <span class="o">=</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">simulation</span><span class="p">,</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">ExtendedSpaceSimulation</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extended_space</span><span class="p">:</span>
+            <span class="n">force</span> <span class="o">=</span> <span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">driving_force</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_cv_names</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">force</span><span class="o">.</span><span class="n">getCollectiveVariableName</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">force</span><span class="o">.</span><span class="n">getNumCollectiveVariables</span><span class="p">())</span>
+            <span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_var_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">variables</span><span class="p">]</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hill_heights</span><span class="p">:</span>
+                <span class="n">metadynamics_tasks</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span>
+                    <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">_Metadynamics</span><span class="p">),</span> <span class="n">simulation</span><span class="o">.</span><span class="n">_periodic_tasks</span>
+                <span class="p">)</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_metadynamics</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">metadynamics_tasks</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
+                        <span class="s2">&quot;hillHeights keyword involked for simulation w/o metadynamics bias&quot;</span>
+                    <span class="p">)</span>
+                <span class="n">bias_factor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_metadynamics</span><span class="o">.</span><span class="n">bias_factor</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_height_scaling</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">bias_factor</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">bias_factor</span> <span class="o">/</span> <span class="p">(</span><span class="n">bias_factor</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_multitemps</span><span class="p">:</span>
+                <span class="n">system</span> <span class="o">=</span> <span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">getSystem</span><span class="p">()</span>
+                <span class="n">integrator</span> <span class="o">=</span> <span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">getIntegrator</span><span class="p">()</span>
+                <span class="n">Nt</span> <span class="o">=</span> <span class="n">system</span><span class="o">.</span><span class="n">getNumParticles</span><span class="p">()</span>
+                <span class="n">Nv</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">variables</span><span class="p">)</span>
+                <span class="n">ke_system</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">System</span><span class="p">()</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">Nt</span> <span class="o">-</span> <span class="n">Nv</span><span class="p">,</span> <span class="n">Nt</span><span class="p">):</span>
+                    <span class="n">ke_system</span><span class="o">.</span><span class="n">addParticle</span><span class="p">(</span><span class="n">system</span><span class="o">.</span><span class="n">getParticleMass</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
+                <span class="n">ke_integrator</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">CustomIntegrator</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="n">ke_integrator</span><span class="o">.</span><span class="n">addPerDofVariable</span><span class="p">(</span><span class="s2">&quot;kT&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="n">ke_integrator</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="n">integrator</span><span class="o">.</span><span class="n">getKineticEnergyExpression</span><span class="p">())</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_ke_context</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">Context</span><span class="p">(</span><span class="n">ke_system</span><span class="p">,</span> <span class="n">ke_integrator</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">integrator</span><span class="o">.</span><span class="n">_up_to_date</span><span class="p">:</span>
+                    <span class="n">kT</span> <span class="o">=</span> <span class="n">integrator</span><span class="o">.</span><span class="n">getPerDofVariableByName</span><span class="p">(</span><span class="s2">&quot;kT&quot;</span><span class="p">)</span>
+                    <span class="n">ke_integrator</span><span class="o">.</span><span class="n">setPerDofVariableByName</span><span class="p">(</span><span class="s2">&quot;kT&quot;</span><span class="p">,</span> <span class="n">kT</span><span class="p">[</span><span class="n">Nt</span> <span class="o">-</span> <span class="n">Nv</span> <span class="p">:</span> <span class="n">Nt</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Integrator temperatures were not set&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_collective_variables</span><span class="p">:</span>
+            <span class="n">forces</span> <span class="o">=</span> <span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">getSystem</span><span class="p">()</span><span class="o">.</span><span class="n">getForces</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_cv_forces</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">f</span><span class="p">:</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">openmm</span><span class="o">.</span><span class="n">CustomCVForce</span><span class="p">),</span> <span class="n">forces</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_constructHeaders</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_constructHeaders</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extended_space</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_multitemps</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_add_item</span><span class="p">(</span><span class="n">headers</span><span class="p">,</span> <span class="s2">&quot;T[atoms] (K)&quot;</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_var_names</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_add_item</span><span class="p">(</span><span class="n">headers</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;T[</span><span class="si">{</span><span class="n">var</span><span class="si">}</span><span class="s2">] (K)&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_variables</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">cv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cv_names</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_add_item</span><span class="p">(</span><span class="n">headers</span><span class="p">,</span> <span class="n">cv</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hill_heights</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_add_item</span><span class="p">(</span><span class="n">headers</span><span class="p">,</span> <span class="s2">&quot;Height (kJ/mole)&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_collective_variables</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">force</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cv_forces</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">force</span><span class="o">.</span><span class="n">getNumCollectiveVariables</span><span class="p">()):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_add_item</span><span class="p">(</span><span class="n">headers</span><span class="p">,</span> <span class="n">force</span><span class="o">.</span><span class="n">getCollectiveVariableName</span><span class="p">(</span><span class="n">index</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_global_parameter_states</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_global_parameter_states</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_add_item</span><span class="p">(</span><span class="n">headers</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Energy[</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">] (kJ/mole)&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">headers</span>
+
+    <span class="k">def</span> <span class="nf">_constructReportValues</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_constructReportValues</span><span class="p">(</span><span class="n">simulation</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extended_space</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_multitemps</span><span class="p">:</span>
+                <span class="n">system</span> <span class="o">=</span> <span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">getSystem</span><span class="p">()</span>
+                <span class="n">ke_context</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ke_context</span>
+                <span class="n">Nt</span> <span class="o">=</span> <span class="n">system</span><span class="o">.</span><span class="n">getNumParticles</span><span class="p">()</span>
+                <span class="n">Nv</span> <span class="o">=</span> <span class="n">ke_context</span><span class="o">.</span><span class="n">getSystem</span><span class="p">()</span><span class="o">.</span><span class="n">getNumParticles</span><span class="p">()</span>
+                <span class="n">ke_context</span><span class="o">.</span><span class="n">setVelocities</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">getVelocities</span><span class="p">(</span><span class="n">extended</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="n">Nt</span> <span class="o">-</span> <span class="n">Nv</span> <span class="p">:</span> <span class="n">Nt</span><span class="p">])</span>
+                <span class="n">ke_context</span><span class="o">.</span><span class="n">getIntegrator</span><span class="p">()</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">ke_values</span> <span class="o">=</span> <span class="n">ke_context</span><span class="o">.</span><span class="n">getState</span><span class="p">(</span><span class="n">getVelocities</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">getVelocities</span><span class="p">()</span>
+                <span class="n">xvar_ke</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">ke</span><span class="o">.</span><span class="n">x</span> <span class="o">+</span> <span class="n">ke</span><span class="o">.</span><span class="n">y</span> <span class="o">+</span> <span class="n">ke</span><span class="o">.</span><span class="n">z</span> <span class="k">for</span> <span class="n">ke</span> <span class="ow">in</span> <span class="n">ke_values</span><span class="p">)</span>
+                <span class="n">total_ke</span> <span class="o">=</span> <span class="n">_standardized</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">getKineticEnergy</span><span class="p">())</span>
+                <span class="n">kB</span> <span class="o">=</span> <span class="n">_standardized</span><span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">MOLAR_GAS_CONSTANT_R</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_add_item</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">total_ke</span> <span class="o">-</span> <span class="n">xvar_ke</span><span class="p">)</span> <span class="o">/</span> <span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_dof</span> <span class="o">-</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">Nv</span><span class="p">)</span> <span class="o">*</span> <span class="n">kB</span><span class="p">))</span>
+                <span class="k">for</span> <span class="n">ke</span> <span class="ow">in</span> <span class="n">ke_values</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_add_item</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">ke</span><span class="o">.</span><span class="n">x</span> <span class="o">/</span> <span class="n">kB</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_variables</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">cv</span> <span class="ow">in</span> <span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">driving_force</span><span class="o">.</span><span class="n">getCollectiveVariableValues</span><span class="p">(</span>
+                    <span class="n">simulation</span><span class="o">.</span><span class="n">context</span>
+                <span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_add_item</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">cv</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hill_heights</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_add_item</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_metadynamics</span><span class="o">.</span><span class="n">height</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_height_scaling</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_collective_variables</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">force</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cv_forces</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">cv</span> <span class="ow">in</span> <span class="n">force</span><span class="o">.</span><span class="n">getCollectiveVariableValues</span><span class="p">(</span><span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_add_item</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">cv</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_global_parameter_states</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">originals</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+                <span class="nb">map</span><span class="p">(</span><span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">getParameter</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_global_parameter_states</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_global_parameter_states</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+                <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">row</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">setParameter</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+                <span class="n">energy</span> <span class="o">=</span> <span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">getState</span><span class="p">(</span><span class="n">getEnergy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">getPotentialEnergy</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_add_item</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">energy</span><span class="o">.</span><span class="n">value_in_unit</span><span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">kilojoules_per_mole</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_global_parameter_states</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span> <span class="n">originals</span><span class="p">):</span>
+                <span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">setParameter</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">values</span></div>
+
+
+<div class="viewcode-block" id="serialize"><a class="viewcode-back" href="../../pythonapi/io.html#ufedmm.io.serialize">[docs]</a><span class="k">def</span> <span class="nf">serialize</span><span class="p">(</span><span class="nb">object</span><span class="p">,</span> <span class="n">file</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Serializes a ufedmm object.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dump</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="nb">object</span><span class="p">,</span> <span class="n">Dumper</span><span class="o">=</span><span class="n">yaml</span><span class="o">.</span><span class="n">CDumper</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">dump</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">dump</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="deserialize"><a class="viewcode-back" href="../../pythonapi/io.html#ufedmm.io.deserialize">[docs]</a><span class="k">def</span> <span class="nf">deserialize</span><span class="p">(</span><span class="n">file</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Deserializes a ufedmm object.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="nb">object</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(),</span> <span class="n">Loader</span><span class="o">=</span><span class="n">yaml</span><span class="o">.</span><span class="n">CLoader</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">object</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file</span><span class="o">.</span><span class="n">read</span><span class="p">(),</span> <span class="n">Loader</span><span class="o">=</span><span class="n">yaml</span><span class="o">.</span><span class="n">CLoader</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">object</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">UFED for OpenMM</a></h1>
+
+
+
+
+
+
+
+
+
+
+
+<h3><a href="../../index.html">Table of Contents</a></h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../readme.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../pythonapi/index.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../authors.html">Authors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../glossary.html">Glossary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">Bibliography</a></li>
+</ul>
+
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Charlles Abreu. Project structure based on the Computational Molecular Science Python Cookiecutter version 1.0.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.0.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
