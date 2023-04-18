@@ -41,14 +41,22 @@
 
 <span class="sd">.. moduleauthor:: Charlles Abreu &lt;abreu@eq.ufrj.br&gt;</span>
 
-<span class="sd">.. _Context: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html</span>
-<span class="sd">.. _CustomCVForce: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html</span>
-<span class="sd">.. _CustomIntegrator: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomIntegrator.html</span>
-<span class="sd">.. _Force: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Force.html</span>
-<span class="sd">.. _NonbondedForce: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html</span>
-<span class="sd">.. _System: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html</span>
-<span class="sd">.. _coordination: https://www.plumed.org/doc-v2.6/user-doc/html/_c_o_o_r_d_i_n_a_t_i_o_n.html</span>
-<span class="sd">.. _PLUMED: https://www.plumed.org</span>
+<span class="sd">.. _Context:</span>
+<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html</span>
+<span class="sd">.. _CustomCVForce:</span>
+<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html</span>
+<span class="sd">.. _CustomIntegrator:</span>
+<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomIntegrator.html</span>
+<span class="sd">.. _Force:</span>
+<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Force.html</span>
+<span class="sd">.. _NonbondedForce:</span>
+<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html</span>
+<span class="sd">.. _System:</span>
+<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html</span>
+<span class="sd">.. _coordination:</span>
+<span class="sd">    https://www.plumed.org/doc-v2.6/user-doc/html/_c_o_o_r_d_i_n_a_t_i_o_n.html</span>
+<span class="sd">.. _PLUMED:</span>
+<span class="sd">    https://www.plumed.org</span>
 
 <span class="sd">&quot;&quot;&quot;</span>
 
@@ -213,8 +221,16 @@
 <span class="sd">        &gt;&gt;&gt; from openmm import app</span>
 <span class="sd">        &gt;&gt;&gt; from ufedmm import cvlib</span>
 <span class="sd">        &gt;&gt;&gt; model = ufedmm.AlanineDipeptideModel()</span>
-<span class="sd">        &gt;&gt;&gt; carbons = [atom.index for atom in model.topology.atoms() if atom.element == app.element.carbon]</span>
-<span class="sd">        &gt;&gt;&gt; oxygens = [atom.index for atom in model.topology.atoms() if atom.element == app.element.carbon]</span>
+<span class="sd">        &gt;&gt;&gt; carbons = [</span>
+<span class="sd">        ...     atom.index</span>
+<span class="sd">        ...     for atom in model.topology.atoms()</span>
+<span class="sd">        ...     if atom.element == app.element.carbon</span>
+<span class="sd">        ... ]</span>
+<span class="sd">        &gt;&gt;&gt; oxygens = [</span>
+<span class="sd">        ...     atom.index</span>
+<span class="sd">        ...     for atom in model.topology.atoms()</span>
+<span class="sd">        ...     if atom.element == app.element.carbon</span>
+<span class="sd">        ... ]</span>
 <span class="sd">        &gt;&gt;&gt; N = cvlib.CoordinationNumber(model.system, carbons, oxygens)</span>
 <span class="sd">        &gt;&gt;&gt; N.setForceGroup(1)</span>
 <span class="sd">        &gt;&gt;&gt; model.system.addForce(N)</span>
@@ -580,9 +596,12 @@
 
 <span class="sd">        .. math::</span>
 <span class="sd">            u_\\mathrm{cap}(x) = \\left\\{ \\begin{array}{ccc}</span>
-<span class="sd">                126 x^4 - 176 x^3 + 50 &amp; \\mathrm{if} &amp; m = 2 \\\\</span>
-<span class="sd">                \\frac{-4340 x^6 + 10944 x^5 - 7200 x^4 + 596}{5} &amp; \\mathrm{if} &amp; m = 3 \\\\</span>
-<span class="sd">                \\frac{43365 x^8 - 155880 x^7 + 191065 x^6 - 80472 x^5 + 1922}{35} &amp; \\mathrm{if} &amp; m = 4</span>
+<span class="sd">                126 x^4 - 176 x^3 + 50 &amp;</span>
+<span class="sd">                    \\mathrm{if} &amp; m = 2 \\\\</span>
+<span class="sd">                \\frac{-4340 x^6 + 10944 x^5 - 7200 x^4 + 596}{5} &amp;</span>
+<span class="sd">                    \\mathrm{if} &amp; m = 3 \\\\</span>
+<span class="sd">                \\frac{43365 x^8 - 155880 x^7 + 191065 x^6 - 80472 x^5 + 1922}{35} &amp;</span>
+<span class="sd">                    \\mathrm{if} &amp; m = 4</span>
 <span class="sd">            \\end{array}\\right.</span>
 
 <span class="sd">        Keyword Args</span>

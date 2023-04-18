@@ -41,14 +41,22 @@
 
 <span class="sd">.. moduleauthor:: Charlles Abreu &lt;abreu@eq.ufrj.br&gt;</span>
 
-<span class="sd">.. _Context: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html</span>
-<span class="sd">.. _CustomCVForce: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html</span>
-<span class="sd">.. _CustomIntegrator: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomIntegrator.html</span>
-<span class="sd">.. _Force: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Force.html</span>
-<span class="sd">.. _Integrator: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Integrator.html</span>
-<span class="sd">.. _Platform: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Platform.html</span>
-<span class="sd">.. _System: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html</span>
-<span class="sd">.. _State: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.State.html</span>
+<span class="sd">.. _Context:</span>
+<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html</span>
+<span class="sd">.. _CustomCVForce:</span>
+<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html</span>
+<span class="sd">.. _CustomIntegrator:</span>
+<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomIntegrator.html</span>
+<span class="sd">.. _Force:</span>
+<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Force.html</span>
+<span class="sd">.. _Integrator:</span>
+<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Integrator.html</span>
+<span class="sd">.. _Platform:</span>
+<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Platform.html</span>
+<span class="sd">.. _System:</span>
+<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html</span>
+<span class="sd">.. _State:</span>
+<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.State.html</span>
 
 <span class="sd">&quot;&quot;&quot;</span>
 
@@ -222,10 +230,10 @@
 <span class="sd">            &gt;&gt;&gt; import ufedmm</span>
 <span class="sd">            &gt;&gt;&gt; from openmm import unit</span>
 <span class="sd">            &gt;&gt;&gt; model = ufedmm.AlanineDipeptideModel()</span>
-<span class="sd">            &gt;&gt;&gt; model.phi.effective_mass(model.system, model.positions)</span>
-<span class="sd">            0.0479588726559707</span>
-<span class="sd">            &gt;&gt;&gt; model.psi.effective_mass(model.system, model.positions)</span>
-<span class="sd">            0.05115582071188152</span>
+<span class="sd">            &gt;&gt;&gt; model.phi.effective_mass(model.system, model.positions)  # doctest: +ELLIPSIS</span>
+<span class="sd">            0.04795887...</span>
+<span class="sd">            &gt;&gt;&gt; model.psi.effective_mass(model.system, model.positions)  # doctest: +ELLIPSIS</span>
+<span class="sd">            0.05115582...</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">context</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_context</span><span class="p">(</span><span class="n">system</span><span class="p">,</span> <span class="n">positions</span><span class="p">)</span>
@@ -253,8 +261,8 @@
 <span class="sd">    .. math::</span>
 <span class="sd">        V(s, \\mathbf r) = \\frac{\\kappa}{2} [s - q(\\mathbf r)]^2</span>
 
-<span class="sd">    where :math:`s` is the new dynamical variable, :math:`q(\\mathbf r)` is its associated collective</span>
-<span class="sd">    variable, and :math:`kappa` is a force constant.</span>
+<span class="sd">    where :math:`s` is the new dynamical variable, :math:`q(\\mathbf r)` is its associated</span>
+<span class="sd">    collective variable, and :math:`kappa` is a force constant.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>

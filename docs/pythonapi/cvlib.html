@@ -97,8 +97,16 @@ counted only once.</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">openmm</span> <span class="kn">import</span> <span class="n">app</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ufedmm</span> <span class="kn">import</span> <span class="n">cvlib</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">AlanineDipeptideModel</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">carbons</span> <span class="o">=</span> <span class="p">[</span><span class="n">atom</span><span class="o">.</span><span class="n">index</span> <span class="k">for</span> <span class="n">atom</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">atoms</span><span class="p">()</span> <span class="k">if</span> <span class="n">atom</span><span class="o">.</span><span class="n">element</span> <span class="o">==</span> <span class="n">app</span><span class="o">.</span><span class="n">element</span><span class="o">.</span><span class="n">carbon</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">oxygens</span> <span class="o">=</span> <span class="p">[</span><span class="n">atom</span><span class="o">.</span><span class="n">index</span> <span class="k">for</span> <span class="n">atom</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">atoms</span><span class="p">()</span> <span class="k">if</span> <span class="n">atom</span><span class="o">.</span><span class="n">element</span> <span class="o">==</span> <span class="n">app</span><span class="o">.</span><span class="n">element</span><span class="o">.</span><span class="n">carbon</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">carbons</span> <span class="o">=</span> <span class="p">[</span>
+<span class="gp">... </span>    <span class="n">atom</span><span class="o">.</span><span class="n">index</span>
+<span class="gp">... </span>    <span class="k">for</span> <span class="n">atom</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">atoms</span><span class="p">()</span>
+<span class="gp">... </span>    <span class="k">if</span> <span class="n">atom</span><span class="o">.</span><span class="n">element</span> <span class="o">==</span> <span class="n">app</span><span class="o">.</span><span class="n">element</span><span class="o">.</span><span class="n">carbon</span>
+<span class="gp">... </span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">oxygens</span> <span class="o">=</span> <span class="p">[</span>
+<span class="gp">... </span>    <span class="n">atom</span><span class="o">.</span><span class="n">index</span>
+<span class="gp">... </span>    <span class="k">for</span> <span class="n">atom</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">atoms</span><span class="p">()</span>
+<span class="gp">... </span>    <span class="k">if</span> <span class="n">atom</span><span class="o">.</span><span class="n">element</span> <span class="o">==</span> <span class="n">app</span><span class="o">.</span><span class="n">element</span><span class="o">.</span><span class="n">carbon</span>
+<span class="gp">... </span><span class="p">]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">N</span> <span class="o">=</span> <span class="n">cvlib</span><span class="o">.</span><span class="n">CoordinationNumber</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span> <span class="n">carbons</span><span class="p">,</span> <span class="n">oxygens</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">N</span><span class="o">.</span><span class="n">setForceGroup</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="o">.</span><span class="n">addForce</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
@@ -399,9 +407,12 @@ atoms will be set to zero.</p></li>
 <p>with</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}u_\mathrm{cap}(x) = \left\{ \begin{array}{ccc}
-    126 x^4 - 176 x^3 + 50 &amp; \mathrm{if} &amp; m = 2 \\
-    \frac{-4340 x^6 + 10944 x^5 - 7200 x^4 + 596}{5} &amp; \mathrm{if} &amp; m = 3 \\
-    \frac{43365 x^8 - 155880 x^7 + 191065 x^6 - 80472 x^5 + 1922}{35} &amp; \mathrm{if} &amp; m = 4
+    126 x^4 - 176 x^3 + 50 &amp;
+        \mathrm{if} &amp; m = 2 \\
+    \frac{-4340 x^6 + 10944 x^5 - 7200 x^4 + 596}{5} &amp;
+        \mathrm{if} &amp; m = 3 \\
+    \frac{43365 x^8 - 155880 x^7 + 191065 x^6 - 80472 x^5 + 1922}{35} &amp;
+        \mathrm{if} &amp; m = 4
 \end{array}\right.\end{split}\]</div>
 <dl class="field-list simple">
 <dt class="field-odd">Keyword Arguments<span class="colon">:</span></dt>

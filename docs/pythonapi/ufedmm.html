@@ -100,10 +100,10 @@ numerical value is returned based on the OpenMM default units.</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">ufedmm</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">openmm</span> <span class="kn">import</span> <span class="n">unit</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">AlanineDipeptideModel</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span><span class="o">.</span><span class="n">phi</span><span class="o">.</span><span class="n">effective_mass</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">positions</span><span class="p">)</span>
-<span class="go">0.0479588726559707</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span><span class="o">.</span><span class="n">psi</span><span class="o">.</span><span class="n">effective_mass</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">positions</span><span class="p">)</span>
-<span class="go">0.05115582071188152</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span><span class="o">.</span><span class="n">phi</span><span class="o">.</span><span class="n">effective_mass</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">positions</span><span class="p">)</span>  
+<span class="go">0.04795887...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span><span class="o">.</span><span class="n">psi</span><span class="o">.</span><span class="n">effective_mass</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">positions</span><span class="p">)</span>  
+<span class="go">0.05115582...</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -154,8 +154,8 @@ and its associated collective variables.</p>
 <p>The default potential is a harmonic driving of the type:</p>
 <div class="math notranslate nohighlight">
 \[V(s, \mathbf r) = \frac{\kappa}{2} [s - q(\mathbf r)]^2\]</div>
-<p>where <span class="math notranslate nohighlight">\(s\)</span> is the new dynamical variable, <span class="math notranslate nohighlight">\(q(\mathbf r)\)</span> is its associated collective
-variable, and <span class="math notranslate nohighlight">\(kappa\)</span> is a force constant.</p>
+<p>where <span class="math notranslate nohighlight">\(s\)</span> is the new dynamical variable, <span class="math notranslate nohighlight">\(q(\mathbf r)\)</span> is its associated
+collective variable, and <span class="math notranslate nohighlight">\(kappa\)</span> is a force constant.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">

@@ -41,12 +41,18 @@
 
 <span class="sd">.. moduleauthor:: Charlles Abreu &lt;abreu@eq.ufrj.br&gt;</span>
 
-<span class="sd">.. _Context: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html</span>
-<span class="sd">.. _CustomCVForce: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html</span>
-<span class="sd">.. _CustomIntegrator: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomIntegrator.html</span>
-<span class="sd">.. _Force: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Force.html</span>
-<span class="sd">.. _NonbondedForce: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html</span>
-<span class="sd">.. _System: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html</span>
+<span class="sd">.. _Context:</span>
+<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html</span>
+<span class="sd">.. _CustomCVForce:</span>
+<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html</span>
+<span class="sd">.. _CustomIntegrator:</span>
+<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomIntegrator.html</span>
+<span class="sd">.. _Force:</span>
+<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Force.html</span>
+<span class="sd">.. _NonbondedForce:</span>
+<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html</span>
+<span class="sd">.. _System:</span>
+<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html</span>
 
 <span class="sd">&quot;&quot;&quot;</span>
 
@@ -297,9 +303,10 @@
 <span class="sd">            e^{\\frac{\\Delta t}{2}\\mathcal{L}^{[1]}_v}</span>
 
 <span class="sd">    Each exponential operator is the solution of a particular subsystem of equations.</span>
-<span class="sd">    If :math:`\\mathrm{bath}(T_i, v_i) = 0`, the scheme above is time-reversible, measure-preserving,</span>
-<span class="sd">    and symplectic. It is referred to as the ``VV-Middle`` scheme :cite:`Zhang_2019`, where VV</span>
-<span class="sd">    stands for Velocity Verlet. An alternative approach is also available, which is:</span>
+<span class="sd">    If :math:`\\mathrm{bath}(T_i, v_i) = 0`, the scheme above is time-reversible,</span>
+<span class="sd">    measure-preserving, and symplectic. It is referred to as the ``VV-Middle`` scheme</span>
+<span class="sd">    :cite:`Zhang_2019`, where VV stands for Velocity Verlet. An alternative approach</span>
+<span class="sd">    is also available, which is:</span>
 
 <span class="sd">    .. math::</span>
 <span class="sd">        e^{\\Delta t\\mathcal{L}} =</span>
@@ -364,12 +371,18 @@
 <span class="sd">        ...         self.addGlobalVariable(&#39;scaling&#39;, 1)</span>
 <span class="sd">        ...     def _bath(self, fraction):</span>
 <span class="sd">        ...         self.addComputeSum(&#39;twoK&#39;, &#39;m*v*v&#39;)</span>
-<span class="sd">        ...         self.addComputeGlobal(&#39;v_eta&#39;, f&#39;v_eta + {0.5*fraction}*dt*(twoK - gkT)/Q&#39;)</span>
+<span class="sd">        ...         self.addComputeGlobal(</span>
+<span class="sd">        ...             &#39;v_eta&#39;, f&#39;v_eta + {0.5*fraction}*dt*(twoK - gkT)/Q&#39;</span>
+<span class="sd">        ...         )</span>
 <span class="sd">        ...         self.addComputeGlobal(&#39;scaling&#39;, f&#39;exp(-{fraction}*dt*v_eta)&#39;)</span>
 <span class="sd">        ...         self.addComputePerDof(&#39;v&#39;, f&#39;v*scaling&#39;)</span>
-<span class="sd">        ...         self.addComputeGlobal(&#39;v_eta&#39;, f&#39;v_eta + {0.5*fraction}*dt*(scaling^2*twoK - gkT)/Q&#39;)</span>
-<span class="sd">        &gt;&gt;&gt; integrator = MiddleNoseHooverIntegrator(500, 10*unit.femtoseconds, 300*unit.kelvin,</span>
-<span class="sd">        ...                                         1*unit.femtoseconds, num_rattles=0)</span>
+<span class="sd">        ...         self.addComputeGlobal(</span>
+<span class="sd">        ...             &#39;v_eta&#39;, f&#39;v_eta + {0.5*fraction}*dt*(scaling^2*twoK - gkT)/Q&#39;</span>
+<span class="sd">        ...         )</span>
+<span class="sd">        &gt;&gt;&gt; integrator = MiddleNoseHooverIntegrator(</span>
+<span class="sd">        ...     500, 10*unit.femtoseconds, 300*unit.kelvin,</span>
+<span class="sd">        ...     1*unit.femtoseconds, num_rattles=0</span>
+<span class="sd">        ... )</span>
 <span class="sd">        &gt;&gt;&gt; print(integrator)</span>
 <span class="sd">        Per-dof variables:</span>
 <span class="sd">          kT</span>
@@ -620,7 +633,9 @@
 <span class="sd">    -------</span>
 <span class="sd">        &gt;&gt;&gt; import ufedmm</span>
 <span class="sd">        &gt;&gt;&gt; temp, tau, dt = 300*unit.kelvin, 10*unit.femtoseconds, 2*unit.femtoseconds</span>
-<span class="sd">        &gt;&gt;&gt; integrator = ufedmm.MiddleMassiveNHCIntegrator(temp, tau, dt, respa_loops=[4, 1], unroll_loops=False)</span>
+<span class="sd">        &gt;&gt;&gt; integrator = ufedmm.MiddleMassiveNHCIntegrator(</span>
+<span class="sd">        ...     temp, tau, dt, respa_loops=[4, 1], unroll_loops=False</span>
+<span class="sd">        ... )</span>
 <span class="sd">        &gt;&gt;&gt; print(integrator)</span>
 <span class="sd">        Per-dof variables:</span>
 <span class="sd">          kT, Q, v1, v2</span>
@@ -769,9 +784,10 @@
 <div class="viewcode-block" id="RegulatedNHLIntegrator"><a class="viewcode-back" href="../../pythonapi/integrators.html#ufedmm.integrators.RegulatedNHLIntegrator">[docs]</a><span class="k">class</span> <span class="nc">RegulatedNHLIntegrator</span><span class="p">(</span><span class="n">AbstractMiddleRespaIntegrator</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A regulated version of the massive Nose-Hoover-Langevin :cite:`Samoletov_2007,Leimkuhler_2009`</span>
-<span class="sd">    method. Regulation means that the system Hamiltonian is modified so that velocities remain below</span>
-<span class="sd">    a temperature-dependent limit. This is closely related to the SIN(R) method :cite:`Leimkuhler_2013`</span>
-<span class="sd">    and allows multiple time-scale integration with very large outer time steps, without resonance.</span>
+<span class="sd">    method. Regulation means that the system Hamiltonian is modified so that velocities remain</span>
+<span class="sd">    below a temperature-dependent limit. This is closely related to the SIN(R) method</span>
+<span class="sd">    :cite:`Leimkuhler_2013` and allows multiple time-scale integration with very large outer time</span>
+<span class="sd">    steps, without resonance.</span>
 
 <span class="sd">    .. info:</span>
 <span class="sd">        If `regulation_parameter = 1` (default), this method is equivalent to SIN(R) with a single</span>
