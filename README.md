@@ -5,9 +5,9 @@ Unified Free Energy Dynamics with OpenMM
 [![GitHub Actions Build Status](https://github.com/craabreu/ufedmm/workflows/Linux/badge.svg)](https://github.com/craabreu/ufedmm/actions?query=workflow%3ALinux)
 [![GitHub Actions Build Status](https://github.com/craabreu/ufedmm/workflows/MacOS/badge.svg)](https://github.com/craabreu/ufedmm/actions?query=workflow%3AMacOS)
 [![GitHub Actions Build Status](https://github.com/craabreu/ufedmm/workflows/Windows/badge.svg)](https://github.com/craabreu/ufedmm/actions?query=workflow%3AWindows)
-[![codecov](https://codecov.io/gh/craabreu/ufedmm/branch/main/graph/badge.svg)](https://codecov.io/gh/craabreu/ufedmm/branch/main)
-[![Documentation Status](https://readthedocs.org/projects/ufedmm/badge/?style=flat)](https://readthedocs.org/projects/ufedmm)
-[![License](https://img.shields.io/github/license/mashape/apistatus.svg)]()
+[![GitHub Actions Build Status](https://github.com/craabreu/ufedmm/workflows/Docs/badge.svg)](https://craabreu.github.io/ufedmm/)
+[![Coverage](https://craabreu.github.io/ufedmm/coverage/coverage.svg)](https://craabreu.github.io/ufedmm/coverage/)
+[![License](https://img.shields.io/badge/License-MIT-yellowgreen.svg?style=flat)](https://github.com/craabreu/ufedmm/blob/main/LICENSE.md)
 
 UFEDMM extends [OpenMM's Python API] so that the user can easily run
 efficient simulations in extended phase spaces, perform enhanced sampling
@@ -89,9 +89,7 @@ general applicability, not restricted to `ufedmm` simulations.
 
 ## Documentation
 
-<!-- https://atomsmm.readthedocs.io/en/stable -->
-
-https://ufedmm.readthedocs.io/en/latest
+https://craabreu.github.io/ufedmm/
 
 #### Copyright
 
