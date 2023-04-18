@@ -1,0 +1,46 @@
+{% set version = environ['UFEDMM_VERSION'][1:] %}
+{% set python_version = environ['PYTHON_VERSION'] %}
+
+package:
+  name: ufedmm
+  version: {{ version }}
+
+source:
+  git_url: ../../../
+
+build:
+  number: 0
+  script: python -m pip install . --no-deps
+
+requirements:
+  host:
+    - python=={{ python_version }}
+    - setuptools
+    - versioningit
+    - pip
+  run:
+    - python=={{ python_version }}
+    - importlib-resources  # [py<310]
+    - numpy
+    - openmm
+    - pandas
+    - pyyaml
+    - scipy
+    - cvpack
+
+test:
+  imports:
+    - ufedmm
+
+about:
+  home: https://github.com/craabreu/ufedmm
+  summary: Unified Free Energy Dynamics with OpenMM
+  license: MIT
+  license_family: MIT
+  license_file: LICENSE
+  doc_url: https://craabreu.github.io/ufedmm/
+  dev_url: https://github.com/craabreu/ufedmm
+
+extra:
+  recipe-maintainers:
+    - craabreu
