@@ -26,6 +26,7 @@ dependencies = [
     "pandas",
 #    "openmm",  #  This pypi package is not actually OpenMM
     "pyyaml",
+#    "cvpack",  # There is no cvpack package on pypi
 ]
 
 [project.urls]

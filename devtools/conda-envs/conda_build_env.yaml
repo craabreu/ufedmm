@@ -1,0 +1,19 @@
+name: build
+channels:
+  - conda-forge
+  - redesign-science
+dependencies:
+    # Base depends
+  - python
+  - pip
+  - numpy
+  - openmm
+  - pandas
+  - pyyaml
+  - scipy
+  - cvpack
+
+    # Conda build
+  - anaconda-client
+  - conda-build
+  - boa
