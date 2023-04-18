@@ -11,7 +11,12 @@ dependencies:
   - pyyaml
   - scipy
 
-    # Testing
+    # Test depends
   - pytest
   - pytest-cov
   - codecov
+
+    # Docs depends
+  - sphinx
+  - sphinxcontrib-bibtex
+  - sphinx-copybutton

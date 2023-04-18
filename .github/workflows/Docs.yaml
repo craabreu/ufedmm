@@ -1,0 +1,103 @@
+name: Docs
+
+on:
+  push:
+    branches:
+      - "main"
+  pull_request:
+    branches:
+      - "main"
+
+jobs:
+  build_and_deploy_docs:
+    name: Documentation Building and Deployment
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.REPO_TOKEN }}
+          path: ufedmm
+
+      - name: Additional info about the build
+        shell: bash
+        run: |
+          uname -a
+          df -h
+          ulimit -a
+
+      - uses: mamba-org/provision-with-micromamba@main
+        with:
+          environment-file: ufedmm/devtools/conda-envs/test_env.yaml
+          environment-name: docs
+          channels: conda-forge
+          extra-specs: |
+            python=3.10
+
+      - name: Install package
+        shell: bash -l {0}
+        run: |
+          cd ufedmm/
+          python -m pip install . --no-deps
+          micromamba list
+
+      - name: Build Documentation
+        shell: bash -l {0}
+        run: |
+          cd ufedmm/
+          sphinx-build ./docs ./html
+
+      - name: Run tests
+        shell: bash -l {0}
+        run: |
+          cd ufedmm/
+          pytest -v --cov=ufedmm --cov-report=term-missing --cov-report=html \
+                 --pyargs --color=yes --doctest-modules ufedmm/
+
+      - name: Get coverage report
+        id:  coverage
+        shell: bash -l {0}
+        run: |
+          cd ufedmm/
+          COVERAGE=$(coverage report | tail -1 | awk '{print $4}')
+          OFFSET=$(((${COVERAGE::-1}-35)/6-1))
+          [[ $OFFSET < 0 ]] && OFFSET=0
+          PALETTE="000111222333"
+          CODE=${PALETTE:$OFFSET:3}
+          COLOR=$(echo $CODE | sed -e "s/0/red,/g; s/1/orange,/g; s/2/yellow,/g; s/3/green,/g; s/,$//")
+          echo "coverage=${COVERAGE}" | tee -a "${GITHUB_OUTPUT}"
+          echo "color=${COLOR}" | tee -a "${GITHUB_OUTPUT}"
+
+      - name: Generate coverage badge
+        uses: emibcn/badge-action@v2.0.2
+        with:
+          label: 'Coverage'
+          label-color: 'black'
+          status: ${{ steps.coverage.outputs.coverage }}
+          color: ${{ steps.coverage.outputs.color }}
+          path: 'ufedmm/htmlcov/coverage.svg'
+
+      - name: Deploy documentation
+        shell: bash -l {0}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
+            echo "Deployment is deactivated on pull requests"
+          else
+            cd ufedmm/
+            git reset --hard HEAD
+            set -x
+            echo "::group::Push page to gh-pages branch"
+            git config user.name "$(git show --format=%an -s)"
+            git config user.email "$(git show --format=%ae -s)"
+            git fetch origin
+            git switch gh-pages
+            rsync -va --delete-excluded html/ docs/
+            rsync -va --delete-excluded htmlcov/ docs/coverage/
+            touch docs/.nojekyll
+            git add -f docs/*
+            git add -f docs/.nojekyll
+            git add -f docs/coverage/*
+            git commit -m "Docs from $GITHUB_REF $GITHUB_SHA" || echo "Branch is up to date"
+            git push -f origin gh-pages
+            echo "::endgroup::"
+          fi
