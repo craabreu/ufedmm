@@ -11,10 +11,8 @@
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
     <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
-    <script src="../../_static/jquery.js"></script>
-    <script src="../../_static/underscore.js"></script>
-    <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/sphinx_highlight.js"></script>
     <script src="../../_static/clipboard.min.js"></script>
     <script src="../../_static/copybutton.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -60,7 +58,7 @@
 
 
 <div class="viewcode-block" id="add_inner_nonbonded_force"><a class="viewcode-back" href="../../pythonapi/integrators.html#ufedmm.integrators.add_inner_nonbonded_force">[docs]</a><span class="k">def</span> <span class="nf">add_inner_nonbonded_force</span><span class="p">(</span><span class="n">system</span><span class="p">,</span> <span class="n">inner_switch</span><span class="p">,</span> <span class="n">inner_cutoff</span><span class="p">,</span> <span class="n">force_group_index</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    To a given OpenMM System_ containing a NonbondedForce_ object, this function adds a new force</span>
 <span class="sd">    group with the purpose of performing multiple time-scale integration according to the RESPA2</span>
 <span class="sd">    splitting scheme of Morrone, Zhou, and Berne :cite:`Morrone_2010`. Besides, it assigns the</span>
@@ -134,7 +132,7 @@
         <span class="k">return</span> <span class="s2">&quot;+&quot;</span> <span class="k">if</span> <span class="n">m</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">val</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">S</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
-        <span class="k">return</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">sgn</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span><span class="si">}{</span><span class="n">val</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span><span class="si">}{</span><span class="n">func</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">6</span><span class="p">))</span>
+        <span class="k">return</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">sgn</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">m</span><span class="p">)</span><span class="si">}{</span><span class="n">val</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">m</span><span class="p">)</span><span class="si">}{</span><span class="n">func</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">m</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">6</span><span class="p">))</span>
 
     <span class="n">potential</span> <span class="o">=</span> <span class="s2">&quot;eps4*((sigma/r)^12-(sigma/r)^6)+Qprod/r&quot;</span>
     <span class="n">potential</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;+step(r-</span><span class="si">{</span><span class="n">rs</span><span class="si">}</span><span class="s2">)*(eps4*(sigma^12*(</span><span class="si">{</span><span class="n">S</span><span class="p">(</span><span class="mi">12</span><span class="p">)</span><span class="si">}</span><span class="s2">)-sigma^6*(</span><span class="si">{</span><span class="n">S</span><span class="p">(</span><span class="mi">6</span><span class="p">)</span><span class="si">}</span><span class="s2">))+Qprod*(</span><span class="si">{</span><span class="n">S</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="si">}</span><span class="s2">))&quot;</span>
@@ -172,7 +170,7 @@
 
 
 <div class="viewcode-block" id="CustomIntegrator"><a class="viewcode-back" href="../../pythonapi/integrators.html#ufedmm.integrators.CustomIntegrator">[docs]</a><span class="k">class</span> <span class="nc">CustomIntegrator</span><span class="p">(</span><span class="n">openmm</span><span class="o">.</span><span class="n">CustomIntegrator</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    An extension of OpenMM&#39;s CustomIntegrator_ class with an extra per-dof variable named</span>
 <span class="sd">    `temperature`, whose content is the temperature of the heat bath associated to each</span>
 <span class="sd">    degree of freedom. A per-dof temperature is necessary if the extended-space variables</span>
@@ -195,7 +193,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_up_to_date</span> <span class="o">=</span> <span class="kc">False</span>
 
     <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        A human-readable version of each integrator step (adapted from openmmtools)</span>
 
 <span class="sd">        Returns</span>
@@ -258,7 +256,7 @@
 
 
 <div class="viewcode-block" id="AbstractMiddleRespaIntegrator"><a class="viewcode-back" href="../../pythonapi/integrators.html#ufedmm.integrators.AbstractMiddleRespaIntegrator">[docs]</a><span class="k">class</span> <span class="nc">AbstractMiddleRespaIntegrator</span><span class="p">(</span><span class="n">CustomIntegrator</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    An abstract class for middle-type, multiple time-scale integrators.</span>
 
 <span class="sd">    .. warning::</span>
@@ -491,7 +489,7 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_rattles</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">addComputeGlobal</span><span class="p">(</span><span class="s2">&quot;irattle&quot;</span><span class="p">,</span> <span class="s2">&quot;0&quot;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">beginWhileBlock</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;irattle &lt; </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_num_rattles</span><span class="o">-</span><span class="mi">1</span><span class="o">/</span><span class="mi">2</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;x + </span><span class="si">{</span><span class="n">fraction</span><span class="o">/</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_rattles</span><span class="p">)</span><span class="si">}</span><span class="s2">*dt*v&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;x + </span><span class="si">{</span><span class="n">fraction</span><span class="o">/</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">_num_rattles</span><span class="p">)</span><span class="si">}</span><span class="s2">*dt*v&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_rattles</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;x0&quot;</span><span class="p">,</span> <span class="s2">&quot;x&quot;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">addConstrainPositions</span><span class="p">()</span>
@@ -517,7 +515,7 @@
 
 
 <div class="viewcode-block" id="GeodesicLangevinIntegrator"><a class="viewcode-back" href="../../pythonapi/integrators.html#ufedmm.integrators.GeodesicLangevinIntegrator">[docs]</a><span class="k">class</span> <span class="nc">GeodesicLangevinIntegrator</span><span class="p">(</span><span class="n">AbstractMiddleRespaIntegrator</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A geodesic Langevin integrator :cite:`Leimkuhler_2016`, which can be integrated by using</span>
 <span class="sd">    either the LF-Middle or the VV-Middle scheme :cite:`Zhang_2019`.</span>
 
@@ -593,7 +591,7 @@
 
 
 <div class="viewcode-block" id="MiddleMassiveNHCIntegrator"><a class="viewcode-back" href="../../pythonapi/integrators.html#ufedmm.integrators.MiddleMassiveNHCIntegrator">[docs]</a><span class="k">class</span> <span class="nc">MiddleMassiveNHCIntegrator</span><span class="p">(</span><span class="n">AbstractMiddleRespaIntegrator</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A massive, middle-type Nose-Hoover Chain Thermostat solver :cite:`Martyna_1992`</span>
 <span class="sd">    with optional multiple time-scale integration via RESPA.</span>
 
@@ -687,7 +685,7 @@
 
 
 <div class="viewcode-block" id="MiddleMassiveGGMTIntegrator"><a class="viewcode-back" href="../../pythonapi/integrators.html#ufedmm.integrators.MiddleMassiveGGMTIntegrator">[docs]</a><span class="k">class</span> <span class="nc">MiddleMassiveGGMTIntegrator</span><span class="p">(</span><span class="n">AbstractMiddleRespaIntegrator</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A massive, middle-type Generalized Gaussian Moment Thermostat :cite:`Liu_2000`</span>
 <span class="sd">    solver with optional multiple time-scale integration via RESPA.</span>
 
@@ -769,7 +767,7 @@
 
 
 <div class="viewcode-block" id="RegulatedNHLIntegrator"><a class="viewcode-back" href="../../pythonapi/integrators.html#ufedmm.integrators.RegulatedNHLIntegrator">[docs]</a><span class="k">class</span> <span class="nc">RegulatedNHLIntegrator</span><span class="p">(</span><span class="n">AbstractMiddleRespaIntegrator</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A regulated version of the massive Nose-Hoover-Langevin :cite:`Samoletov_2007,Leimkuhler_2009`</span>
 <span class="sd">    method. Regulation means that the system Hamiltonian is modified so that velocities remain below</span>
 <span class="sd">    a temperature-dependent limit. This is closely related to the SIN(R) method :cite:`Leimkuhler_2013`</span>
@@ -1006,8 +1004,8 @@
       &copy;2020, Charlles Abreu. Project structure based on the Computational Molecular Science Python Cookiecutter version 1.0.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.0.2</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 6.1.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
       
     </div>
 

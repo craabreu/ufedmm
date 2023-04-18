@@ -11,10 +11,8 @@
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
     <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
-    <script src="../../_static/jquery.js"></script>
-    <script src="../../_static/underscore.js"></script>
-    <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/sphinx_highlight.js"></script>
     <script src="../../_static/clipboard.min.js"></script>
     <script src="../../_static/copybutton.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -65,7 +63,7 @@
 
 
 <span class="k">def</span> <span class="nf">_standardized</span><span class="p">(</span><span class="n">quantity</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Returns the numerical value of a quantity in a unit of measurement compatible with the</span>
 <span class="sd">    Molecular Dynamics unit system (mass in Da, distance in nm, time in ps, temperature in K,</span>
 <span class="sd">    energy in kJ/mol, angle in rad).</span>
@@ -99,7 +97,7 @@
 
 
 <div class="viewcode-block" id="CollectiveVariable"><a class="viewcode-back" href="../../pythonapi/ufedmm.html#ufedmm.ufedmm.CollectiveVariable">[docs]</a><span class="k">class</span> <span class="nc">CollectiveVariable</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A function of the particle coordinates, evaluated by means of an OpenMM Force_ object.</span>
 
 <span class="sd">    Quoting OpenMM&#39;s CustomCVForce_ manual entry:</span>
@@ -148,7 +146,7 @@
         <span class="k">return</span> <span class="n">context</span>
 
 <div class="viewcode-block" id="CollectiveVariable.evaluate"><a class="viewcode-back" href="../../pythonapi/ufedmm.html#ufedmm.ufedmm.CollectiveVariable.evaluate">[docs]</a>    <span class="k">def</span> <span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">system</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">cv_unit</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Computes the value of the collective variable for a given system and a given set of particle</span>
 <span class="sd">        coordinates.</span>
 
@@ -189,7 +187,7 @@
         <span class="k">return</span> <span class="n">value</span></div>
 
 <div class="viewcode-block" id="CollectiveVariable.effective_mass"><a class="viewcode-back" href="../../pythonapi/ufedmm.html#ufedmm.ufedmm.CollectiveVariable.effective_mass">[docs]</a>    <span class="k">def</span> <span class="nf">effective_mass</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">system</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">cv_unit</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Computes the effective mass of the collective variable for a given system and a given set of</span>
 <span class="sd">        particle coordinates.</span>
 
@@ -243,7 +241,7 @@
 
 
 <div class="viewcode-block" id="DynamicalVariable"><a class="viewcode-back" href="../../pythonapi/ufedmm.html#ufedmm.ufedmm.DynamicalVariable">[docs]</a><span class="k">class</span> <span class="nc">DynamicalVariable</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    An extended phase-space variable, whose dynamics is coupled to that of one of more collective</span>
 <span class="sd">    variables of a system.</span>
 
@@ -392,7 +390,7 @@
         <span class="k">return</span> <span class="n">openmm</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="n">length</span> <span class="o">*</span> <span class="p">(</span><span class="n">value</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_value</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_range</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span>
 
     <span class="k">def</span> <span class="nf">_get_energy_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns the algebraic expression that transforms the x coordinate of a particle into this</span>
 <span class="sd">        dynamical variables.</span>
 
@@ -414,7 +412,7 @@
         <span class="k">return</span> <span class="n">energy</span>
 
 <div class="viewcode-block" id="DynamicalVariable.evaluate"><a class="viewcode-back" href="../../pythonapi/ufedmm.html#ufedmm.ufedmm.DynamicalVariable.evaluate">[docs]</a>    <span class="k">def</span> <span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">Lx</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Computes the value of this dynamical variable for a given x coordinate and a given length of</span>
 <span class="sd">        the simulation box in the x direction.</span>
 
@@ -477,7 +475,7 @@
 
 
 <span class="k">class</span> <span class="nc">_Metadynamics</span><span class="p">(</span><span class="n">PeriodicTask</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Extended-space Metadynamics.</span>
 
 <span class="sd">    Parameters</span>
@@ -562,7 +560,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_table</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">Continuous3DFunction</span><span class="p">(</span>
                 <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_widths</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bias</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_bounds</span><span class="p">,</span> <span class="n">full_periodic</span>
             <span class="p">)</span>
-        <span class="n">expression</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;bias(</span><span class="si">{</span><span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias_variables</span><span class="p">)</span><span class="si">}</span><span class="s1">)&#39;</span>
+        <span class="n">expression</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;bias(</span><span class="si">{</span><span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">id</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">bias_variables</span><span class="p">)</span><span class="si">}</span><span class="s1">)&#39;</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bias_variables</span><span class="p">):</span>
             <span class="n">expression</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;;</span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">_get_energy_function</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="n">force</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">CustomCVForce</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span>
@@ -721,7 +719,7 @@
 
 
 <div class="viewcode-block" id="ExtendedSpaceState"><a class="viewcode-back" href="../../pythonapi/ufedmm.html#ufedmm.ufedmm.ExtendedSpaceState">[docs]</a><span class="k">class</span> <span class="nc">ExtendedSpaceState</span><span class="p">(</span><span class="n">openmm</span><span class="o">.</span><span class="n">State</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    An extension of OpenMM&#39;s State_ class.</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -740,7 +738,7 @@
         <span class="k">return</span> <span class="n">particles_contribution</span><span class="p">,</span> <span class="n">variables_contribution</span>
 
 <div class="viewcode-block" id="ExtendedSpaceState.getPositions"><a class="viewcode-back" href="../../pythonapi/ufedmm.html#ufedmm.ufedmm.ExtendedSpaceState.getPositions">[docs]</a>    <span class="k">def</span> <span class="nf">getPositions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">asNumpy</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">extended</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Gets the positions of all physical particles and optionally also gets the positions</span>
 <span class="sd">        of the extra particles from which the extended-space dynamical variables are computed.</span>
 
@@ -773,7 +771,7 @@
         <span class="k">return</span> <span class="p">(</span><span class="n">positions</span><span class="p">,</span> <span class="n">xvars</span><span class="p">)</span> <span class="k">if</span> <span class="n">extended</span> <span class="k">else</span> <span class="n">positions</span></div>
 
 <div class="viewcode-block" id="ExtendedSpaceState.getVelocities"><a class="viewcode-back" href="../../pythonapi/ufedmm.html#ufedmm.ufedmm.ExtendedSpaceState.getVelocities">[docs]</a>    <span class="k">def</span> <span class="nf">getVelocities</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">asNumpy</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">extended</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Gets the velocities of all physical particles and optionally also gets the velocities</span>
 <span class="sd">        of the extra particles associated to the extended-space dynamical variables.</span>
 
@@ -807,7 +805,7 @@
         <span class="k">return</span> <span class="n">velocities</span></div>
 
 <div class="viewcode-block" id="ExtendedSpaceState.getDynamicalVariables"><a class="viewcode-back" href="../../pythonapi/ufedmm.html#ufedmm.ufedmm.ExtendedSpaceState.getDynamicalVariables">[docs]</a>    <span class="k">def</span> <span class="nf">getDynamicalVariables</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Gets the values of the extended-space dynamical variables.</span>
 
 <span class="sd">        Returns</span>
@@ -839,7 +837,7 @@
 
 
 <div class="viewcode-block" id="ExtendedSpaceContext"><a class="viewcode-back" href="../../pythonapi/ufedmm.html#ufedmm.ufedmm.ExtendedSpaceContext">[docs]</a><span class="k">class</span> <span class="nc">ExtendedSpaceContext</span><span class="p">(</span><span class="n">openmm</span><span class="o">.</span><span class="n">Context</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    An extension of OpenMM&#39;s Context_ class.</span>
 
 <span class="sd">    Parameters</span>
@@ -915,7 +913,7 @@
             <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;GBSAOBCForce not supported&quot;</span><span class="p">)</span>
 
 <div class="viewcode-block" id="ExtendedSpaceContext.getState"><a class="viewcode-back" href="../../pythonapi/ufedmm.html#ufedmm.ufedmm.ExtendedSpaceContext.getState">[docs]</a>    <span class="k">def</span> <span class="nf">getState</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns a :class:`ExtendedSpaceState` object.</span>
 
 <span class="sd">        .. _getState: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html#openmm.openmm.Context.getState  # noqa: E501</span>
@@ -929,7 +927,7 @@
         <span class="k">return</span> <span class="n">ExtendedSpaceState</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">,</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">getState</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">))</span></div>
 
 <div class="viewcode-block" id="ExtendedSpaceContext.setPeriodicBoxVectors"><a class="viewcode-back" href="../../pythonapi/ufedmm.html#ufedmm.ufedmm.ExtendedSpaceContext.setPeriodicBoxVectors">[docs]</a>    <span class="k">def</span> <span class="nf">setPeriodicBoxVectors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Set the vectors defining the axes of the periodic box.</span>
 
 <span class="sd">        .. warning::</span>
@@ -960,7 +958,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">reinitialize</span><span class="p">(</span><span class="n">preserveState</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="ExtendedSpaceContext.setPositions"><a class="viewcode-back" href="../../pythonapi/ufedmm.html#ufedmm.ufedmm.ExtendedSpaceContext.setPositions">[docs]</a>    <span class="k">def</span> <span class="nf">setPositions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">extended_positions</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Sets the positions of all particles and extended-space variables in</span>
 <span class="sd">        this context. If the latter are not provided, then suitable values</span>
 <span class="sd">        are automatically determined from the particle positions.</span>
@@ -1013,7 +1011,7 @@
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">setPositions</span><span class="p">(</span><span class="n">particle_positions</span> <span class="o">+</span> <span class="n">extra_positions</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="ExtendedSpaceContext.setVelocitiesToTemperature"><a class="viewcode-back" href="../../pythonapi/ufedmm.html#ufedmm.ufedmm.ExtendedSpaceContext.setVelocitiesToTemperature">[docs]</a>    <span class="k">def</span> <span class="nf">setVelocitiesToTemperature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">temperature</span><span class="p">,</span> <span class="n">randomSeed</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Sets the velocities of all particles in the system to random values chosen from a</span>
 <span class="sd">        Maxwell-Boltzmann distribution at a given temperature.</span>
 
@@ -1046,7 +1044,7 @@
 
 
 <div class="viewcode-block" id="ExtendedSpaceSimulation"><a class="viewcode-back" href="../../pythonapi/ufedmm.html#ufedmm.ufedmm.ExtendedSpaceSimulation">[docs]</a><span class="k">class</span> <span class="nc">ExtendedSpaceSimulation</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">Simulation</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A simulation involving extended phase-space variables.</span>
 
 <span class="sd">    Parameters</span>
@@ -1101,7 +1099,7 @@
             <span class="p">)</span>
 
 <div class="viewcode-block" id="ExtendedSpaceSimulation.add_periodic_task"><a class="viewcode-back" href="../../pythonapi/ufedmm.html#ufedmm.ufedmm.ExtendedSpaceSimulation.add_periodic_task">[docs]</a>    <span class="k">def</span> <span class="nf">add_periodic_task</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task</span><span class="p">,</span> <span class="n">force_group</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Adds a task to be executed periodically along this simulation.</span>
 
 <span class="sd">        Parameters</span>
@@ -1114,7 +1112,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_periodic_tasks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">task</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="ExtendedSpaceSimulation.step"><a class="viewcode-back" href="../../pythonapi/ufedmm.html#ufedmm.ufedmm.ExtendedSpaceSimulation.step">[docs]</a>    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">steps</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Executed a given number of simulation steps.</span>
 
 <span class="sd">        Parameters</span>
@@ -1155,7 +1153,7 @@
 
 
 <div class="viewcode-block" id="UnifiedFreeEnergyDynamics"><a class="viewcode-back" href="../../pythonapi/ufedmm.html#ufedmm.ufedmm.UnifiedFreeEnergyDynamics">[docs]</a><span class="k">class</span> <span class="nc">UnifiedFreeEnergyDynamics</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A Unified Free-Energy Dynamics (UFED) setup.</span>
 
 <span class="sd">    Parameters</span>
@@ -1226,7 +1224,7 @@
         <span class="n">properties</span> <span class="o">=</span> <span class="p">(</span>
             <span class="sa">f</span><span class="s2">&quot;temperature=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">temperature</span><span class="si">}</span><span class="s2">, height=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">height</span><span class="si">}</span><span class="s2">, frequency=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">frequency</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="p">)</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;&lt;variables=[</span><span class="si">{</span><span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">)</span><span class="si">}</span><span class="s1">], </span><span class="si">{</span><span class="n">properties</span><span class="si">}</span><span class="s1">&gt;&#39;</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;&lt;variables=[</span><span class="si">{</span><span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">id</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">)</span><span class="si">}</span><span class="s1">], </span><span class="si">{</span><span class="n">properties</span><span class="si">}</span><span class="s1">&gt;&#39;</span>
 
     <span class="k">def</span> <span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span>
@@ -1244,7 +1242,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kw</span><span class="p">)</span>
 
 <div class="viewcode-block" id="UnifiedFreeEnergyDynamics.simulation"><a class="viewcode-back" href="../../pythonapi/ufedmm.html#ufedmm.ufedmm.UnifiedFreeEnergyDynamics.simulation">[docs]</a>    <span class="k">def</span> <span class="nf">simulation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">topology</span><span class="p">,</span> <span class="n">system</span><span class="p">,</span> <span class="n">integrator</span><span class="p">,</span> <span class="n">platform</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">platformProperties</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns a ExtendedSpaceSimulation object.</span>
 
 <span class="sd">        .. warning::</span>
@@ -1375,8 +1373,8 @@
       &copy;2020, Charlles Abreu. Project structure based on the Computational Molecular Science Python Cookiecutter version 1.0.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.0.2</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 6.1.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
       
     </div>
 

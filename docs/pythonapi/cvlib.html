@@ -4,7 +4,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
     <title>collective variable library &#8212; UFED for OpenMM  documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
@@ -12,10 +12,8 @@
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
     <link rel="stylesheet" type="text/css" href="../_static/css/custom.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
-    <script src="../_static/jquery.js"></script>
-    <script src="../_static/underscore.js"></script>
-    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
     <script src="../_static/clipboard.min.js"></script>
     <script src="../_static/copybutton.js"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
@@ -184,7 +182,7 @@ hydrogen atoms and <span class="math notranslate nohighlight">\(d_0\)</span> is 
 
 <dl class="py class">
 <dt class="sig sig-object py" id="ufedmm.cvlib.HelixRamachandranContent">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ufedmm.cvlib.</span></span><span class="sig-name descname"><span class="pre">HelixRamachandranContent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topology</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">first</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phi_ref</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Quantity(value=-</span> <span class="pre">63.8,</span> <span class="pre">unit=degree)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phi_tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Quantity(value=25,</span> <span class="pre">unit=degree)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">psi_ref</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Quantity(value=-</span> <span class="pre">41.1,</span> <span class="pre">unit=degree)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">psi_tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Quantity(value=25,</span> <span class="pre">unit=degree)</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/cvlib.html#HelixRamachandranContent"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.cvlib.HelixRamachandranContent" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ufedmm.cvlib.</span></span><span class="sig-name descname"><span class="pre">HelixRamachandranContent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topology</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">first</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phi_ref</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Quantity(value=-63.8,</span> <span class="pre">unit=degree)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phi_tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Quantity(value=25,</span> <span class="pre">unit=degree)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">psi_ref</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Quantity(value=-41.1,</span> <span class="pre">unit=degree)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">psi_tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Quantity(value=25,</span> <span class="pre">unit=degree)</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/cvlib.html#HelixRamachandranContent"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.cvlib.HelixRamachandranContent" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">CustomTorsionForce</span></code></p>
 <blockquote>
 <div><p>Fractional alpha-helix content of a sequence of residues in a protein chain based on the
@@ -307,7 +305,7 @@ chosen from a number of different styles:</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>group</strong> (<em>list of int</em>) – The atoms in the specified group.</p></li>
+<li><p><strong>group</strong> (<em>list</em><em> of </em><em>int</em>) – The atoms in the specified group.</p></li>
 <li><p><strong>nbforce</strong> (<em>openmm.NonbondedForce</em>) – The <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html">NonbondedForce</a> object from which the atom charges are imported.</p></li>
 </ul>
 </dd>
@@ -363,7 +361,7 @@ treated as exceptions and all atoms of the group are removed from regular LJ int
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>group</strong> (<em>list of int</em>) – The atoms in the specified group.</p></li>
+<li><p><strong>group</strong> (<em>list</em><em> of </em><em>int</em>) – The atoms in the specified group.</p></li>
 <li><p><strong>nbforce</strong> (<em>openmm.NonbondedForce</em>) – The <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html">NonbondedForce</a> object from which the atom parameters are imported.</p></li>
 </ul>
 </dd>
@@ -539,8 +537,8 @@ atoms <cite>i</cite> and <cite>j</cite>.</p>
       &copy;2020, Charlles Abreu. Project structure based on the Computational Molecular Science Python Cookiecutter version 1.0.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.0.2</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 6.1.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
       
       |
       <a href="../_sources/pythonapi/cvlib.rst.txt"

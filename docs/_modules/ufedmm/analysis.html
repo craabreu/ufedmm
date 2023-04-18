@@ -11,10 +11,8 @@
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
     <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
-    <script src="../../_static/jquery.js"></script>
-    <script src="../../_static/underscore.js"></script>
-    <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/sphinx_highlight.js"></script>
     <script src="../../_static/clipboard.min.js"></script>
     <script src="../../_static/copybutton.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -90,7 +88,7 @@
 
 
 <div class="viewcode-block" id="FreeEnergyAnalyzer"><a class="viewcode-back" href="../../pythonapi/analysis.html#ufedmm.analysis.FreeEnergyAnalyzer">[docs]</a><span class="k">class</span> <span class="nc">FreeEnergyAnalyzer</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Calculate free energy landscapes from UFED simulation results.</span>
 
 <span class="sd">    Parameters</span>
@@ -108,7 +106,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_bias_variables</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">v</span><span class="o">.</span><span class="n">sigma</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ufed</span><span class="o">.</span><span class="n">variables</span><span class="p">)</span>
 
 <div class="viewcode-block" id="FreeEnergyAnalyzer.metadynamics_bias_free_energy"><a class="viewcode-back" href="../../pythonapi/analysis.html#ufedmm.analysis.FreeEnergyAnalyzer.metadynamics_bias_free_energy">[docs]</a>    <span class="k">def</span> <span class="nf">metadynamics_bias_free_energy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns a Python function which, in turn, receives the values of extended-space variables</span>
 <span class="sd">        and returns the energy estimated from a Metadynamics bias potential reconstructed from the</span>
 <span class="sd">        simulation data.</span>
@@ -143,7 +141,7 @@
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="n">free_energy</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="FreeEnergyAnalyzer.centers_and_mean_forces"><a class="viewcode-back" href="../../pythonapi/analysis.html#ufedmm.analysis.FreeEnergyAnalyzer.centers_and_mean_forces">[docs]</a>    <span class="k">def</span> <span class="nf">centers_and_mean_forces</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bins</span><span class="p">,</span> <span class="n">min_count</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">adjust_centers</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Performs binned statistics with the UFED simulation data.</span>
 
 <span class="sd">        Parameters</span>
@@ -195,7 +193,7 @@
 <div class="viewcode-block" id="FreeEnergyAnalyzer.mean_force_free_energy"><a class="viewcode-back" href="../../pythonapi/analysis.html#ufedmm.analysis.FreeEnergyAnalyzer.mean_force_free_energy">[docs]</a>    <span class="k">def</span> <span class="nf">mean_force_free_energy</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">centers</span><span class="p">,</span> <span class="n">mean_forces</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">platform_name</span><span class="o">=</span><span class="s2">&quot;Reference&quot;</span><span class="p">,</span> <span class="n">properties</span><span class="o">=</span><span class="p">{}</span>
     <span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns Python functions for evaluating the potential of mean force and their originating</span>
 <span class="sd">        mean forces as a function of the collective variables.</span>
 
@@ -312,7 +310,7 @@
 
 
 <div class="viewcode-block" id="Analyzer"><a class="viewcode-back" href="../../pythonapi/analysis.html#ufedmm.analysis.Analyzer">[docs]</a><span class="k">class</span> <span class="nc">Analyzer</span><span class="p">(</span><span class="n">FreeEnergyAnalyzer</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    UFED Analyzer.</span>
 
 <span class="sd">    .. warning::</span>
@@ -347,7 +345,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_adjust_centers</span> <span class="o">=</span> <span class="n">adjust_centers</span>
 
 <div class="viewcode-block" id="Analyzer.free_energy_functions"><a class="viewcode-back" href="../../pythonapi/analysis.html#ufedmm.analysis.Analyzer.free_energy_functions">[docs]</a>    <span class="k">def</span> <span class="nf">free_energy_functions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">factor</span><span class="o">=</span><span class="mi">8</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns Python functions for evaluating the potential of mean force and their originating</span>
 <span class="sd">        mean forces as a function of the collective variables.</span>
 
@@ -438,8 +436,8 @@
       &copy;2020, Charlles Abreu. Project structure based on the Computational Molecular Science Python Cookiecutter version 1.0.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.0.2</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 6.1.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
       
     </div>
 

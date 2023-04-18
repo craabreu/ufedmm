@@ -4,7 +4,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
     <title>Python API &#8212; UFED for OpenMM  documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
@@ -12,10 +12,8 @@
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
     <link rel="stylesheet" type="text/css" href="../_static/css/custom.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
-    <script src="../_static/jquery.js"></script>
-    <script src="../_static/underscore.js"></script>
-    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
     <script src="../_static/clipboard.min.js"></script>
     <script src="../_static/copybutton.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -42,12 +40,96 @@
 <h1>Python API<a class="headerlink" href="#python-api" title="Permalink to this heading">¶</a></h1>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="ufedmm.html">ufedmm</a></li>
-<li class="toctree-l1"><a class="reference internal" href="cvlib.html">collective variable library</a></li>
-<li class="toctree-l1"><a class="reference internal" href="analysis.html">analysis</a></li>
-<li class="toctree-l1"><a class="reference internal" href="integrators.html">integrators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="io.html">input/output</a></li>
-<li class="toctree-l1"><a class="reference internal" href="testmodels.html">testmodels</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ufedmm.html">ufedmm</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ufedmm.html#ufedmm.ufedmm.CollectiveVariable"><code class="docutils literal notranslate"><span class="pre">CollectiveVariable</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ufedmm.html#ufedmm.ufedmm.CollectiveVariable.effective_mass"><code class="docutils literal notranslate"><span class="pre">CollectiveVariable.effective_mass()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ufedmm.html#ufedmm.ufedmm.CollectiveVariable.evaluate"><code class="docutils literal notranslate"><span class="pre">CollectiveVariable.evaluate()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ufedmm.html#ufedmm.ufedmm.DynamicalVariable"><code class="docutils literal notranslate"><span class="pre">DynamicalVariable</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ufedmm.html#ufedmm.ufedmm.DynamicalVariable.evaluate"><code class="docutils literal notranslate"><span class="pre">DynamicalVariable.evaluate()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ufedmm.html#ufedmm.ufedmm.ExtendedSpaceContext"><code class="docutils literal notranslate"><span class="pre">ExtendedSpaceContext</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ufedmm.html#ufedmm.ufedmm.ExtendedSpaceContext.getState"><code class="docutils literal notranslate"><span class="pre">ExtendedSpaceContext.getState()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ufedmm.html#ufedmm.ufedmm.ExtendedSpaceContext.setPeriodicBoxVectors"><code class="docutils literal notranslate"><span class="pre">ExtendedSpaceContext.setPeriodicBoxVectors()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ufedmm.html#ufedmm.ufedmm.ExtendedSpaceContext.setPositions"><code class="docutils literal notranslate"><span class="pre">ExtendedSpaceContext.setPositions()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ufedmm.html#ufedmm.ufedmm.ExtendedSpaceContext.setVelocitiesToTemperature"><code class="docutils literal notranslate"><span class="pre">ExtendedSpaceContext.setVelocitiesToTemperature()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ufedmm.html#ufedmm.ufedmm.ExtendedSpaceSimulation"><code class="docutils literal notranslate"><span class="pre">ExtendedSpaceSimulation</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ufedmm.html#ufedmm.ufedmm.ExtendedSpaceSimulation.add_periodic_task"><code class="docutils literal notranslate"><span class="pre">ExtendedSpaceSimulation.add_periodic_task()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ufedmm.html#ufedmm.ufedmm.ExtendedSpaceSimulation.loadCheckpoint"><code class="docutils literal notranslate"><span class="pre">ExtendedSpaceSimulation.loadCheckpoint()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ufedmm.html#ufedmm.ufedmm.ExtendedSpaceSimulation.saveCheckpoint"><code class="docutils literal notranslate"><span class="pre">ExtendedSpaceSimulation.saveCheckpoint()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ufedmm.html#ufedmm.ufedmm.ExtendedSpaceSimulation.step"><code class="docutils literal notranslate"><span class="pre">ExtendedSpaceSimulation.step()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ufedmm.html#ufedmm.ufedmm.ExtendedSpaceState"><code class="docutils literal notranslate"><span class="pre">ExtendedSpaceState</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ufedmm.html#ufedmm.ufedmm.ExtendedSpaceState.getDynamicalVariables"><code class="docutils literal notranslate"><span class="pre">ExtendedSpaceState.getDynamicalVariables()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ufedmm.html#ufedmm.ufedmm.ExtendedSpaceState.getPositions"><code class="docutils literal notranslate"><span class="pre">ExtendedSpaceState.getPositions()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ufedmm.html#ufedmm.ufedmm.ExtendedSpaceState.getVelocities"><code class="docutils literal notranslate"><span class="pre">ExtendedSpaceState.getVelocities()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ufedmm.html#ufedmm.ufedmm.UnifiedFreeEnergyDynamics"><code class="docutils literal notranslate"><span class="pre">UnifiedFreeEnergyDynamics</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ufedmm.html#ufedmm.ufedmm.UnifiedFreeEnergyDynamics.simulation"><code class="docutils literal notranslate"><span class="pre">UnifiedFreeEnergyDynamics.simulation()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="cvlib.html">collective variable library</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="cvlib.html#ufedmm.cvlib.CoordinationNumber"><code class="docutils literal notranslate"><span class="pre">CoordinationNumber</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="cvlib.html#ufedmm.cvlib.HelixAngleContent"><code class="docutils literal notranslate"><span class="pre">HelixAngleContent</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="cvlib.html#ufedmm.cvlib.HelixHydrogenBondContent"><code class="docutils literal notranslate"><span class="pre">HelixHydrogenBondContent</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="cvlib.html#ufedmm.cvlib.HelixRamachandranContent"><code class="docutils literal notranslate"><span class="pre">HelixRamachandranContent</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="cvlib.html#ufedmm.cvlib.HelixRamachandranContent.atom_indices"><code class="docutils literal notranslate"><span class="pre">HelixRamachandranContent.atom_indices()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="cvlib.html#ufedmm.cvlib.InOutCoulombForce"><code class="docutils literal notranslate"><span class="pre">InOutCoulombForce</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="cvlib.html#ufedmm.cvlib.InOutLennardJonesForce"><code class="docutils literal notranslate"><span class="pre">InOutLennardJonesForce</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="cvlib.html#ufedmm.cvlib.InOutLennardJonesForce.capped_version"><code class="docutils literal notranslate"><span class="pre">InOutLennardJonesForce.capped_version()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="cvlib.html#ufedmm.cvlib.RadiusOfGyration"><code class="docutils literal notranslate"><span class="pre">RadiusOfGyration</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="cvlib.html#ufedmm.cvlib.SquareRadiusOfGyration"><code class="docutils literal notranslate"><span class="pre">SquareRadiusOfGyration</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="analysis.html">analysis</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="analysis.html#ufedmm.analysis.Analyzer"><code class="docutils literal notranslate"><span class="pre">Analyzer</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#ufedmm.analysis.Analyzer.free_energy_functions"><code class="docutils literal notranslate"><span class="pre">Analyzer.free_energy_functions()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="analysis.html#ufedmm.analysis.FreeEnergyAnalyzer"><code class="docutils literal notranslate"><span class="pre">FreeEnergyAnalyzer</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#ufedmm.analysis.FreeEnergyAnalyzer.centers_and_mean_forces"><code class="docutils literal notranslate"><span class="pre">FreeEnergyAnalyzer.centers_and_mean_forces()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#ufedmm.analysis.FreeEnergyAnalyzer.mean_force_free_energy"><code class="docutils literal notranslate"><span class="pre">FreeEnergyAnalyzer.mean_force_free_energy()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#ufedmm.analysis.FreeEnergyAnalyzer.metadynamics_bias_free_energy"><code class="docutils literal notranslate"><span class="pre">FreeEnergyAnalyzer.metadynamics_bias_free_energy()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="integrators.html">integrators</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="integrators.html#ufedmm.integrators.AbstractMiddleRespaIntegrator"><code class="docutils literal notranslate"><span class="pre">AbstractMiddleRespaIntegrator</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrators.html#ufedmm.integrators.CustomIntegrator"><code class="docutils literal notranslate"><span class="pre">CustomIntegrator</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="integrators.html#ufedmm.integrators.CustomIntegrator.step"><code class="docutils literal notranslate"><span class="pre">CustomIntegrator.step()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="integrators.html#ufedmm.integrators.GeodesicLangevinIntegrator"><code class="docutils literal notranslate"><span class="pre">GeodesicLangevinIntegrator</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrators.html#ufedmm.integrators.MiddleMassiveGGMTIntegrator"><code class="docutils literal notranslate"><span class="pre">MiddleMassiveGGMTIntegrator</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrators.html#ufedmm.integrators.MiddleMassiveNHCIntegrator"><code class="docutils literal notranslate"><span class="pre">MiddleMassiveNHCIntegrator</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrators.html#ufedmm.integrators.RegulatedNHLIntegrator"><code class="docutils literal notranslate"><span class="pre">RegulatedNHLIntegrator</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrators.html#ufedmm.integrators.add_inner_nonbonded_force"><code class="docutils literal notranslate"><span class="pre">add_inner_nonbonded_force()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="io.html">input/output</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="io.html#ufedmm.io.StateDataReporter"><code class="docutils literal notranslate"><span class="pre">StateDataReporter</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="io.html#ufedmm.io.Tee"><code class="docutils literal notranslate"><span class="pre">Tee</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="io.html#ufedmm.io.deserialize"><code class="docutils literal notranslate"><span class="pre">deserialize()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="io.html#ufedmm.io.serialize"><code class="docutils literal notranslate"><span class="pre">serialize()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="testmodels.html">testmodels</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="testmodels.html#ufedmm.testmodels.AlanineDipeptideModel"><code class="docutils literal notranslate"><span class="pre">AlanineDipeptideModel</span></code></a></li>
+</ul>
+</li>
 </ul>
 </div>
 </section>
@@ -110,8 +192,8 @@
       &copy;2020, Charlles Abreu. Project structure based on the Computational Molecular Science Python Cookiecutter version 1.0.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.0.2</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 6.1.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
       
       |
       <a href="../_sources/pythonapi/index.rst.txt"
