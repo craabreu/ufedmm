@@ -71,7 +71,7 @@ For the post-processing of [UFED] simulations, a free energy analysis tool
 is provided, which is based on mean-force estimation and radial basis set
 reconstruction of free energy (hyper)surfaces.
 
-## Collective Variable Library (cvlib)
+## Collective Variable Package (cvpack)
 
 In OpenMM, a collective variable (CV) involved in a [CustomCVForce] are
 nothing but objects of some `Force` (or, particularly, `CustomForce`)
@@ -84,7 +84,7 @@ CV's, such as:
 * Different flavors of alpha-helix content measures, based on angles,
 dihedrals, and hydrogen bonds
 
-The `ufedmm.cvlib` module can be viewed as a standalone package of
+The `ufedmm.cvpack` module can be viewed as a standalone package of
 general applicability, not restricted to `ufedmm` simulations.
 
 ## Documentation

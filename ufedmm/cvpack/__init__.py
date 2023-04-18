@@ -1,12 +1,10 @@
 """
 .. module:: cvpack
-   :platform: Unix, Windows
+   :platform: Unix, MacOS, Windows
    :synopsis: A collection of custom collective variables
 
 .. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
 
 """
 
-from cvpack import Distance as CVPackDistance # noqa F401, F403
-
-Distance = CVPackDistance
+from cvpack import * # noqa F401, F403

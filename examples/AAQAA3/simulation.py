@@ -4,7 +4,7 @@ from simtk import openmm, unit
 from simtk.openmm import app
 from sys import stdout
 import ufedmm
-from ufedmm import cvlib
+from ufedmm import cvpack
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', dest='seed', help='the RNG seed', default=None)
@@ -33,9 +33,9 @@ system = force_field.createSystem(
     removeCMMotion=False,
 )
 
-hc_hb = ufedmm.CollectiveVariable('hc_hb', cvlib.HelixHydrogenBondContent(pdb.topology, 0, 14))
-hc_a = ufedmm.CollectiveVariable('hc_a', cvlib.HelixAngleContent(pdb.topology, 0, 14))
-hc_d = ufedmm.CollectiveVariable('hc_d', cvlib.HelixRamachandranContent(pdb.topology, 0, 14))
+hc_hb = ufedmm.CollectiveVariable('hc_hb', cvpack.HelixHydrogenBondContent(pdb.topology, 0, 14))
+hc_a = ufedmm.CollectiveVariable('hc_a', cvpack.HelixAngleContent(pdb.topology, 0, 14))
+hc_d = ufedmm.CollectiveVariable('hc_d', cvpack.HelixRamachandranContent(pdb.topology, 0, 14))
 
 s_hc = ufedmm.DynamicalVariable('s_hc', 0.0, 1.0, mass, Ts, [hc_hb, hc_a, hc_d],
                                 '0.5*Ks*(s_hc - (hc_hb + hc_a + hc_d)/3)^2', Ks=Ks,

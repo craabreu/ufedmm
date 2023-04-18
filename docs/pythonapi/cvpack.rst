@@ -1,0 +1,3 @@
+collective variable package
+===========================
+
