@@ -130,7 +130,9 @@ def test_gridded_metadynamics():
 
 # def test_gridless_metadynamics():
 #     model, ufed = ufed_model(height=2.0*unit.kilocalorie_per_mole, enforce_gridless=True)
-#     integrator = ufedmm.MiddleMassiveNHCIntegrator(300*unit.kelvin, 10*unit.femtoseconds, 1*unit.femtoseconds)
+#     integrator = ufedmm.MiddleMassiveNHCIntegrator(
+#         300*unit.kelvin, 10*unit.femtoseconds, 1*unit.femtoseconds
+#     )
 #     platform = openmm.Platform.getPlatformByName('Reference')
 #     simulation = ufed.simulation(model.topology, model.system, integrator, platform)
 #     simulation.context.setPositions(model.positions)
