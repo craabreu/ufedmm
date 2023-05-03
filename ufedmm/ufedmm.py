@@ -837,7 +837,6 @@ class ExtendedSpaceContext(openmm.Context):
     """
 
     def __init__(self, variables, system, *args, **kwargs):
-
         def get_driving_force(variables):
             driving_force = openmm.CustomCVForce(_get_energy_function(variables))
             for name, value in _get_parameters(variables).items():
