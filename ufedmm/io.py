@@ -153,9 +153,10 @@ class StateDataReporter(app.StateDataReporter):
 
         self._extended_space = isinstance(simulation, ufedmm.ExtendedSpaceSimulation)
         if self._extended_space:
-            force = simulation.context.driving_force
             self._cv_names = [
-                force.getCollectiveVariableName(i) for i in range(force.getNumCollectiveVariables())
+                force.getCollectiveVariableName(i)
+                for force in simulation.context.driving_forces
+                for i in range(force.getNumCollectiveVariables())
             ]
             self._var_names = [v.id for v in simulation.context.variables]
             if self._hill_heights:
@@ -232,10 +233,9 @@ class StateDataReporter(app.StateDataReporter):
                 for ke in ke_values:
                     self._add_item(values, 2 * ke.x / kB)
             if self._variables:
-                for cv in simulation.context.driving_force.getCollectiveVariableValues(
-                    simulation.context
-                ):
-                    self._add_item(values, cv)
+                for force in simulation.context.driving_forces:
+                    for cv in force.getCollectiveVariableValues(simulation.context):
+                        self._add_item(values, cv)
             if self._hill_heights:
                 self._add_item(values, self._metadynamics.height * self._height_scaling)
         if self._collective_variables:

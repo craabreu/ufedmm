@@ -829,39 +829,48 @@ class ExtendedSpaceContext(openmm.Context):
     ----------
         variables : list(DynamicalVariable)
             The dynamical variables added to the system's phase space.
-        driving_force : openmm.CustomCVForce
-            A CustomCVForce_ object responsible for evaluating the potential energy terms
+        driving_forces : list[openmm.CustomCVForce]
+            A list of CustomCVForce_ objects responsible for evaluating the potential energy terms
             which couples the extra dynamical variables to their associated collective
             variables.
 
     """
 
     def __init__(self, variables, system, *args, **kwargs):
-        driving_force = openmm.CustomCVForce(_get_energy_function(variables))
-        for name, value in _get_parameters(variables).items():
-            driving_force.addGlobalParameter(name, value)
-        collective_variables = []
-        for v in variables:
-            driving_force.addCollectiveVariable(v.id, deepcopy(v.force))
-            for colvar in v.colvars:
-                cv_force = deepcopy(colvar.force)
-                driving_force.addCollectiveVariable(colvar.id, cv_force)
-                collective_variables += [colvar.force, cv_force]
+        def get_driving_force(variables):
+            driving_force = openmm.CustomCVForce(_get_energy_function(variables))
+            for name, value in _get_parameters(variables).items():
+                driving_force.addGlobalParameter(name, value)
+            for var in variables:
+                driving_force.addCollectiveVariable(var.id, var.force)
+                for colvar in var.colvars:
+                    driving_force.addCollectiveVariable(colvar.id, colvar.force)
+            return driving_force
 
-        np = system.getNumParticles()
-        a, _, _ = system.getDefaultPeriodicBoxVectors()
-        for i, v in enumerate(variables):
-            system.addParticle(v._particle_mass(a.x))
-            parameter = driving_force.getCollectiveVariable(2 * i)
-            parameter.setParticleParameters(0, np + i, [])
+        driving_force_variables = [[]]
+        for var in variables:
+            if len(driving_force_variables[-1]) + len(var.colvars) > 31:
+                driving_force_variables.append([])
+            driving_force_variables[-1].append(deepcopy(var))
+        driving_forces = [get_driving_force(vars) for vars in driving_force_variables]
+        box_length_x = system.getDefaultPeriodicBoxVectors()[0].x
+        num_particles = system.getNumParticles()
+        collective_variables = []
+        for vars in driving_force_variables:
+            for var in vars:
+                system.addParticle(var._particle_mass(box_length_x))
+                var.force.setParticleParameters(0, num_particles, [])
+                num_particles += 1
+                collective_variables += var.colvars
         for force in system.getForces() + collective_variables:
             self._add_fake_particles(force, len(variables))
-        system.addForce(driving_force)
+        for driving_force in driving_forces:
+            system.addForce(driving_force)
         _update_RMSD_forces(system)
         super().__init__(system, *args, **kwargs)
-        self.setParameter("Lx", a.x)
+        self.setParameter("Lx", box_length_x)
         self.variables = variables
-        self.driving_force = driving_force
+        self.driving_forces = driving_forces
 
     def _add_fake_particles(self, force, n):
         if isinstance(force, openmm.NonbondedForce):
