@@ -9,6 +9,10 @@ Unified Free Energy Dynamics with OpenMM
 [![Coverage](https://craabreu.github.io/ufedmm/coverage/coverage.svg)](https://craabreu.github.io/ufedmm/coverage/)
 [![License](https://img.shields.io/badge/License-MIT-yellowgreen.svg?style=flat)](https://github.com/craabreu/ufedmm/blob/main/LICENSE.md)
 
+[![Conda ufedmm version](https://img.shields.io/conda/v/craabreu/ufedmm.svg)](https://anaconda.org/craabreu/ufedmm)
+[![Conda ufedmm platforms](https://img.shields.io/conda/pn/craabreu/ufedmm.svg)](https://anaconda.org/craabreu/ufedmm)
+[![Conda ufedmm downloads](https://img.shields.io/conda/dn/craabreu/ufedmm.svg)](https://anaconda.org/craabreu/ufedmm)
+
 UFEDMM extends [OpenMM's Python API] so that the user can easily run
 efficient simulations in extended phase spaces, perform enhanced sampling
 of systems with barriers and rare events, and compute accurate free-energy
