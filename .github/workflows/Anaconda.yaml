@@ -42,9 +42,9 @@ jobs:
         shell: bash -l {0}
         working-directory: ./devtools/conda-recipes/anaconda
         run: |
+          export UFEDMM_VERSION=${{ github.ref_name }}
           echo "::group::Building ufedmm $UFEDMM_VERSION"
           outdir=$(mktemp -d)
-          export UFEDMM_VERSION=${{ github.ref_name }}
           conda mambabuild . --no-anaconda-upload -c conda-forge --output-folder $outdir
           echo "::endgroup::"
           echo "::group::Uploading package to craabreu conda channel"

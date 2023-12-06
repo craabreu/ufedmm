@@ -14,12 +14,12 @@ build:
 
 requirements:
   host:
-    - python=={{ python_version }}
+    - python={{ python_version }}
     - setuptools
     - versioningit
     - pip
   run:
-    - python=={{ python_version }}
+    - python={{ python_version }}
     - importlib-resources  # [py<310]
     - numpy
     - openmm
