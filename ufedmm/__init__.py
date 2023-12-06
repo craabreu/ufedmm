@@ -1,8 +1,4 @@
-"""
-UFED for OpenMM
-Unified Free Energy Dynamics with OpenMM
-
-"""
+"""UFED for OpenMM Unified Free Energy Dynamics with OpenMM."""
 
 
 from .analysis import *  # noqa: F401, F403

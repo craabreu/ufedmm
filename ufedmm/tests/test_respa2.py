@@ -49,7 +49,9 @@ def test_inner_coulomb():
 
 def test_inner_exceptions():
     model = ufedmm.AlanineDipeptideModel()
-    nbforce = next(filter(lambda f: isinstance(f, openmm.NonbondedForce), model.system.getForces()))
+    nbforce = next(
+        filter(lambda f: isinstance(f, openmm.NonbondedForce), model.system.getForces())
+    )
     rs = 0.2
     rc = 0.4
     ufedmm.add_inner_nonbonded_force(model.system, rs, rc, 1)
@@ -61,7 +63,9 @@ def test_inner_exceptions():
     forces2 = [0 * f for f in forces1]
     ONE_4PI_EPS0 = 138.93545764438198
     for index in range(nbforce.getNumExceptions()):
-        i, j, chargeprod, sigma, epsilon = map(_standardized, nbforce.getExceptionParameters(index))
+        i, j, chargeprod, sigma, epsilon = map(
+            _standardized, nbforce.getExceptionParameters(index)
+        )
         rij = _standardized(model.positions[i] - model.positions[j])
         r = np.linalg.norm(rij)
         z = (r - rs) / (rc - rs)
