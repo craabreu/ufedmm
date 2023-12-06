@@ -33,6 +33,7 @@ jobs:
           channels: conda-forge
           extra-specs: |
             python=3.10
+            openmm=8.0
 
       - name: Install package
         shell: bash -l {0}
