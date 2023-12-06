@@ -8,6 +8,7 @@ source:
   git_url: ../../../
 
 build:
+  noarch: python
   number: 0
   script: python -m pip install --no-deps --ignore-installed .
 
