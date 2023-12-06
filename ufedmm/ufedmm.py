@@ -848,16 +848,20 @@ class ExtendedSpaceContext(openmm.Context):
             return driving_force
 
         driving_force_variables = [[]]
+        added_colvars = 0
         for var in variables:
-            if len(driving_force_variables[-1]) + len(var.colvars) > 31:
+            colvars_to_add = len(var.colvars) + 1
+            if added_colvars + colvars_to_add > 32:
                 driving_force_variables.append([])
+                added_colvars = 0
             driving_force_variables[-1].append(deepcopy(var))
+            added_colvars += colvars_to_add
         driving_forces = [get_driving_force(vars) for vars in driving_force_variables]
         box_length_x = system.getDefaultPeriodicBoxVectors()[0].x
         num_particles = system.getNumParticles()
         collective_variables = []
-        for vars in driving_force_variables:
-            for var in vars:
+        for dfvars in driving_force_variables:
+            for var in dfvars:
                 system.addParticle(var._particle_mass(box_length_x))
                 var.force.setParticleParameters(0, num_particles, [])
                 num_particles += 1
