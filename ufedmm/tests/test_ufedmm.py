@@ -5,12 +5,14 @@ Unit and regression test for the ufedmm package.
 # Import package, test suite, and other packages as needed
 import io
 import sys
+from copy import deepcopy
 
 import openmm
 import pytest
 from openmm import unit
 
 import ufedmm
+import numpy as np
 
 
 def ufed_model(
@@ -171,3 +173,25 @@ def test_well_tempered_metadynamics():
     simulation.step(100)
     energy = simulation.context.getState(getEnergy=True).getPotentialEnergy()
     assert energy / energy.unit == pytest.approx(153.17, abs=0.1)
+
+
+def test_rmsd_forces():
+    model, ufed = ufed_model(constraints=None)
+    rmsd = openmm.RMSDForce(  # Level 1
+        model.positions, np.arange(model.system.getNumParticles())
+    )
+    cvforce = openmm.CustomCVForce("rmsd + cvforce")
+    cvforce.addCollectiveVariable("rmsd", deepcopy(rmsd))  # Level 2
+    inner_cvforce = openmm.CustomCVForce("rmsd")
+    inner_cvforce.addCollectiveVariable("rmsd", deepcopy(rmsd))  # Level 3
+    cvforce.addCollectiveVariable("cvforce", inner_cvforce)
+    model.system.addForce(rmsd)
+    model.system.addForce(cvforce)
+    integrator = ufedmm.MiddleMassiveNHCIntegrator(
+        300 * unit.kelvin, 10 * unit.femtoseconds, 1 * unit.femtoseconds
+    )
+    platform = openmm.Platform.getPlatformByName("Reference")
+    simulation = ufed.simulation(model.topology, model.system, integrator, platform)
+    simulation.context.setPositions(model.positions)
+    simulation.context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)
+    simulation.step(1)
