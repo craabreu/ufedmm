@@ -7,12 +7,12 @@ import io
 import sys
 from copy import deepcopy
 
+import numpy as np
 import openmm
 import pytest
 from openmm import unit
 
 import ufedmm
-import numpy as np
 
 
 def ufed_model(
