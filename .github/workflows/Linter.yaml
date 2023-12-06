@@ -45,16 +45,12 @@ jobs:
 
       - name: Run flake8
         shell: bash -l {0}
-        run: flake8 --max-line-length=100 --ignore=E203,W503 ufedmm/
+        run: flake8 ufedmm/
 
       - name: Run black
         shell: bash -l {0}
-        run: black --line-length 100 --diff --color ufedmm/
+        run: black --diff --color ufedmm/
 
       - name: Run isort
         shell: bash -l {0}
-        run: isort --line-length=100 --check-only ufedmm/
-
-      # - name: Run pylint
-      #   shell: bash -l {0}
-      #   run: pylint --rcfile=devtools/linters/pylintrc ufedmm/
+        run: isort --check-only ufedmm/

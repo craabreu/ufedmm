@@ -47,7 +47,7 @@ def _standardized(quantity):
 def _update_RMSD_forces(system):
     N = system.getNumParticles()
 
-    def update_RMSDForce(force):
+    def _update_RMSDForce(force):
         positions = force.getReferencePositions()._value
         if len(positions) >= N:
             positions = positions[:N]
@@ -55,14 +55,19 @@ def _update_RMSD_forces(system):
             positions += [openmm.Vec3(0, 0, 0)] * (N - len(positions))
         force.setReferencePositions(positions)
 
+    def _update_RMSD_forces_in_cvforce(cvforce):
+        for index in range(cvforce.getNumCollectiveVariables()):
+            force = cvforce.getCollectiveVariable(index)
+            if isinstance(force, openmm.RMSDForce):
+                _update_RMSDForce(force)
+            elif isinstance(force, openmm.CustomCVForce):
+                _update_RMSD_forces_in_cvforce(force)
+
     for force in system.getForces():
         if isinstance(force, openmm.RMSDForce):
-            update_RMSDForce(force)
+            _update_RMSDForce(force)
         elif isinstance(force, openmm.CustomCVForce):
-            for index in range(force.getNumCollectiveVariables()):
-                cv = force.getCollectiveVariable(index)
-                if isinstance(cv, openmm.RMSDForce):
-                    update_RMSDForce(cv)
+            _update_RMSD_forces_in_cvforce(force)
 
 
 class CollectiveVariable(object):
