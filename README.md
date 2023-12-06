@@ -87,17 +87,17 @@ the `ufedmm.cvpack` module.
 ### Installation and Usage
 
 UFEDMM is available as a conda package installable from the
-[craabreu](https://anaconda.org/craabreu) channel.
+[mdtools](https://anaconda.org/mdtools) conda channel.
 To install it, either run:
 
 ```bash
-    conda install -c conda-forge -c craabreu ufedmm
+    conda install -c conda-forge -c mdtools ufedmm
 ```
 
 Or:
 
 ```bash
-    mamba install -c conda-forge -c craabreu ufedmm
+    mamba install -c mdtools ufedmm
 ```
 
 To use UFEDMM in your own Python script or Jupyter notebook, import it as follows:
