@@ -1,0 +1,17 @@
+[MAIN]
+
+ignored-modules=openmm.unit
+ignore=_version.py
+extension-pkg-whitelist=openmm.app.internal.compiled
+
+[DESIGN]
+
+max-locals=20  # Maximum number of local variables for function/method body
+
+[BASIC]
+
+method-naming-style=camelCase
+argument-naming-style=camelCase
+
+[FORMAT]
+good-names=i,j,k,_,x,y,z

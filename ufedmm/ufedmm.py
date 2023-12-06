@@ -35,12 +35,9 @@ import ufedmm
 
 
 def _standardized(quantity):
-    """
-    Returns the numerical value of a quantity in a unit of measurement compatible with the
-    Molecular Dynamics unit system (mass in Da, distance in nm, time in ps, temperature in K,
-    energy in kJ/mol, angle in rad).
-
-    """
+    """Returns the numerical value of a quantity in a unit of measurement compatible
+    with the Molecular Dynamics unit system (mass in Da, distance in nm, time in ps,
+    temperature in K, energy in kJ/mol, angle in rad)."""
     if unit.is_quantity(quantity):
         return quantity.value_in_unit_system(unit.md_unit_system)
     else:
@@ -69,23 +66,24 @@ def _update_RMSD_forces(system):
 
 
 class CollectiveVariable(object):
-    """
-    A function of the particle coordinates, evaluated by means of an OpenMM Force_ object.
+    """A function of the particle coordinates, evaluated by means of an OpenMM Force_
+    object.
 
     Quoting OpenMM's CustomCVForce_ manual entry:
 
-        "Each collective variable is defined by a Force object. The Force's potential energy is
-        computed, and that becomes the value of the variable. This provides enormous flexibility
-        in defining collective variables, especially by using custom forces. Anything that can
-        be computed as a potential function can also be used as a collective variable."
+        "Each collective variable is defined by a Force object. The Force's potential
+        energy is computed, and that becomes the value of the variable. This provides
+        enormous flexibility in defining collective variables, especially by using
+        custom forces. Anything that can be computed as a potential function can also
+        be used as a collective variable."
 
     Parameters
     ----------
         id : str
             A valid identifier string for this collective variable.
         force : openmm.Force
-            An OpenMM Force_ object whose energy function is used to evaluate this collective
-            variable.
+            An OpenMM Force_ object whose energy function is used to evaluate this
+            collective variable.
 
     Example
     -------
@@ -95,7 +93,6 @@ class CollectiveVariable(object):
         >>> cv = ufedmm.CollectiveVariable('psi', openmm.CustomTorsionForce('theta'))
         >>> cv.force.addTorsion(0, 1, 2, 3, [])
         0
-
     """
 
     def __init__(self, id, force):
@@ -118,23 +115,22 @@ class CollectiveVariable(object):
         return context
 
     def evaluate(self, system, positions, cv_unit=None):
-        """
-        Computes the value of the collective variable for a given system and a given set of particle
-        coordinates.
+        """Computes the value of the collective variable for a given system and a given
+        set of particle coordinates.
 
         Parameters
         ----------
             system : openmm.System
                 The system for which the collective variable will be evaluated.
             positions : list of openmm.Vec3
-                A list whose size equals the number of particles in the system and which contains
-                the coordinates of these particles.
+                A list whose size equals the number of particles in the system and which
+                contains the coordinates of these particles.
 
         Keyword Args
         ------------
             cv_unit : unit.Unit, default=None
-                The unity of measurement of the collective variable. If this is `None`, then a
-                numerical value is returned based on the OpenMM default units.
+                The unity of measurement of the collective variable. If this is `None`,
+                then a numerical value is returned based on the OpenMM default units.
 
         Returns
         -------
@@ -149,7 +145,6 @@ class CollectiveVariable(object):
             3.141592653589793
             >>> model.psi.evaluate(model.system, model.positions)
             3.141592653589793
-
         """
         context = self._create_context(system, positions)
         energy = context.getState(getEnergy=True, groups={1}).getPotentialEnergy()
@@ -159,16 +154,17 @@ class CollectiveVariable(object):
         return value
 
     def effective_mass(self, system, positions, cv_unit=None):
-        """
-        Computes the effective mass of the collective variable for a given system and a given set of
-        particle coordinates.
+        """Computes the effective mass of the collective variable for a given system and
+        a given set of particle coordinates.
 
         The effective mass of a collective variable :math:`q(\\mathbf{r})` is defined as
         :cite:`Cuendet_2014`:
 
         .. math::
             m_\\mathrm{eff} = \\left(
-                \\sum_{j=1}^N \\frac{1}{m_j} \\left\\|\\frac{dq}{d\\mathbf{r}_j}\\right\\|^2
+                \\sum_{j=1}^N \\frac{1}{m_j} \\left\\|
+                    \\frac{dq}{d\\mathbf{r}_j}
+                \\right\\|^2
             \\right)^{-1}
 
         Parameters
@@ -176,14 +172,14 @@ class CollectiveVariable(object):
             system : openmm.System
                 The system for which the collective variable will be evaluated.
             positions : list of openmm.Vec3
-                A list whose size equals the number of particles in the system and which contains
-                the coordinates of these particles.
+                A list whose size equals the number of particles in the system and which
+                contains the coordinates of these particles.
 
         Keyword Args
         ------------
             cv_unit : unit.Unit, default=None
-                The unity of measurement of the collective variable. If this is `None`, then a
-                numerical value is returned based on the OpenMM default units.
+                The unity of measurement of the collective variable. If this is `None`,
+                then a numerical value is returned based on the OpenMM default units.
 
         Returns
         -------
@@ -194,16 +190,18 @@ class CollectiveVariable(object):
             >>> import ufedmm
             >>> from openmm import unit
             >>> model = ufedmm.AlanineDipeptideModel()
-            >>> model.phi.effective_mass(model.system, model.positions)  # doctest: +ELLIPSIS
+            >>> model.phi.effective_mass(model.system, model.positions)
             0.04795887...
-            >>> model.psi.effective_mass(model.system, model.positions)  # doctest: +ELLIPSIS
+            >>> model.psi.effective_mass(model.system, model.positions)
             0.05115582...
-
         """
         context = self._create_context(system, positions)
-        forces = _standardized(context.getState(getForces=True, groups={1}).getForces(asNumpy=True))
+        forces = _standardized(
+            context.getState(getForces=True, groups={1}).getForces(asNumpy=True)
+        )
         denom = sum(
-            f.dot(f) / _standardized(system.getParticleMass(i)) for i, f in enumerate(forces)
+            f.dot(f) / _standardized(system.getParticleMass(i))
+            for i, f in enumerate(forces)
         )
         effective_mass = 1.0 / float(denom)
         if cv_unit is not None:
@@ -213,20 +211,19 @@ class CollectiveVariable(object):
 
 
 class DynamicalVariable(object):
-    """
-    An extended phase-space variable, whose dynamics is coupled to that of one of more collective
-    variables of a system.
+    """An extended phase-space variable, whose dynamics is coupled to that of one of
+    more collective variables of a system.
 
-    The coupling occurs in the form of a potential energy term involving this dynamical variable
-    and its associated collective variables.
+    The coupling occurs in the form of a potential energy term involving this dynamical
+    variable and its associated collective variables.
 
     The default potential is a harmonic driving of the type:
 
     .. math::
         V(s, \\mathbf r) = \\frac{\\kappa}{2} [s - q(\\mathbf r)]^2
 
-    where :math:`s` is the new dynamical variable, :math:`q(\\mathbf r)` is its associated
-    collective variable, and :math:`kappa` is a force constant.
+    where :math:`s` is the new dynamical variable, :math:`q(\\mathbf r)` is its
+    associated collective variable, and :math:`kappa` is a force constant.
 
     Parameters
     ----------
@@ -237,31 +234,33 @@ class DynamicalVariable(object):
         max_value : float or unit.Quantity
             The maximum allowable value for this dynamical variable.
         mass : float or unit.Quantity
-            The mass assigned to this dynamical variable, whose unit of measurement must be
-            compatible with `unit.dalton*(unit.nanometers/X)**2`, where `X` is the unit of
-            measurement of the dynamical variable itself.
+            The mass assigned to this dynamical variable, whose unit of measurement must
+            be compatible with `unit.dalton*(unit.nanometers/X)**2`, where `X` is the
+            unit of measurement of the dynamical variable itself.
         temperature : float or unit.Quantity
             The temperature of the heat bath attached to this variable.
         colvars : :class:`~ufedmm.ufedmm.CollectiveVariable` or list thereof
             Either a single colective variable or a list.
         potential : float or unit.Quantity or str
-            Either the value of the force constant of a harmonic driving potential or an algebraic
-            expression giving the energy of the system as a function of this dynamical variable and
-            its associated collective variable. Such expression can also contain a set of global
-            parameters, whose values must be passed as keyword arguments (see below).
+            Either the value of the force constant of a harmonic driving potential or an
+            algebraic expression giving the energy of the system as a function of this
+            dynamical variable and its associated collective variable. Such expression
+            can also contain a set of global parameters, whose values must be passed as
+            keyword arguments (see below).
 
     Keyword Args
     ------------
         periodic : bool, default=True
-            Whether the collective variable is periodic with period `L=max_value-min_value`.
+            Whether the collective variable is periodic with period
+            `L=max_value-min_value`.
         sigma : float or unit.Quantity, default=None
             The standard deviation. If this is `None`, then no bias will be considered.
         grid_size : int, default=None
-            The grid size. If this is `None` and `sigma` is finite, then a convenient value will be
-            automatically chosen.
+            The grid size. If this is `None` and `sigma` is finite, then a convenient
+            value will be automatically chosen.
         **parameters
-            Names and values of global parameters present in the algebraic expression defined as
-            `potential` (see above).
+            Names and values of global parameters present in the algebraic expression
+            defined as `potential` (see above).
 
     Example
     -------
@@ -274,9 +273,10 @@ class DynamicalVariable(object):
         >>> mass = 50*unit.dalton*(unit.nanometer/unit.radians)**2
         >>> K = 1000*unit.kilojoules_per_mole/unit.radians**2
         >>> Ts = 1500*unit.kelvin
-        >>> ufedmm.DynamicalVariable('s_psi', -180*unit.degrees, 180*unit.degrees, mass, Ts, cv, K)
+        >>> ufedmm.DynamicalVariable(
+        ...     's_psi', -180*unit.degrees, 180*unit.degrees, mass, Ts, cv, K
+        ... )
         <s_psi in [-3.141592653589793, 3.141592653589793], periodic, m=50, T=1500>
-
     """
 
     def __init__(
@@ -304,7 +304,9 @@ class DynamicalVariable(object):
 
         if isinstance(potential, str):
             self.potential = potential
-            self.parameters = {key: _standardized(value) for key, value in parameters.items()}
+            self.parameters = {
+                key: _standardized(value) for key, value in parameters.items()
+            }
         else:
             cv_id = self.colvars[0].id
             if periodic:
@@ -333,7 +335,10 @@ class DynamicalVariable(object):
     def __repr__(self):
         properties = f"m={self.mass}, T={self.temperature}"
         status = "periodic" if self.periodic else "non-periodic"
-        return f"<{self.id} in [{self.min_value}, {self.max_value}], {status}, {properties}>"
+        return (
+            f"<{self.id} in "
+            f"[{self.min_value}, {self.max_value}], {status}, {properties}>"
+        )
 
     def __getstate__(self):
         return dict(
@@ -359,12 +364,14 @@ class DynamicalVariable(object):
 
     def _particle_position(self, value, Lx, y=0):
         length = Lx if self.periodic else Lx / 2
-        return openmm.Vec3(length * (value - self.min_value) / self._range, y, 0) * unit.nanometer
+        return (
+            openmm.Vec3(length * (value - self.min_value) / self._range, y, 0)
+            * unit.nanometer
+        )
 
     def _get_energy_function(self, index=""):
-        """
-        Returns the algebraic expression that transforms the x coordinate of a particle into this
-        dynamical variables.
+        """Returns the algebraic expression that transforms the x coordinate of a
+        particle into this dynamical variables.
 
         Keyword Args
         ------------
@@ -374,7 +381,6 @@ class DynamicalVariable(object):
         Returns
         -------
             str
-
         """
         if self.periodic:
             energy = f"{self.min_value}+{self._range}*(x{index}/Lx-floor(x{index}/Lx))"
@@ -384,9 +390,8 @@ class DynamicalVariable(object):
         return energy
 
     def evaluate(self, x, Lx):
-        """
-        Computes the value of this dynamical variable for a given x coordinate and a given length of
-        the simulation box in the x direction.
+        """Computes the value of this dynamical variable for a given x coordinate and a
+        given length of the simulation box in the x direction.
 
         Parameters
         ----------
@@ -398,7 +403,6 @@ class DynamicalVariable(object):
         Returns
         -------
             float
-
         """
         pos = x / Lx - np.floor(x / Lx)
         if self.periodic:
@@ -447,35 +451,37 @@ class PeriodicTask(object):
 
 
 class _Metadynamics(PeriodicTask):
-    """
-    Extended-space Metadynamics.
+    """Extended-space Metadynamics.
 
     Parameters
     ----------
         variables : list of :class:`DynamicalVariable`
-            A list of extended-space dynamical variables to which the metadynamics bias must be
-            applied. In fact, dynamical variables with `sigma = None` will not be considered.
+            A list of extended-space dynamical variables to which the metadynamics bias
+            must be applied. In fact, dynamical variables with `sigma = None` will not
+            be considered.
         height : float or unit.Quantity
-            The height of the Gaussian potential hills to be deposited. If the `bias_factor` keyword
-            is defined (see below), then this is the unscaled height.
+            The height of the Gaussian potential hills to be deposited. If the
+            `bias_factor` keyword is defined (see below), then this is the unscaled
+            height.
         frequency : int
             The frequency of Gaussian hill deposition.
 
     Keyword Args
     ------------
         bias_factor : float, default=None
-            Scales the height of the hills added to the bias potential. If it is `None`, then the
-            hills will have a constant height over time. For a bias factor to be applicable, all
-            bias variables must be at the same temperature T. The extended-space dynamical
-            variables are sampled as if the effective temperature were T*bias_factor.
+            Scales the height of the hills added to the bias potential. If it is `None`,
+            then the hills will have a constant height over time. For a bias factor to
+            be applicable, all bias variables must be at the same temperature T. The
+            extended-space dynamical variables are sampled as if the effective
+            temperature were T*bias_factor.
         buffer_size : int, default=100
             The buffer size.
         grid_expansion : int, default=20
-            The number of extra grid points to be used in periodic directions of multidimensional
-            tabulated functions. This aims at avoiding boundary discontinuity artifacts.
+            The number of extra grid points to be used in periodic directions of
+            multidimensional tabulated functions. This aims at avoiding boundary
+            discontinuity artifacts.
         enforce_gridless : bool, default=False
             Enforce gridless metadynamics even for 1D to 3D problems.
-
     """
 
     def __init__(
@@ -497,24 +503,34 @@ class _Metadynamics(PeriodicTask):
             temperature = self.bias_variables[0].temperature
             if any(v.temperature != temperature for v in self.bias_variables):
                 raise ValueError(
-                    "Well-tempered metadynamics requires all variables at the same temperature"
+                    "Well-tempered metadynamics requires same temperature "
+                    "for all variables."
                 )
             self.delta_kT = (
-                (bias_factor - 1) * unit.MOLAR_GAS_CONSTANT_R * temperature * unit.kelvin
+                (bias_factor - 1)
+                * unit.MOLAR_GAS_CONSTANT_R
+                * temperature
+                * unit.kelvin
             )
         self.buffer_size = buffer_size
         self.grid_expansion = grid_expansion
         self._use_grid = len(self.bias_variables) < 4 and not enforce_gridless
-        self.force = self._interpolation_grid_force() if self._use_grid else self._hills_force()
+        self.force = (
+            self._interpolation_grid_force() if self._use_grid else self._hills_force()
+        )
 
     def _interpolation_grid_force(self):
         self._widths = []
         self._bounds = []
         self._extra_points = []
-        full_periodic = self._full_periodic = all(v.periodic for v in self.bias_variables)
+        full_periodic = self._full_periodic = all(
+            v.periodic for v in self.bias_variables
+        )
         for v in self.bias_variables:
             extra_points = (
-                min(self.grid_expansion, v.grid_size - 1) if v.periodic and not full_periodic else 0
+                min(self.grid_expansion, v.grid_size - 1)
+                if v.periodic and not full_periodic
+                else 0
             )
             extra_range = extra_points * v._range / (v.grid_size - 1)
             self._widths.append(v.grid_size + 2 * extra_points)
@@ -523,7 +539,9 @@ class _Metadynamics(PeriodicTask):
         self._bias = np.zeros(np.prod(self._widths))
         num_bias_variables = len(self.bias_variables)
         if num_bias_variables == 1:
-            self._table = openmm.Continuous1DFunction(self._bias, *self._bounds, full_periodic)
+            self._table = openmm.Continuous1DFunction(
+                self._bias, *self._bounds, full_periodic
+            )
         elif num_bias_variables == 2:
             self._table = openmm.Continuous2DFunction(
                 *self._widths, self._bias, *self._bounds, full_periodic
@@ -551,7 +569,9 @@ class _Metadynamics(PeriodicTask):
         for v, center in zip(self.bias_variables, centers):
             if v.periodic:  # von Mises
                 factor = 2 * np.pi / v._range
-                exponents.append(f"{1.0/(factor*v.sigma)**2}*(cos({factor}*({v.id}-{center}))-1)")
+                exponents.append(
+                    f"{1.0/(factor*v.sigma)**2}*(cos({factor}*({v.id}-{center}))-1)"
+                )
             else:  # Gauss
                 exponents.append(f"({-0.5/v.sigma**2})*({v.id}-{center})^2")
         expression = f'height*exp({"+".join(exponents)})'
@@ -576,7 +596,9 @@ class _Metadynamics(PeriodicTask):
             if len(self.bias_variables) == 1:
                 self._table.setFunctionParameters(self._bias, *self._bounds)
             else:
-                self._table.setFunctionParameters(*self._widths, self._bias, *self._bounds)
+                self._table.setFunctionParameters(
+                    *self._widths, self._bias, *self._bounds
+                )
             self.force.updateParametersInContext(simulation.context)
 
     def initialize(self, simulation):
@@ -586,7 +608,9 @@ class _Metadynamics(PeriodicTask):
         self.Lx = context.getParameter("Lx")
         if self._use_grid:
             for i, particle in enumerate(self.particles):
-                self.force.getCollectiveVariable(i).setParticleParameters(0, particle, [])
+                self.force.getCollectiveVariable(i).setParticleParameters(
+                    0, particle, []
+                )
         else:
             self._num_hills = 0
             self._total_hills = 0
@@ -600,9 +624,13 @@ class _Metadynamics(PeriodicTask):
             while self.free_group in used_groups:
                 self.free_group -= 1
             if self.free_group < 0:
-                raise RuntimeError("Well-tempered Metadynamics requires free force groups")
+                raise RuntimeError(
+                    "Well-tempered Metadynamics requires free force groups"
+                )
         if not self._use_grid:
-            steps_until_next_report = self.frequency - simulation.currentStep % self.frequency
+            steps_until_next_report = (
+                self.frequency - simulation.currentStep % self.frequency
+            )
             if steps_until_next_report > steps:
                 required_hills = 0
             else:
@@ -617,7 +645,9 @@ class _Metadynamics(PeriodicTask):
         else:
             group = self.force.getForceGroup()
             self.force.setForceGroup(self.free_group)
-            hills_state = simulation.context.getState(getEnergy=True, groups={self.free_group})
+            hills_state = simulation.context.getState(
+                getEnergy=True, groups={self.free_group}
+            )
             self.force.setForceGroup(group)
             energy = hills_state.getPotentialEnergy()
             self.height = self.initial_height * np.exp(-energy / self.delta_kT)
@@ -635,23 +665,31 @@ class _Metadynamics(PeriodicTask):
                     exponents = -0.5 * dist * dist / v._scaled_variance
                 hills.append(self.height * np.exp(exponents))
             ndim = len(self.bias_variables)
-            bias = hills[0] if ndim == 1 else functools.reduce(np.multiply.outer, reversed(hills))
+            bias = (
+                hills[0]
+                if ndim == 1
+                else functools.reduce(np.multiply.outer, reversed(hills))
+            )
             if not self._full_periodic:
                 for axis, v in enumerate(self.bias_variables):
                     if v.periodic:
                         n = self._extra_points[axis] + 1
                         begin = tuple(
-                            slice(1, n) if i == axis else slice(None) for i in range(ndim)
+                            slice(1, n) if i == axis else slice(None)
+                            for i in range(ndim)
                         )
                         end = tuple(
-                            slice(-n, -1) if i == axis else slice(None) for i in range(ndim)
+                            slice(-n, -1) if i == axis else slice(None)
+                            for i in range(ndim)
                         )
                         bias = np.concatenate((bias[end], bias, bias[begin]), axis=axis)
             self.add_bias(simulation, bias)
         else:
             if self._num_hills == self.force.getNumBonds():
                 self._add_buffer(simulation)
-            self.force.setBondParameters(self._num_hills, self.particles, [self.height] + centers)
+            self.force.setBondParameters(
+                self._num_hills, self.particles, [self.height] + centers
+            )
             self._num_hills += 1
             self.force.updateParametersInContext(simulation.context)
 
@@ -673,12 +711,16 @@ class _Metadynamics(PeriodicTask):
             if len(self.bias_variables) == 1:
                 self._table.setFunctionParameters(self._bias, *self._bounds)
             else:
-                self._table.setFunctionParameters(*self._widths, self._bias, *self._bounds)
+                self._table.setFunctionParameters(
+                    *self._widths, self._bias, *self._bounds
+                )
             self.force.updateParametersInContext(context)
         else:
             npars = len(self.bias_variables) + 1
             nhills = self._num_hills = np.fromfile(file, dtype=int, count=1)[0]
-            parameter_array = np.fromfile(file, count=nhills * npars).reshape((nhills, npars))
+            parameter_array = np.fromfile(file, count=nhills * npars).reshape(
+                (nhills, npars)
+            )
             for index in range(nhills - self.force.getNumBonds()):
                 self.force.addBond(self.particles, [0] * npars)
             self._total_hills = self.force.getNumBonds()
@@ -691,13 +733,12 @@ class _Metadynamics(PeriodicTask):
 
 
 class ExtendedSpaceState(openmm.State):
-    """
-    An extension of OpenMM's State_ class.
-
-    """
+    """An extension of OpenMM's State_ class."""
 
     def __init__(self, variables, state):
-        self.__class__ = type(state.__class__.__name__, (self.__class__, state.__class__), {})
+        self.__class__ = type(
+            state.__class__.__name__, (self.__class__, state.__class__), {}
+        )
         self.__dict__ = state.__dict__
         self._variables = variables
         a, _, _ = self.getPeriodicBoxVectors()
@@ -706,13 +747,15 @@ class ExtendedSpaceState(openmm.State):
     def _split(self, vector, asNumpy=False):
         np = (vector.shape[0] if asNumpy else len(vector)) - len(self._variables)
         particles_contribution = vector[:np, :] if asNumpy else vector[:np]
-        variables_contribution = vector[np:, 0] if asNumpy else [v.x for v in vector[np:]]
+        variables_contribution = (
+            vector[np:, 0] if asNumpy else [v.x for v in vector[np:]]
+        )
         return particles_contribution, variables_contribution
 
     def getPositions(self, asNumpy=False, extended=False):
-        """
-        Gets the positions of all physical particles and optionally also gets the positions
-        of the extra particles from which the extended-space dynamical variables are computed.
+        """Gets the positions of all physical particles and optionally also gets the
+        positions of the extra particles from which the extended-space dynamical
+        variables are computed.
 
         Keyword Args
         ------------
@@ -737,15 +780,14 @@ class ExtendedSpaceState(openmm.State):
         ------
             Exception
                 If positions were not requested in the ``context.getState()`` call.
-
         """
         positions, xvars = self._split(super().getPositions(asNumpy), asNumpy)
         return (positions, xvars) if extended else positions
 
     def getVelocities(self, asNumpy=False, extended=False):
-        """
-        Gets the velocities of all physical particles and optionally also gets the velocities
-        of the extra particles associated to the extended-space dynamical variables.
+        """Gets the velocities of all physical particles and optionally also gets the
+        velocities of the extra particles associated to the extended- space dynamical
+        variables.
 
         Keyword Args
         ------------
@@ -769,7 +811,6 @@ class ExtendedSpaceState(openmm.State):
         ------
             Exception
                 If velocities were not requested in the ``context.getState()`` call.
-
         """
         velocities = super().getVelocities(asNumpy)
         if not extended:
@@ -777,8 +818,7 @@ class ExtendedSpaceState(openmm.State):
         return velocities
 
     def getDynamicalVariables(self):
-        """
-        Gets the values of the extended-space dynamical variables.
+        """Gets the values of the extended-space dynamical variables.
 
         Returns
         -------
@@ -798,19 +838,19 @@ class ExtendedSpaceState(openmm.State):
             >>> args = [-np.pi, np.pi, 50, 1500, model.phi, 1000]
             >>> s_phi = ufedmm.DynamicalVariable('s_phi', *args)
             >>> s_psi = ufedmm.DynamicalVariable('s_psi', *args)
-            >>> context = ufedmm.ExtendedSpaceContext([s_phi, s_psi], model.system, integrator)
+            >>> context = ufedmm.ExtendedSpaceContext(
+            ...     [s_phi, s_psi], model.system, integrator
+            ... )
             >>> context.setPositions(model.positions)
             >>> context.getState(getPositions=True).getDynamicalVariables()
             [-3.141592653589793, -3.141592653589793]
-
         """
         _, xvars = self._split(super().getPositions())
         return [v.evaluate(x, self._Lx) for v, x in zip(self._variables, xvars)]
 
 
 class ExtendedSpaceContext(openmm.Context):
-    """
-    An extension of OpenMM's Context_ class.
+    """An extension of OpenMM's Context_ class.
 
     Parameters
     ----------
@@ -823,17 +863,17 @@ class ExtendedSpaceContext(openmm.Context):
         platform : openmm.Platform
             The Platform_ to use for calculations.
         properties : dict(str: str)
-            A set of values for platform-specific properties. Keys are the property names.
+            A set of values for platform-specific properties. Keys are the property
+            names.
 
     Attributes
     ----------
         variables : list(DynamicalVariable)
             The dynamical variables added to the system's phase space.
         driving_forces : list[openmm.CustomCVForce]
-            A list of CustomCVForce_ objects responsible for evaluating the potential energy terms
-            which couples the extra dynamical variables to their associated collective
-            variables.
-
+            A list of CustomCVForce_ objects responsible for evaluating the potential
+            energy terms which couples the extra dynamical variables to their associated
+            collective variables.
     """
 
     def __init__(self, variables, system, *args, **kwargs):
@@ -884,12 +924,20 @@ class ExtendedSpaceContext(openmm.Context):
             for i in range(n):
                 force.addParticle([0.0] * force.getNumPerParticleParameters())
         elif isinstance(force, openmm.CustomGBForce):
-            parameter_list = list(map(force.getParticleParameters, range(force.getNumParticles())))
+            parameter_list = list(
+                map(force.getParticleParameters, range(force.getNumParticles()))
+            )
             force.addPerParticleParameter("isreal")
             for index in range(force.getNumEnergyTerms()):
                 expression, type = force.getEnergyTermParameters(index)
-                energy = "isreal*E_GB" if type == force.SingleParticle else "isreal1*isreal2*E_GB"
-                force.setEnergyTermParameters(index, f"{energy}; E_GB={expression}", type)
+                energy = (
+                    "isreal*E_GB"
+                    if type == force.SingleParticle
+                    else "isreal1*isreal2*E_GB"
+                )
+                force.setEnergyTermParameters(
+                    index, f"{energy}; E_GB={expression}", type
+                )
             for index, parameters in enumerate(parameter_list):
                 force.setParticleParameters(index, parameters + (1.0,))
             for i in range(n):
@@ -898,8 +946,7 @@ class ExtendedSpaceContext(openmm.Context):
             raise RuntimeError("GBSAOBCForce not supported")
 
     def getState(self, **kwargs):
-        """
-        Returns a :class:`ExtendedSpaceState` object.
+        """Returns a :class:`ExtendedSpaceState` object.
 
         .. _getState: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html#openmm.openmm.Context.getState  # noqa: E501
 
@@ -907,13 +954,11 @@ class ExtendedSpaceContext(openmm.Context):
         ------------
             **kwargs
                 See getState_.
-
         """
         return ExtendedSpaceState(self.variables, super().getState(**kwargs))
 
     def setPeriodicBoxVectors(self, a, b, c):
-        """
-        Set the vectors defining the axes of the periodic box.
+        """Set the vectors defining the axes of the periodic box.
 
         .. warning::
             Only orthorhombic boxes are allowed.
@@ -926,7 +971,6 @@ class ExtendedSpaceContext(openmm.Context):
                 The vector defining the second edge of the periodic box.
             c : openmm.Vec3
                 The vector defining the third edge of the periodic box.
-
         """
         a = openmm.Vec3(*map(_standardized, a))
         b = openmm.Vec3(*map(_standardized, b))
@@ -943,10 +987,9 @@ class ExtendedSpaceContext(openmm.Context):
         self.reinitialize(preserveState=True)
 
     def setPositions(self, positions, extended_positions=None):
-        """
-        Sets the positions of all particles and extended-space variables in
-        this context. If the latter are not provided, then suitable values
-        are automatically determined from the particle positions.
+        """Sets the positions of all particles and extended-space variables in this
+        context. If the latter are not provided, then suitable values are automatically
+        determined from the particle positions.
 
         Parameters
         ----------
@@ -957,13 +1000,14 @@ class ExtendedSpaceContext(openmm.Context):
         ------------
             extended_positions : list of float or unit.Quantity
                 The positions of extended-space particles.
-
         """
         a, b, _ = self.getState().getPeriodicBoxVectors()
         nvars = len(self.variables)
         particle_positions = _standardized(positions)
         if extended_positions is None:
-            extra_positions = [openmm.Vec3(0, b.y * (i + 1) / (nvars + 2), 0) for i in range(nvars)]
+            extra_positions = [
+                openmm.Vec3(0, b.y * (i + 1) / (nvars + 2), 0) for i in range(nvars)
+            ]
             minisystem = openmm.System()
             expression = _get_energy_function(self.variables)
             for i, v in enumerate(self.variables):
@@ -976,7 +1020,9 @@ class ExtendedSpaceContext(openmm.Context):
             for v in self.variables:
                 minisystem.addParticle(v._particle_mass(a.x))
                 for cv in v.colvars:
-                    value = cv.evaluate(self.getSystem(), particle_positions + extra_positions)
+                    value = cv.evaluate(
+                        self.getSystem(), particle_positions + extra_positions
+                    )
                     force.addGlobalParameter(cv.id, value)
             minisystem.addForce(force)
             minicontext = openmm.Context(
@@ -985,7 +1031,9 @@ class ExtendedSpaceContext(openmm.Context):
                 openmm.Platform.getPlatformByName("Reference"),
             )
             minicontext.setPositions(extra_positions)
-            openmm.LocalEnergyMinimizer.minimize(minicontext, 1 * unit.kilojoules_per_mole, 0)
+            openmm.LocalEnergyMinimizer.minimize(
+                minicontext, 1 * unit.kilojoules_per_mole, 0
+            )
             ministate = minicontext.getState(getPositions=True)
             extra_positions = ministate.getPositions().value_in_unit(unit.nanometers)
         else:
@@ -996,13 +1044,12 @@ class ExtendedSpaceContext(openmm.Context):
         super().setPositions(particle_positions + extra_positions)
 
     def setVelocitiesToTemperature(self, temperature, randomSeed=None):
-        """
-        Sets the velocities of all particles in the system to random values chosen from a
-        Maxwell-Boltzmann distribution at a given temperature.
+        """Sets the velocities of all particles in the system to random values chosen
+        from a Maxwell-Boltzmann distribution at a given temperature.
 
         .. warning ::
-            The velocities of the extended-space variables are set to values consistent with the
-            distribution at its own specified temperature.
+            The velocities of the extended-space variables are set to values consistent
+            with the distribution at its own specified temperature.
 
         Parameters
         ----------
@@ -1013,14 +1060,14 @@ class ExtendedSpaceContext(openmm.Context):
         ------------
             randomSeed : int, default=None
                 A seed for the random number generator.
-
         """
         system = self.getSystem()
         Ntotal = system.getNumParticles()
         Natoms = Ntotal - len(self.variables)
         m = np.array([system.getParticleMass(i) / unit.dalton for i in range(Ntotal)])
         T = np.array(
-            [_standardized(temperature)] * Natoms + [v.temperature for v in self.variables]
+            [_standardized(temperature)] * Natoms
+            + [v.temperature for v in self.variables]
         )
         sigma = np.sqrt(_standardized(unit.MOLAR_GAS_CONSTANT_R) * T / m)
         random_state = np.random.RandomState(randomSeed)
@@ -1029,8 +1076,7 @@ class ExtendedSpaceContext(openmm.Context):
 
 
 class ExtendedSpaceSimulation(app.Simulation):
-    """
-    A simulation involving extended phase-space variables.
+    """A simulation involving extended phase-space variables.
 
     Parameters
     ----------
@@ -1048,12 +1094,18 @@ class ExtendedSpaceSimulation(app.Simulation):
         platform : openmm.Platform, default=None
             If not None, the OpenMM Platform_ to use.
         platformProperties : dict, default=None
-            If not None, a set of platform-specific properties to pass to the Context's constructor.
-
+            If not None, a set of platform-specific properties to pass to the Context's
+            constructor.
     """
 
     def __init__(
-        self, variables, topology, system, integrator, platform=None, platformProperties=None
+        self,
+        variables,
+        topology,
+        system,
+        integrator,
+        platform=None,
+        platformProperties=None,
     ):
         self.variables = variables
         self._periodic_tasks = []
@@ -1061,7 +1113,9 @@ class ExtendedSpaceSimulation(app.Simulation):
         for force in system.getForces():
             cls = force.__class__.__name__
             if cls == "CMMotionRemover" or cls.endswith("Barostat"):
-                raise Exception("UFED: system cannot contain CMMotionRemover nor any Barostat")
+                raise Exception(
+                    "UFED: system cannot contain CMMotionRemover nor any Barostat"
+                )
 
         box_vectors = topology.getPeriodicBoxVectors()
         if box_vectors is None:
@@ -1084,30 +1138,29 @@ class ExtendedSpaceSimulation(app.Simulation):
             )
 
     def add_periodic_task(self, task, force_group=0):
-        """
-        Adds a task to be executed periodically along this simulation.
+        """Adds a task to be executed periodically along this simulation.
 
         Parameters
         ----------
             task : PeriodicTask
                 A :class:`~ufedmm.ufedmm.PeriodicTask` object.
-
         """
         task.initialize(self)
         self._periodic_tasks.append(task)
 
     def step(self, steps):
-        """
-        Executed a given number of simulation steps.
+        """Executed a given number of simulation steps.
 
         Parameters
         ----------
             steps : int
                 The number of steps to be executed.
-
         """
         if isinstance(self.integrator, ufedmm.AbstractMiddleRespaIntegrator):
-            if self.integrator._num_rattles == 0 and self.system.getNumConstraints() > 0:
+            if (
+                self.integrator._num_rattles == 0
+                and self.system.getNumConstraints() > 0
+            ):
                 raise RuntimeError("Integrator cannot handle constraints")
         if self._periodic_tasks:
             for task in self._periodic_tasks:
@@ -1138,8 +1191,7 @@ class ExtendedSpaceSimulation(app.Simulation):
 
 
 class UnifiedFreeEnergyDynamics(object):
-    """
-    A Unified Free-Energy Dynamics (UFED) setup.
+    """A Unified Free-Energy Dynamics (UFED) setup.
 
     Parameters
     ----------
@@ -1155,14 +1207,16 @@ class UnifiedFreeEnergyDynamics(object):
         frequency : int, default=None
             The frequency.
         bias_factor : float, default=None
-            Scales the height of the hills added to the metadynamics bias potential. If it is
-            `None`, then the hills will have a constant height over time. For a bias factor to be
-            applicable, all bias variables must be at the same temperature T. The extended-space
-            dynamical variables are sampled as if the effective temperature were T*bias_factor.
+            Scales the height of the hills added to the metadynamics bias potential. If
+            it is `None`, then the hills will have a constant height over time. For a
+            bias factor to be applicable, all bias variables must be at the same
+            temperature T. The extended-space dynamical variables are sampled as if the
+            effective temperature were T*bias_factor.
         grid_expansion : int, default=20
             The grid expansion.
         enforce_gridless : bool, default=False
-            If this is `True`, gridless metadynamics is enforced even for 1D to 3D problems.
+            If this is `True`, gridless metadynamics is enforced even for 1D to 3D
+            problems.
         buffer_size : int, default=100
             The buffer size.
 
@@ -1175,11 +1229,14 @@ class UnifiedFreeEnergyDynamics(object):
         >>> Ks = 1000*unit.kilojoules_per_mole/unit.radians**2
         >>> Ts = 1500*unit.kelvin
         >>> limit = 180*unit.degrees
-        >>> s_phi = ufedmm.DynamicalVariable('s_phi', -limit, limit, mass, Ts, model.phi, Ks)
-        >>> s_psi = ufedmm.DynamicalVariable('s_psi', -limit, limit, mass, Ts, model.psi, Ks)
+        >>> s_phi = ufedmm.DynamicalVariable(
+        ...     's_phi', -limit, limit, mass, Ts, model.phi, Ks
+        ... )
+        >>> s_psi = ufedmm.DynamicalVariable(
+        ...     's_psi', -limit, limit, mass, Ts, model.psi, Ks
+        ... )
         >>> ufedmm.UnifiedFreeEnergyDynamics([s_phi, s_psi], 300*unit.kelvin)
         <variables=[s_phi, s_psi], temperature=300, height=None, frequency=None>
-
     """
 
     def __init__(
@@ -1203,11 +1260,15 @@ class UnifiedFreeEnergyDynamics(object):
         self.buffer_size = buffer_size
 
         dimensions = sum(v.sigma is not None for v in variables)
-        self._metadynamics = not (dimensions == 0 or height is None or frequency is None)
+        self._metadynamics = not (
+            dimensions == 0 or height is None or frequency is None
+        )
 
     def __repr__(self):
         properties = (
-            f"temperature={self.temperature}, height={self.height}, frequency={self.frequency}"
+            f"temperature={self.temperature}, "
+            f"height={self.height}, "
+            f"frequency={self.frequency}"
         )
         return f'<variables=[{", ".join(v.id for v in self.variables)}], {properties}>'
 
@@ -1226,17 +1287,19 @@ class UnifiedFreeEnergyDynamics(object):
     def __setstate__(self, kw):
         self.__init__(**kw)
 
-    def simulation(self, topology, system, integrator, platform=None, platformProperties=None):
-        """
-        Returns a ExtendedSpaceSimulation object.
+    def simulation(
+        self, topology, system, integrator, platform=None, platformProperties=None
+    ):
+        """Returns a ExtendedSpaceSimulation object.
 
         .. warning::
-            If the temperature of any driving parameter is different from the particle-system
-            temperature, then the passed integrator must be a CustomIntegrator_ object
-            containing a per-dof variable `kT` whose content is the Boltzmann constant times
-            the temperature associated to each degree of freedom.
-            This is true for all integrators available in :mod:`ufedmm.integrators`, which are
-            subclasses of :class:`ufedmm.integrators.CustomIntegrator`.
+            If the temperature of any driving parameter is different from the
+            particle-system temperature, then the passed integrator must be a
+            CustomIntegrator_ object containing a per-dof variable `kT` whose content is
+            the Boltzmann constant times the temperature associated to each degree of
+            freedom. This is true for all integrators available in
+            :mod:`ufedmm.integrators`, which are subclasses of
+            :class:`ufedmm.integrators.CustomIntegrator`.
 
         Parameters
         ----------
@@ -1265,12 +1328,17 @@ class UnifiedFreeEnergyDynamics(object):
             >>> dt = 2*unit.femtoseconds
             >>> gamma = 10/unit.picoseconds
             >>> limit = 180*unit.degrees
-            >>> s_phi = ufedmm.DynamicalVariable('s_phi', -limit, limit, mass, Ts, model.phi, Ks)
-            >>> s_psi = ufedmm.DynamicalVariable('s_psi', -limit, limit, mass, Ts, model.psi, Ks)
+            >>> s_phi = ufedmm.DynamicalVariable(
+            ...    's_phi', -limit, limit, mass, Ts, model.phi, Ks
+            ... )
+            >>> s_psi = ufedmm.DynamicalVariable(
+            ...    's_psi', -limit, limit, mass, Ts, model.psi, Ks
+            ... )
             >>> ufed = ufedmm.UnifiedFreeEnergyDynamics([s_phi, s_psi], 300*unit.kelvin)
-            >>> integrator = ufedmm.GeodesicLangevinIntegrator(300*unit.kelvin, gamma, dt)
+            >>> integrator = ufedmm.GeodesicLangevinIntegrator(
+            ...    300*unit.kelvin, gamma, dt
+            ... )
             >>> simulation = ufed.simulation(model.topology, model.system, integrator)
-
         """
         simulation = ExtendedSpaceSimulation(
             self.variables,
@@ -1297,13 +1365,18 @@ class UnifiedFreeEnergyDynamics(object):
         if any(v.temperature != self.temperature for v in self.variables):
             ntotal = system.getNumParticles()
             nvars = len(self.variables)
-            simulation.context.setPositions([openmm.Vec3(0, 0, 0)] * (ntotal - nvars), [0] * nvars)
+            simulation.context.setPositions(
+                [openmm.Vec3(0, 0, 0)] * (ntotal - nvars), [0] * nvars
+            )
             vartemps = [v.temperature for v in self.variables]
             if isinstance(integrator, ufedmm.integrators.CustomIntegrator):
                 integrator.update_temperatures(self.temperature, vartemps)
             else:
                 temperatures = [self.temperature] * (ntotal - len(vartemps)) + vartemps
-                kT = [unit.MOLAR_GAS_CONSTANT_R * T * openmm.Vec3(1, 1, 1) for T in temperatures]
+                kT = [
+                    unit.MOLAR_GAS_CONSTANT_R * T * openmm.Vec3(1, 1, 1)
+                    for T in temperatures
+                ]
                 integrator.setPerDofVariableByName("kT", kT)
 
         return simulation

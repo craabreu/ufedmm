@@ -27,10 +27,19 @@ def ufed_model(
     constraints=openmm.app.HBonds,
 ):
     model = ufedmm.AlanineDipeptideModel(constraints=constraints)
-    s_phi = ufedmm.DynamicalVariable("s_phi", -limit, limit, mass, Ts, model.phi, Ks, sigma=sigma)
-    s_psi = ufedmm.DynamicalVariable("s_psi", -limit, limit, mass, Ts, model.psi, Ks, sigma=sigma)
+    s_phi = ufedmm.DynamicalVariable(
+        "s_phi", -limit, limit, mass, Ts, model.phi, Ks, sigma=sigma
+    )
+    s_psi = ufedmm.DynamicalVariable(
+        "s_psi", -limit, limit, mass, Ts, model.psi, Ks, sigma=sigma
+    )
     return model, ufedmm.UnifiedFreeEnergyDynamics(
-        [s_phi, s_psi], temp, height, frequency, bias_factor, enforce_gridless=enforce_gridless
+        [s_phi, s_psi],
+        temp,
+        height,
+        frequency,
+        bias_factor,
+        enforce_gridless=enforce_gridless,
     )
 
 
@@ -133,7 +142,9 @@ def test_gridded_metadynamics():
 
 
 # def test_gridless_metadynamics():
-#     model, ufed = ufed_model(height=2.0*unit.kilocalorie_per_mole, enforce_gridless=True)
+#     model, ufed = ufed_model(
+#         height=2.0*unit.kilocalorie_per_mole, enforce_gridless=True
+#     )
 #     integrator = ufedmm.MiddleMassiveNHCIntegrator(
 #         300*unit.kelvin, 10*unit.femtoseconds, 1*unit.femtoseconds
 #     )

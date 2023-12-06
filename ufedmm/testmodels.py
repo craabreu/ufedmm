@@ -5,8 +5,10 @@
 
 .. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
 
-.. _System: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html
-.. _Topology: http://docs.openmm.org/latest/api-python/generated/openmm.app.topology.Topology.html
+.. _System:
+    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html
+.. _Topology:
+    http://docs.openmm.org/latest/api-python/generated/openmm.app.topology.Topology.html
 
 """
 
@@ -19,26 +21,26 @@ import ufedmm
 
 
 class AlanineDipeptideModel(object):
-    """
-    A system consisting of a single alanine-dipeptide molecule in a vacuum or solvated in explicit
-    water.
+    """A system consisting of a single alanine-dipeptide molecule in a vacuum or
+    solvated in explicit water.
 
     Keyword Args
     ------------
         force_field : str, default="amber03"
             The force field to be used for the alanine dipeptide molecule.
         water : str, default=None
-            The water model to be used if the alanine dipeptide is supposed to be solvated.
-            Available options are "spce", "tip3p", "tip4pew", and "tip5p".
+            The water model to be used if the alanine dipeptide is supposed to be
+            solvated. Available options are "spce", "tip3p", "tip4pew", and "tip5p".
         box_length : unit.Quantity, default=25*unit.angstroms
-            The size of the simulation box. This is only effective if water is not `None`.
+            The size of the simulation box. This is only effective if water is not
+            `None`.
         constraints : object, default=`openmm.app.HBonds`
-            Specifies which bonds and angles should be implemented with constraints. Allowed
-            values are `None`, `openmm.app.HBonds`, `openmm.app.AllBonds`, or
+            Specifies which bonds and angles should be implemented with constraints.
+            Allowed values are `None`, `openmm.app.HBonds`, `openmm.app.AllBonds`, or
             `openmm.app.HAngles`.
         rigidWater : bool, boolean=True
-            Whether water molecules will be fully rigid regardless of the value passed for the
-            constraints argument.
+            Whether water molecules will be fully rigid regardless of the value passed
+            for the constraints argument.
 
     Attributes
     ----------
@@ -49,10 +51,11 @@ class AlanineDipeptideModel(object):
         positions : list of openmm.Vec3
             The positions.
         phi : openm.CustomTorsionForce
-            The Ramachandran dihedral angle :math:`\\phi` of the alanine dipeptide molecule.
+            The Ramachandran dihedral angle :math:`\\phi` of the alanine dipeptide
+            molecule.
         psi : openm.CustomTorsionForce
-            The Ramachandran dihedral angle :math:`\\psi` of the alanine dipeptide molecule.
-
+            The Ramachandran dihedral angle :math:`\\psi` of the alanine dipeptide
+            molecule.
     """
 
     def __init__(
@@ -63,7 +66,9 @@ class AlanineDipeptideModel(object):
         constraints=openmm.app.HBonds,
         rigidWater=True,
     ):
-        pdb = app.PDBFile(os.path.join(ufedmm.__path__[0], "data", "alanine-dipeptide.pdb"))
+        pdb = app.PDBFile(
+            os.path.join(ufedmm.__path__[0], "data", "alanine-dipeptide.pdb")
+        )
         if water is None:
             force_field = app.ForceField(f"{force_field}.xml")
             self.topology = pdb.topology
@@ -74,7 +79,9 @@ class AlanineDipeptideModel(object):
         else:
             force_field = app.ForceField(f"{force_field}.xml", f"{water}.xml")
             modeller = app.Modeller(pdb.topology, pdb.positions)
-            modeller.addSolvent(force_field, model=water, boxSize=box_length * openmm.Vec3(1, 1, 1))
+            modeller.addSolvent(
+                force_field, model=water, boxSize=box_length * openmm.Vec3(1, 1, 1)
+            )
             self.topology = modeller.topology
             self.positions = modeller.positions
         self.system = force_field.createSystem(
