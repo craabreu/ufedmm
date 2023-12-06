@@ -1,5 +1,4 @@
 {% set version = environ['UFEDMM_VERSION'][1:] %}
-{% set python_version = environ['PYTHON_VERSION'] %}
 
 package:
   name: ufedmm
@@ -10,16 +9,16 @@ source:
 
 build:
   number: 0
-  script: python -m pip install . --no-deps
+  script: python -m pip install --no-deps --ignore-installed .
 
 requirements:
   host:
-    - python={{ python_version }}
+    - python
     - setuptools
     - versioningit
     - pip
   run:
-    - python={{ python_version }}
+    - python
     - importlib-resources  # [py<310]
     - numpy
     - openmm
@@ -38,7 +37,7 @@ about:
   license: MIT
   license_family: MIT
   license_file: LICENSE
-  doc_url: https://craabreu.github.io/ufedmm/
+  doc_url: https://craabreu.github.io/ufedmm
   dev_url: https://github.com/craabreu/ufedmm
 
 extra:
