@@ -82,7 +82,7 @@
 <span class="k">def</span> <span class="nf">_update_RMSD_forces</span><span class="p">(</span><span class="n">system</span><span class="p">):</span>
     <span class="n">N</span> <span class="o">=</span> <span class="n">system</span><span class="o">.</span><span class="n">getNumParticles</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="nf">update_RMSDForce</span><span class="p">(</span><span class="n">force</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_update_RMSDForce</span><span class="p">(</span><span class="n">force</span><span class="p">):</span>
         <span class="n">positions</span> <span class="o">=</span> <span class="n">force</span><span class="o">.</span><span class="n">getReferencePositions</span><span class="p">()</span><span class="o">.</span><span class="n">_value</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">positions</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">N</span><span class="p">:</span>
             <span class="n">positions</span> <span class="o">=</span> <span class="n">positions</span><span class="p">[:</span><span class="n">N</span><span class="p">]</span>
@@ -90,14 +90,19 @@
             <span class="n">positions</span> <span class="o">+=</span> <span class="p">[</span><span class="n">openmm</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)]</span> <span class="o">*</span> <span class="p">(</span><span class="n">N</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">positions</span><span class="p">))</span>
         <span class="n">force</span><span class="o">.</span><span class="n">setReferencePositions</span><span class="p">(</span><span class="n">positions</span><span class="p">)</span>
 
+    <span class="k">def</span> <span class="nf">_update_RMSD_forces_in_cvforce</span><span class="p">(</span><span class="n">cvforce</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">cvforce</span><span class="o">.</span><span class="n">getNumCollectiveVariables</span><span class="p">()):</span>
+            <span class="n">force</span> <span class="o">=</span> <span class="n">cvforce</span><span class="o">.</span><span class="n">getCollectiveVariable</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">force</span><span class="p">,</span> <span class="n">openmm</span><span class="o">.</span><span class="n">RMSDForce</span><span class="p">):</span>
+                <span class="n">_update_RMSDForce</span><span class="p">(</span><span class="n">force</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">force</span><span class="p">,</span> <span class="n">openmm</span><span class="o">.</span><span class="n">CustomCVForce</span><span class="p">):</span>
+                <span class="n">_update_RMSD_forces_in_cvforce</span><span class="p">(</span><span class="n">force</span><span class="p">)</span>
+
     <span class="k">for</span> <span class="n">force</span> <span class="ow">in</span> <span class="n">system</span><span class="o">.</span><span class="n">getForces</span><span class="p">():</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">force</span><span class="p">,</span> <span class="n">openmm</span><span class="o">.</span><span class="n">RMSDForce</span><span class="p">):</span>
-            <span class="n">update_RMSDForce</span><span class="p">(</span><span class="n">force</span><span class="p">)</span>
+            <span class="n">_update_RMSDForce</span><span class="p">(</span><span class="n">force</span><span class="p">)</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">force</span><span class="p">,</span> <span class="n">openmm</span><span class="o">.</span><span class="n">CustomCVForce</span><span class="p">):</span>
-            <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">force</span><span class="o">.</span><span class="n">getNumCollectiveVariables</span><span class="p">()):</span>
-                <span class="n">cv</span> <span class="o">=</span> <span class="n">force</span><span class="o">.</span><span class="n">getCollectiveVariable</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
-                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cv</span><span class="p">,</span> <span class="n">openmm</span><span class="o">.</span><span class="n">RMSDForce</span><span class="p">):</span>
-                    <span class="n">update_RMSDForce</span><span class="p">(</span><span class="n">cv</span><span class="p">)</span>
+            <span class="n">_update_RMSD_forces_in_cvforce</span><span class="p">(</span><span class="n">force</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="CollectiveVariable">
@@ -1501,6 +1506,8 @@
 <h3><a href="../../index.html">Table of Contents</a></h3>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../readme.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../readme.html#installation">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../readme.html#contributing">Contributing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../pythonapi/index.html">Python API</a></li>
