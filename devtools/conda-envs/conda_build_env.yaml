@@ -1,7 +1,7 @@
 name: build
 channels:
   - conda-forge
-  - redesign-science
+  - mdtools
 dependencies:
     # Base depends
   - python
