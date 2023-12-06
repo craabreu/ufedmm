@@ -43,6 +43,7 @@ jobs:
         working-directory: ./devtools/conda-recipes/anaconda
         run: |
           export UFEDMM_VERSION=${{ github.ref_name }}
+          export PYTHON_VERSION=${{ matrix.python-version }}
           echo "::group::Building ufedmm $UFEDMM_VERSION"
           outdir=$(mktemp -d)
           conda mambabuild . --no-anaconda-upload -c conda-forge --output-folder $outdir
