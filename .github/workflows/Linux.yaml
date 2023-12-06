@@ -22,7 +22,8 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: [3.8, 3.9, "3.10"]
+        python-version: [3.9, "3.10"]
+        openmm-version: ["7.7", "8.0"]
 
     steps:
       - uses: actions/checkout@v3
@@ -42,6 +43,7 @@ jobs:
           channels: conda-forge
           extra-specs: |
             python=${{ matrix.python-version }}
+            openmm=${{ matrix.openmm-version }}
 
       - name: Install package
         # conda setup requires this special shell
