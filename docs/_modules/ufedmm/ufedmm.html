@@ -802,16 +802,16 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_Lx</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">x</span>
 
     <span class="k">def</span> <span class="nf">_split</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vector</span><span class="p">,</span> <span class="n">asNumpy</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="n">np</span> <span class="o">=</span> <span class="p">(</span><span class="n">vector</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">asNumpy</span> <span class="k">else</span> <span class="nb">len</span><span class="p">(</span><span class="n">vector</span><span class="p">))</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_variables</span><span class="p">)</span>
-        <span class="n">particles_contribution</span> <span class="o">=</span> <span class="n">vector</span><span class="p">[:</span><span class="n">np</span><span class="p">,</span> <span class="p">:]</span> <span class="k">if</span> <span class="n">asNumpy</span> <span class="k">else</span> <span class="n">vector</span><span class="p">[:</span><span class="n">np</span><span class="p">]</span>
+        <span class="n">num</span> <span class="o">=</span> <span class="p">(</span><span class="n">vector</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">asNumpy</span> <span class="k">else</span> <span class="nb">len</span><span class="p">(</span><span class="n">vector</span><span class="p">))</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_variables</span><span class="p">)</span>
+        <span class="n">particles_contribution</span> <span class="o">=</span> <span class="n">vector</span><span class="p">[:</span><span class="n">num</span><span class="p">,</span> <span class="p">:]</span> <span class="k">if</span> <span class="n">asNumpy</span> <span class="k">else</span> <span class="n">vector</span><span class="p">[:</span><span class="n">num</span><span class="p">]</span>
         <span class="n">variables_contribution</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">vector</span><span class="p">[</span><span class="n">np</span><span class="p">:,</span> <span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">asNumpy</span> <span class="k">else</span> <span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">x</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vector</span><span class="p">[</span><span class="n">np</span><span class="p">:]]</span>
+            <span class="n">vector</span><span class="p">[</span><span class="n">num</span><span class="p">:,</span> <span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">asNumpy</span> <span class="k">else</span> <span class="p">[</span><span class="n">vec</span><span class="o">.</span><span class="n">x</span> <span class="k">for</span> <span class="n">vec</span> <span class="ow">in</span> <span class="n">vector</span><span class="p">[</span><span class="n">num</span><span class="p">:]]</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">particles_contribution</span><span class="p">,</span> <span class="n">variables_contribution</span>
 
 <div class="viewcode-block" id="ExtendedSpaceState.getPositions">
 <a class="viewcode-back" href="../../pythonapi/ufedmm.html#ufedmm.ufedmm.ExtendedSpaceState.getPositions">[docs]</a>
-    <span class="k">def</span> <span class="nf">getPositions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">asNumpy</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">extended</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">getPositions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">asNumpy</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">extended</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Gets the positions of all physical particles and optionally also gets the</span>
 <span class="sd">        positions of the extra particles from which the extended-space dynamical</span>
 <span class="sd">        variables are computed.</span>
@@ -823,24 +823,26 @@
 <span class="sd">            extended : bool, default=False</span>
 <span class="sd">                Whether to include the positions of the extra particles from which the</span>
 <span class="sd">                extended-space dynamical variables are computed.</span>
+<span class="sd">            split : bool, default=True</span>
+<span class="sd">                Whether to return the positions of the physical particles and the</span>
+<span class="sd">                positions of the extra particles separately.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">            list(openmm.Vec3)</span>
-<span class="sd">                If `asNumpy=False` and `extended=False`.</span>
-<span class="sd">            numpy.ndarray</span>
-<span class="sd">                If `asNumpy=True` and `extended=False`.</span>
-<span class="sd">            list(openmm.Vec3), list(float)</span>
-<span class="sd">                If `asNumpy=False` and `extended=True`.</span>
-<span class="sd">            numpy.ndarray, numpy.ndarray</span>
-<span class="sd">                If `asNumpy=True` and `extended=True`.</span>
+<span class="sd">            list(openmm.Vec3) or numpy.ndarray</span>
+<span class="sd">                If `extended=False` or `split=False`.</span>
+<span class="sd">            list(openmm.Vec3) or numpy.ndarray, list(float) or numpy.ndarray</span>
+<span class="sd">                If `extended=True` and `split=True`.</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">            Exception</span>
 <span class="sd">                If positions were not requested in the ``context.getState()`` call.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">positions</span><span class="p">,</span> <span class="n">xvars</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_split</span><span class="p">(</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">getPositions</span><span class="p">(</span><span class="n">asNumpy</span><span class="p">),</span> <span class="n">asNumpy</span><span class="p">)</span>
+        <span class="n">all_positions</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">getPositions</span><span class="p">(</span><span class="n">asNumpy</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">extended</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">split</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">all_positions</span>
+        <span class="n">positions</span><span class="p">,</span> <span class="n">xvars</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_split</span><span class="p">(</span><span class="n">all_positions</span><span class="p">,</span> <span class="n">asNumpy</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">positions</span><span class="p">,</span> <span class="n">xvars</span><span class="p">)</span> <span class="k">if</span> <span class="n">extended</span> <span class="k">else</span> <span class="n">positions</span></div>
 
 
@@ -984,6 +986,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">setParameter</span><span class="p">(</span><span class="s2">&quot;Lx&quot;</span><span class="p">,</span> <span class="n">box_length_x</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">variables</span> <span class="o">=</span> <span class="n">variables</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">driving_forces</span> <span class="o">=</span> <span class="n">driving_forces</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">driving_forces</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">driving_force</span> <span class="o">=</span> <span class="n">driving_forces</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># for backwards compatibility</span>
 
     <span class="k">def</span> <span class="nf">_add_fake_particles</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">force</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">force</span><span class="p">,</span> <span class="n">openmm</span><span class="o">.</span><span class="n">NonbondedForce</span><span class="p">):</span>
