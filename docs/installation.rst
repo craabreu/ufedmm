@@ -3,7 +3,7 @@ Installation
 ============
 
 UFEDMM is available as a conda package installable from the
-[mdtools](https://anaconda.org/mdtools) channel.
+`mdtools <https://anaconda.org/mdtools>`_ conda channel.
 To install it, either run:
 
 .. code-block:: bash
