@@ -750,14 +750,14 @@ class ExtendedSpaceState(openmm.State):
         self._Lx = a.x
 
     def _split(self, vector, asNumpy=False):
-        np = (vector.shape[0] if asNumpy else len(vector)) - len(self._variables)
-        particles_contribution = vector[:np, :] if asNumpy else vector[:np]
+        num = (vector.shape[0] if asNumpy else len(vector)) - len(self._variables)
+        particles_contribution = vector[:num, :] if asNumpy else vector[:num]
         variables_contribution = (
-            vector[np:, 0] if asNumpy else [v.x for v in vector[np:]]
+            vector[num:, 0] if asNumpy else [vec.x for vec in vector[num:]]
         )
         return particles_contribution, variables_contribution
 
-    def getPositions(self, asNumpy=False, extended=False):
+    def getPositions(self, asNumpy=False, extended=False, split=True):
         """Gets the positions of all physical particles and optionally also gets the
         positions of the extra particles from which the extended-space dynamical
         variables are computed.
@@ -769,24 +769,26 @@ class ExtendedSpaceState(openmm.State):
             extended : bool, default=False
                 Whether to include the positions of the extra particles from which the
                 extended-space dynamical variables are computed.
+            split : bool, default=True
+                Whether to return the positions of the physical particles and the
+                positions of the extra particles separately.
 
         Returns
         -------
-            list(openmm.Vec3)
-                If `asNumpy=False` and `extended=False`.
-            numpy.ndarray
-                If `asNumpy=True` and `extended=False`.
-            list(openmm.Vec3), list(float)
-                If `asNumpy=False` and `extended=True`.
-            numpy.ndarray, numpy.ndarray
-                If `asNumpy=True` and `extended=True`.
+            list(openmm.Vec3) or numpy.ndarray
+                If `extended=False` or `split=False`.
+            list(openmm.Vec3) or numpy.ndarray, list(float) or numpy.ndarray
+                If `extended=True` and `split=True`.
 
         Raises
         ------
             Exception
                 If positions were not requested in the ``context.getState()`` call.
         """
-        positions, xvars = self._split(super().getPositions(asNumpy), asNumpy)
+        all_positions = super().getPositions(asNumpy)
+        if extended and not split:
+            return all_positions
+        positions, xvars = self._split(all_positions, asNumpy)
         return (positions, xvars) if extended else positions
 
     def getVelocities(self, asNumpy=False, extended=False):
@@ -920,6 +922,8 @@ class ExtendedSpaceContext(openmm.Context):
         self.setParameter("Lx", box_length_x)
         self.variables = variables
         self.driving_forces = driving_forces
+        if len(driving_forces) == 1:
+            self.driving_force = driving_forces[0]  # for backwards compatibility
 
     def _add_fake_particles(self, force, n):
         if isinstance(force, openmm.NonbondedForce):
