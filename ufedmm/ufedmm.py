@@ -1041,7 +1041,7 @@ class ExtendedSpaceContext(openmm.Context):
             )
             minicontext.setPositions(extra_positions)
             openmm.LocalEnergyMinimizer.minimize(
-                minicontext, 1 * unit.kilojoules_per_mole, 0
+                minicontext, 1 * unit.kilojoules_per_mole / unit.nanometers, 0
             )
             ministate = minicontext.getState(getPositions=True)
             extra_positions = ministate.getPositions().value_in_unit(unit.nanometers)
