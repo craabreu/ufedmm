@@ -70,6 +70,31 @@ def _update_RMSD_forces(system):
             _update_RMSD_forces_in_cvforce(force)
 
 
+def _update_custom_nonbonded_forces(system):
+    N = system.getNumParticles()
+
+    def _update_CustomNonbondedForce(force):
+        if force.getNumParticles() < N:
+            for _ in range(N - force.getNumParticles()):
+                force.addParticle([0.0] * force.getNumPerParticleParameters())
+
+        force.setReferencePositions(positions)
+
+    def _update_RMSD_forces_in_cvforce(cvforce):
+        for index in range(cvforce.getNumCollectiveVariables()):
+            force = cvforce.getCollectiveVariable(index)
+            if isinstance(force, openmm.RMSDForce):
+                _update_RMSDForce(force)
+            elif isinstance(force, openmm.CustomCVForce):
+                _update_RMSD_forces_in_cvforce(force)
+
+    for force in system.getForces():
+        if isinstance(force, openmm.RMSDForce):
+            _update_RMSDForce(force)
+        elif isinstance(force, openmm.CustomCVForce):
+            _update_RMSD_forces_in_cvforce(force)
+
+
 class CollectiveVariable(object):
     """A function of the particle coordinates, evaluated by means of an OpenMM Force_
     object.
@@ -511,11 +536,8 @@ class _Metadynamics(PeriodicTask):
                     "Well-tempered metadynamics requires same temperature "
                     "for all variables."
                 )
-            self.delta_kT = (
-                (bias_factor - 1)
-                * unit.MOLAR_GAS_CONSTANT_R
-                * temperature
-                * unit.kelvin
+            self.delta_kT = _standardized(
+                (bias_factor - 1) * unit.MOLAR_GAS_CONSTANT_R * temperature
             )
         self.buffer_size = buffer_size
         self.grid_expansion = grid_expansion
@@ -555,7 +577,7 @@ class _Metadynamics(PeriodicTask):
             self._table = openmm.Continuous3DFunction(
                 *self._widths, self._bias, *self._bounds, full_periodic
             )
-        expression = f'bias({",".join(v.id for v in self.bias_variables)})'
+        expression = f'metad_bias_scale*bias({",".join(v.id for v in self.bias_variables)})'
         for i, v in enumerate(self.bias_variables):
             expression += f";{v.id}={v._get_energy_function(i+1)}"
         force = openmm.CustomCVForce(expression)
@@ -565,6 +587,8 @@ class _Metadynamics(PeriodicTask):
             force.addCollectiveVariable(f"x{i+1}", x)
         force.addTabulatedFunction("bias", self._table)
         force.addGlobalParameter("Lx", 0)
+        force.addGlobalParameter("metad_bias_scale", 1)
+        force.addEnergyParameterDerivative("metad_bias_scale")
         return force
 
     def _hills_force(self):
@@ -623,15 +647,6 @@ class _Metadynamics(PeriodicTask):
         context.reinitialize(preserveState=True)
 
     def update(self, simulation, steps):
-        if self.bias_factor is not None:
-            self.free_group = 31
-            used_groups = set(f.getForceGroup() for f in simulation.system.getForces())
-            while self.free_group in used_groups:
-                self.free_group -= 1
-            if self.free_group < 0:
-                raise RuntimeError(
-                    "Well-tempered Metadynamics requires free force groups"
-                )
         if not self._use_grid:
             steps_until_next_report = (
                 self.frequency - simulation.currentStep % self.frequency
@@ -648,13 +663,8 @@ class _Metadynamics(PeriodicTask):
         if self.bias_factor is None:
             self.height = self.initial_height
         else:
-            group = self.force.getForceGroup()
-            self.force.setForceGroup(self.free_group)
-            hills_state = simulation.context.getState(
-                getEnergy=True, groups={self.free_group}
-            )
-            self.force.setForceGroup(group)
-            energy = hills_state.getPotentialEnergy()
+            hills_state = simulation.context.getState(getParameterDerivatives=True)
+            energy = hills_state.getEnergyParameterDerivatives()["metad_bias_scale"]
             self.height = self.initial_height * np.exp(-energy / self.delta_kT)
         if self._use_grid:
             hills = []
