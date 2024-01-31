@@ -88,9 +88,7 @@ def add_inner_nonbonded_force(system, inner_switch, inner_cutoff, force_group_in
     rc = _standardized(inner_cutoff)
     a = rc + rs
     b = rc * rs
-    c = (30 / (rc - rs) ** 5) * np.array(
-        [b**2, -2 * a * b, a**2 + 2 * b, -2 * a, 1]
-    )
+    c = (30 / (rc - rs) ** 5) * np.array([b**2, -2 * a * b, a**2 + 2 * b, -2 * a, 1])
     f0s = sum([c[n] * rs ** (n + 1) / (n + 1) for n in range(5)])
 
     def coeff(n, m):
@@ -773,9 +771,7 @@ class MiddleMassiveGGMTIntegrator(AbstractMiddleRespaIntegrator):
     def update_temperatures(self, system_temperature, extended_space_temperatures):
         super().update_temperatures(system_temperature, extended_space_temperatures)
         kT_vectors = self.getPerDofVariableByName("kT")
-        kT3_vectors = [
-            openmm.Vec3(kT.x**3, kT.y**3, kT.z**3) for kT in kT_vectors
-        ]
+        kT3_vectors = [openmm.Vec3(kT.x**3, kT.y**3, kT.z**3) for kT in kT_vectors]
         if hasattr(self, "_xs_taus"):
             num_particles = len(kT_vectors) - len(extended_space_temperatures)
             taus = [self._tau] * num_particles + self._xs_taus
