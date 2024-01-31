@@ -70,31 +70,6 @@ def _update_RMSD_forces(system):
             _update_RMSD_forces_in_cvforce(force)
 
 
-def _update_custom_nonbonded_forces(system):
-    N = system.getNumParticles()
-
-    def _update_CustomNonbondedForce(force):
-        if force.getNumParticles() < N:
-            for _ in range(N - force.getNumParticles()):
-                force.addParticle([0.0] * force.getNumPerParticleParameters())
-
-        force.setReferencePositions(positions)
-
-    def _update_RMSD_forces_in_cvforce(cvforce):
-        for index in range(cvforce.getNumCollectiveVariables()):
-            force = cvforce.getCollectiveVariable(index)
-            if isinstance(force, openmm.RMSDForce):
-                _update_RMSDForce(force)
-            elif isinstance(force, openmm.CustomCVForce):
-                _update_RMSD_forces_in_cvforce(force)
-
-    for force in system.getForces():
-        if isinstance(force, openmm.RMSDForce):
-            _update_RMSDForce(force)
-        elif isinstance(force, openmm.CustomCVForce):
-            _update_RMSD_forces_in_cvforce(force)
-
-
 class CollectiveVariable(object):
     """A function of the particle coordinates, evaluated by means of an OpenMM Force_
     object.
@@ -577,7 +552,9 @@ class _Metadynamics(PeriodicTask):
             self._table = openmm.Continuous3DFunction(
                 *self._widths, self._bias, *self._bounds, full_periodic
             )
-        expression = f'metad_bias_scale*bias({",".join(v.id for v in self.bias_variables)})'
+        expression = (
+            f'metad_bias_scale*bias({",".join(v.id for v in self.bias_variables)})'
+        )
         for i, v in enumerate(self.bias_variables):
             expression += f";{v.id}={v._get_energy_function(i+1)}"
         force = openmm.CustomCVForce(expression)
