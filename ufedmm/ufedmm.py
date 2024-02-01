@@ -4,24 +4,6 @@
    :synopsis: Unified Free Energy Dynamics with OpenMM
 
 .. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
-
-.. _Context:
-    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html
-.. _CustomCVForce:
-    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html
-.. _CustomIntegrator:
-    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomIntegrator.html
-.. _Force:
-    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Force.html
-.. _Integrator:
-    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Integrator.html
-.. _Platform:
-    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Platform.html
-.. _System:
-    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html
-.. _State:
-    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.State.html
-
 """
 
 import functools
@@ -85,10 +67,10 @@ def _add_fake_particles(force, num_particles):
 
 
 class CollectiveVariable(object):
-    """A function of the particle coordinates, evaluated by means of an OpenMM Force_
+    """A function of the particle coordinates, evaluated by means of an :OpenMM:`Force`
     object.
 
-    Quoting OpenMM's CustomCVForce_ manual entry:
+    Quoting the manual entry for :OpenMM:`CustomCVForce`:
 
         "Each collective variable is defined by a Force object. The Force's potential
         energy is computed, and that becomes the value of the variable. This provides
@@ -101,7 +83,7 @@ class CollectiveVariable(object):
         id : str
             A valid identifier string for this collective variable.
         force : openmm.Force
-            An OpenMM Force_ object whose energy function is used to evaluate this
+            An :OpenMM:`Force` object whose energy function is used to evaluate this
             collective variable.
 
     Example
@@ -739,7 +721,7 @@ class _Metadynamics(PeriodicTask):
 
 
 class ExtendedSpaceState(openmm.State):
-    """An extension of OpenMM's State_ class."""
+    """An extension of the :OpenMM:`State` class."""
 
     def __init__(self, variables, state):
         self.__class__ = type(
@@ -858,18 +840,19 @@ class ExtendedSpaceState(openmm.State):
 
 
 class ExtendedSpaceContext(openmm.Context):
-    """An extension of OpenMM's Context_ class.
+    """An extension of the :OpenMM:`Context` class.
 
     Parameters
     ----------
         variables : list(DynamicalVariable)
             The dynamical variables to be added to the system's phase space.
         system : openmm.System
-            The System_ which will be simulated
+            The :OpenMM:`System` which will be simulated
         integrator : openmm.Integrator
-            The Integrator_ which will be used to simulate the System_.
+            The :OpenMM:`Integrator` which will be used to simulate the
+            :OpenMM:`System`.
         platform : openmm.Platform
-            The Platform_ to use for calculations.
+            The :OpenMM:`Platform` to use for calculations.
         properties : dict(str: str)
             A set of values for platform-specific properties. Keys are the property
             names.
@@ -879,9 +862,9 @@ class ExtendedSpaceContext(openmm.Context):
         variables : list(DynamicalVariable)
             The dynamical variables added to the system's phase space.
         driving_forces : list[openmm.CustomCVForce]
-            A list of CustomCVForce_ objects responsible for evaluating the potential
-            energy terms which couples the extra dynamical variables to their associated
-            collective variables.
+            A list of :OpenMM:`CustomCVForce` objects responsible for evaluating the
+            potential energy terms which couples the extra dynamical variables to their
+            associated collective variables.
     """
 
     def __init__(self, variables, system, *args, **kwargs):
@@ -1067,14 +1050,14 @@ class ExtendedSpaceSimulation(app.Simulation):
         topology : openmm.app.Topology
             A Topology describing the system to be simulated.
         system : openmm.System
-            The OpenMM System_ object to be simulated.
+            The :OpenMM:`System` object to be simulated.
         integrator : openmm.Integrator
             The OpenMM Integrator to use for simulating the system dynamics.
 
     Keyword Args
     ------------
         platform : openmm.Platform, default=None
-            If not None, the OpenMM Platform_ to use.
+            If not None, the :OpenMM:`Platform` to use.
         platformProperties : dict, default=None
             If not None, a set of platform-specific properties to pass to the Context's
             constructor.
@@ -1277,9 +1260,9 @@ class UnifiedFreeEnergyDynamics(object):
         .. warning::
             If the temperature of any driving parameter is different from the
             particle-system temperature, then the passed integrator must be a
-            CustomIntegrator_ object containing a per-dof variable `kT` whose content is
-            the Boltzmann constant times the temperature associated to each degree of
-            freedom. This is true for all integrators available in
+            :OpenMM:`CustomIntegrator` object containing a per-dof variable `kT` whose
+            content is the Boltzmann constant times the temperature associated to each
+            degree of freedom. This is true for all integrators available in
             :mod:`ufedmm.integrators`, which are subclasses of
             :class:`ufedmm.integrators.CustomIntegrator`.
 

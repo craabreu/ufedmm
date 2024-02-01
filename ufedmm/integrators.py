@@ -4,20 +4,6 @@
    :synopsis: Unified Free Energy Dynamics Integrators
 
 .. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
-
-.. _Context:
-    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html
-.. _CustomCVForce:
-    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html
-.. _CustomIntegrator:
-    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomIntegrator.html
-.. _Force:
-    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Force.html
-.. _NonbondedForce:
-    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html
-.. _System:
-    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html
-
 """
 
 import numpy as np
@@ -28,14 +14,14 @@ from ufedmm.ufedmm import _standardized
 
 
 def add_inner_nonbonded_force(system, inner_switch, inner_cutoff, force_group_index):
-    """To a given OpenMM System_ containing a NonbondedForce_ object, this function adds
-    a new force group with the purpose of performing multiple time-scale integration
-    according to the RESPA2 splitting scheme of Morrone, Zhou, and Berne
-    :cite:`Morrone_2010`. Besides, it assigns the provided `force_group_index` to this
-    new group and `force_group_index+1` to the original NonbondedForce_. When used in
-    any instance of :class:`AbstractMiddleRespaIntegrator`, the new force group must be
-    identified as being embodied by the NonbondedForce_ as opposed to being
-    complimentary to it.
+    """
+    Adds a new force group to an :OpenMM:`System` containing a :OpenMM:`NonbondedForce`
+    object, with the purpose of performing multiple time-scale integration via the
+    RESPA2 splitting scheme of Morrone, Zhou, and Berne :cite:`Morrone_2010`. Also,
+    assigns the provided `force_group_index` to this new group and `force_group_index+1`
+    to the original :OpenMM:`NonbondedForce`. When used in an instance of any subclass
+    of :class:`AbstractMiddleRespaIntegrator`, the new force group must be set as
+    embodied by the :OpenMM:`NonbondedForce` as opposed to being complimentary to it.
 
     .. warning:
         The new force group is not intended to contribute to the system energy. Its sole
@@ -46,7 +32,7 @@ def add_inner_nonbonded_force(system, inner_switch, inner_cutoff, force_group_in
     ----------
         system : openmm.System
             The system the inner force will be added to, which must contain a
-            NonbondedForce_.
+            :OpenMM:`NonbondedForce`.
         inner_switch : float or unit.Quantity
             The inner switching distance, where the interaction of an atom pair begins
             to switch off to zero.
@@ -54,8 +40,9 @@ def add_inner_nonbonded_force(system, inner_switch, inner_cutoff, force_group_in
             The inner cutoff distance, where the interaction of an atom pairs completely
             switches off.
         force_group_index : int
-            The force group the new interactions will belong to. The old NonbondedForce_
-            will be automatically assigned to `force_group_index+1`.
+            The force group the new interactions will belong to. The old
+            :OpenMM:`NonbondedForce` will be automatically assigned to
+            `force_group_index+1`.
 
     Example
     -------
@@ -152,7 +139,7 @@ def add_inner_nonbonded_force(system, inner_switch, inner_cutoff, force_group_in
 
 
 class CustomIntegrator(openmm.CustomIntegrator):
-    """An extension of OpenMM's CustomIntegrator_ class with an extra per-dof variable
+    """An extension of :OpenMM:`CustomIntegrator` class with an extra per-dof variable
     named `temperature`, whose content is the temperature of the heat bath associated to
     each degree of freedom. A per-dof temperature is necessary if the extended-space
     variables and the physical system are coupled adiabatically to thermostats at

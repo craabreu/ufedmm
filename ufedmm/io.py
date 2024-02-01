@@ -4,12 +4,6 @@
    :synopsis: Unified Free Energy Dynamics Outputs
 
 .. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
-
-.. _CustomCVForce:
-    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html
-.. _StateDataReporter:
-    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.StateDataReporter.html
-
 """
 
 import sys
@@ -59,10 +53,10 @@ class Tee:
 
 
 class StateDataReporter(app.StateDataReporter):
-    """An extension of OpenMM's StateDataReporter_ class, which outputs information
-    about a simulation, such as energy, temperature, etc.
+    """An extension of OpenMM's :OpenMMApp:`statedatareporter.StateDataReporter` class,
+    which outputs information about a simulation, such as energy, temperature, etc.
 
-    All original functionalities of StateDataReporter_ are preserved.
+    All original functionalities are preserved.
 
     Besides, if it is added to an :class:`~ufedmm.ufedmm.ExtendedSpaceSimulation`
     object, e.g. one created through the
@@ -88,8 +82,8 @@ class StateDataReporter(app.StateDataReporter):
         hillHeights : bool, default=False
             Whether to report the height of the latest deposited metadynamics hill.
         collectiveVariables : bool, default=False
-            Whether to report the collective variables in all CustomCVForce_ objects in
-            the system.
+            Whether to report the collective variables in all :OpenMM:`CustomCVForce`
+            objects in the system.
         globalParameterStates : pandas.DataFrame, default=None
             A DataFrame containing context global parameters (column names) and sets of
             values thereof. If it is provided, then the potential energy will be
