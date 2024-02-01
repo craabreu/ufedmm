@@ -208,6 +208,10 @@ extlinks = {
     "OpenMM": (
         "http://docs.openmm.org/latest/api-python/generated/openmm.openmm.%s.html",
         "openmm.%s",
+    ),
+    "OpenMMApp": (
+        "http://docs.openmm.org/latest/api-python/generated/openmm.app.%s.html",
+        "app.%s",
     )
 }
 
