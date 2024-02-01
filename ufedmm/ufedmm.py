@@ -44,30 +44,44 @@ def _standardized(quantity):
         return quantity
 
 
-def _update_RMSD_forces(system):
-    N = system.getNumParticles()
-
-    def _update_RMSDForce(force):
-        positions = force.getReferencePositions()._value
-        if len(positions) >= N:
-            positions = positions[:N]
-        else:
-            positions += [openmm.Vec3(0, 0, 0)] * (N - len(positions))
-        force.setReferencePositions(positions)
-
-    def _update_RMSD_forces_in_cvforce(cvforce):
-        for index in range(cvforce.getNumCollectiveVariables()):
-            force = cvforce.getCollectiveVariable(index)
-            if isinstance(force, openmm.RMSDForce):
-                _update_RMSDForce(force)
-            elif isinstance(force, openmm.CustomCVForce):
-                _update_RMSD_forces_in_cvforce(force)
-
-    for force in system.getForces():
-        if isinstance(force, openmm.RMSDForce):
-            _update_RMSDForce(force)
-        elif isinstance(force, openmm.CustomCVForce):
-            _update_RMSD_forces_in_cvforce(force)
+def _add_fake_particles(force, num_particles):
+    if isinstance(force, openmm.CustomCVForce):
+        for i in range(force.getNumCollectiveVariables()):
+            _add_fake_particles(force.getCollectiveVariable(i), num_particles)
+    elif isinstance(force, openmm.NonbondedForce):
+        for i in range(num_particles - force.getNumParticles()):
+            force.addParticle(0.0, 1.0, 0.0)
+    elif isinstance(force, openmm.CustomNonbondedForce):
+        for i in range(num_particles - force.getNumParticles()):
+            force.addParticle([0.0] * force.getNumPerParticleParameters())
+    elif isinstance(force, openmm.CustomGBForce):
+        if force.getNumParticles() < num_particles:
+            parameter_list = list(
+                map(force.getParticleParameters, range(force.getNumParticles()))
+            )
+            force.addPerParticleParameter("isreal")
+            for index in range(force.getNumEnergyTerms()):
+                expression, type = force.getEnergyTermParameters(index)
+                energy = (
+                    "isreal*E_GB"
+                    if type == force.SingleParticle
+                    else "isreal1*isreal2*E_GB"
+                )
+                force.setEnergyTermParameters(
+                    index, f"{energy}; E_GB={expression}", type
+                )
+            for index, parameters in enumerate(parameter_list):
+                force.setParticleParameters(index, parameters + (1.0,))
+            for i in range(num_particles - force.getNumParticles()):
+                force.addParticle(parameter_list[0] + (0.0,))
+    elif isinstance(force, openmm.GBSAOBCForce):
+        raise RuntimeError("GBSAOBCForce not supported")
+    elif hasattr(force, "getReferencePositions"):
+        refpos = force.getReferencePositions()._value
+        if len(refpos) < num_particles:
+            for _ in range(num_particles - len(refpos)):
+                refpos.append(openmm.Vec3(0, 0, 0))
+            force.setReferencePositions(refpos)
 
 
 class CollectiveVariable(object):
@@ -112,9 +126,9 @@ class CollectiveVariable(object):
             force.setForceGroup(0)
         force_copy = deepcopy(self.force)
         force_copy.setForceGroup(1)
+        _add_fake_particles(force_copy, system.getNumParticles())
         system_copy.addForce(force_copy)
         platform = openmm.Platform.getPlatformByName("Reference")
-        _update_RMSD_forces(system_copy)
         context = openmm.Context(system_copy, openmm.CustomIntegrator(0), platform)
         context.setPositions(positions)
         return context
@@ -900,46 +914,18 @@ class ExtendedSpaceContext(openmm.Context):
                 var.force.setParticleParameters(0, num_particles, [])
                 num_particles += 1
                 collective_variables += var.colvars
-        for force in system.getForces() + collective_variables:
-            self._add_fake_particles(force, len(variables))
+        for force in system.getForces():
+            _add_fake_particles(force, num_particles)
+        for cv in collective_variables:
+            _add_fake_particles(cv.force, num_particles)
         for driving_force in driving_forces:
             system.addForce(driving_force)
-        _update_RMSD_forces(system)
         super().__init__(system, *args, **kwargs)
         self.setParameter("Lx", box_length_x)
         self.variables = variables
         self.driving_forces = driving_forces
         if len(driving_forces) == 1:
             self.driving_force = driving_forces[0]  # for backwards compatibility
-
-    def _add_fake_particles(self, force, n):
-        if isinstance(force, openmm.NonbondedForce):
-            for i in range(n):
-                force.addParticle(0.0, 1.0, 0.0)
-        elif isinstance(force, openmm.CustomNonbondedForce):
-            for i in range(n):
-                force.addParticle([0.0] * force.getNumPerParticleParameters())
-        elif isinstance(force, openmm.CustomGBForce):
-            parameter_list = list(
-                map(force.getParticleParameters, range(force.getNumParticles()))
-            )
-            force.addPerParticleParameter("isreal")
-            for index in range(force.getNumEnergyTerms()):
-                expression, type = force.getEnergyTermParameters(index)
-                energy = (
-                    "isreal*E_GB"
-                    if type == force.SingleParticle
-                    else "isreal1*isreal2*E_GB"
-                )
-                force.setEnergyTermParameters(
-                    index, f"{energy}; E_GB={expression}", type
-                )
-            for index, parameters in enumerate(parameter_list):
-                force.setParticleParameters(index, parameters + (1.0,))
-            for i in range(n):
-                force.addParticle(parameter_list[0] + (0.0,))
-        elif isinstance(force, openmm.GBSAOBCForce):
-            raise RuntimeError("GBSAOBCForce not supported")
 
     def getState(self, **kwargs):
         """Returns a :class:`ExtendedSpaceState` object.
