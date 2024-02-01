@@ -38,13 +38,13 @@
             
   <section id="module-ufedmm.io">
 <span id="input-output"></span><h1>input/output<a class="headerlink" href="#module-ufedmm.io" title="Link to this heading">¶</a></h1>
-<dl class="py class">
+<dl class="py class" id="module-io">
 <dt class="sig sig-object py" id="ufedmm.io.StateDataReporter">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ufedmm.io.</span></span><span class="sig-name descname"><span class="pre">StateDataReporter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">report_interval</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/io.html#StateDataReporter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.io.StateDataReporter" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">StateDataReporter</span></code></p>
-<p>An extension of OpenMM’s <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.StateDataReporter.html">StateDataReporter</a> class, which outputs information
-about a simulation, such as energy, temperature, etc.</p>
-<p>All original functionalities of <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.StateDataReporter.html">StateDataReporter</a> are preserved.</p>
+<p>An extension of OpenMM’s <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.app.statedatareporter.StateDataReporter.html">app.statedatareporter.StateDataReporter</a> class,
+which outputs information about a simulation, such as energy, temperature, etc.</p>
+<p>All original functionalities are preserved.</p>
 <p>Besides, if it is added to an <a class="reference internal" href="ufedmm.html#ufedmm.ufedmm.ExtendedSpaceSimulation" title="ufedmm.ufedmm.ExtendedSpaceSimulation"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtendedSpaceSimulation</span></code></a>
 object, e.g. one created through the
 <a class="reference internal" href="ufedmm.html#ufedmm.ufedmm.UnifiedFreeEnergyDynamics.simulation" title="ufedmm.ufedmm.UnifiedFreeEnergyDynamics.simulation"><code class="xref py py-func docutils literal notranslate"><span class="pre">simulation()</span></code></a> method, then a
@@ -64,8 +64,8 @@ simulation and their associated collective variables.</p></li>
 <li><p><strong>multipleTemperatures</strong> (<em>bool</em><em>, </em><em>default=False</em>) – Whether to separately report the temperature estimates for the atoms and for
 the extended-space dynamical variables.</p></li>
 <li><p><strong>hillHeights</strong> (<em>bool</em><em>, </em><em>default=False</em>) – Whether to report the height of the latest deposited metadynamics hill.</p></li>
-<li><p><strong>collectiveVariables</strong> (<em>bool</em><em>, </em><em>default=False</em>) – Whether to report the collective variables in all <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html">CustomCVForce</a> objects in
-the system.</p></li>
+<li><p><strong>collectiveVariables</strong> (<em>bool</em><em>, </em><em>default=False</em>) – Whether to report the collective variables in all <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html">openmm.CustomCVForce</a>
+objects in the system.</p></li>
 <li><p><strong>globalParameterStates</strong> (<em>pandas.DataFrame</em><em>, </em><em>default=None</em>) – A DataFrame containing context global parameters (column names) and sets of
 values thereof. If it is provided, then the potential energy will be
 reported for every state defined by these values.</p></li>

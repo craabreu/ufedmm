@@ -40,12 +40,6 @@
 <span class="sd">   :synopsis: Unified Free Energy Dynamics Outputs</span>
 
 <span class="sd">.. moduleauthor:: Charlles Abreu &lt;abreu@eq.ufrj.br&gt;</span>
-
-<span class="sd">.. _CustomCVForce:</span>
-<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html</span>
-<span class="sd">.. _StateDataReporter:</span>
-<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.StateDataReporter.html</span>
-
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span> <span class="nn">sys</span>
@@ -100,10 +94,10 @@
 <div class="viewcode-block" id="StateDataReporter">
 <a class="viewcode-back" href="../../pythonapi/io.html#ufedmm.io.StateDataReporter">[docs]</a>
 <span class="k">class</span> <span class="nc">StateDataReporter</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">StateDataReporter</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;An extension of OpenMM&#39;s StateDataReporter_ class, which outputs information</span>
-<span class="sd">    about a simulation, such as energy, temperature, etc.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;An extension of OpenMM&#39;s :OpenMMApp:`statedatareporter.StateDataReporter` class,</span>
+<span class="sd">    which outputs information about a simulation, such as energy, temperature, etc.</span>
 
-<span class="sd">    All original functionalities of StateDataReporter_ are preserved.</span>
+<span class="sd">    All original functionalities are preserved.</span>
 
 <span class="sd">    Besides, if it is added to an :class:`~ufedmm.ufedmm.ExtendedSpaceSimulation`</span>
 <span class="sd">    object, e.g. one created through the</span>
@@ -129,8 +123,8 @@
 <span class="sd">        hillHeights : bool, default=False</span>
 <span class="sd">            Whether to report the height of the latest deposited metadynamics hill.</span>
 <span class="sd">        collectiveVariables : bool, default=False</span>
-<span class="sd">            Whether to report the collective variables in all CustomCVForce_ objects in</span>
-<span class="sd">            the system.</span>
+<span class="sd">            Whether to report the collective variables in all :OpenMM:`CustomCVForce`</span>
+<span class="sd">            objects in the system.</span>
 <span class="sd">        globalParameterStates : pandas.DataFrame, default=None</span>
 <span class="sd">            A DataFrame containing context global parameters (column names) and sets of</span>
 <span class="sd">            values thereof. If it is provided, then the potential energy will be</span>

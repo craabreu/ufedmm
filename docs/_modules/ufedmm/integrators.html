@@ -40,20 +40,6 @@
 <span class="sd">   :synopsis: Unified Free Energy Dynamics Integrators</span>
 
 <span class="sd">.. moduleauthor:: Charlles Abreu &lt;abreu@eq.ufrj.br&gt;</span>
-
-<span class="sd">.. _Context:</span>
-<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html</span>
-<span class="sd">.. _CustomCVForce:</span>
-<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html</span>
-<span class="sd">.. _CustomIntegrator:</span>
-<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomIntegrator.html</span>
-<span class="sd">.. _Force:</span>
-<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Force.html</span>
-<span class="sd">.. _NonbondedForce:</span>
-<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html</span>
-<span class="sd">.. _System:</span>
-<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html</span>
-
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
@@ -66,14 +52,14 @@
 <div class="viewcode-block" id="add_inner_nonbonded_force">
 <a class="viewcode-back" href="../../pythonapi/integrators.html#ufedmm.integrators.add_inner_nonbonded_force">[docs]</a>
 <span class="k">def</span> <span class="nf">add_inner_nonbonded_force</span><span class="p">(</span><span class="n">system</span><span class="p">,</span> <span class="n">inner_switch</span><span class="p">,</span> <span class="n">inner_cutoff</span><span class="p">,</span> <span class="n">force_group_index</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;To a given OpenMM System_ containing a NonbondedForce_ object, this function adds</span>
-<span class="sd">    a new force group with the purpose of performing multiple time-scale integration</span>
-<span class="sd">    according to the RESPA2 splitting scheme of Morrone, Zhou, and Berne</span>
-<span class="sd">    :cite:`Morrone_2010`. Besides, it assigns the provided `force_group_index` to this</span>
-<span class="sd">    new group and `force_group_index+1` to the original NonbondedForce_. When used in</span>
-<span class="sd">    any instance of :class:`AbstractMiddleRespaIntegrator`, the new force group must be</span>
-<span class="sd">    identified as being embodied by the NonbondedForce_ as opposed to being</span>
-<span class="sd">    complimentary to it.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Adds a new force group to an :OpenMM:`System` containing a :OpenMM:`NonbondedForce`</span>
+<span class="sd">    object, with the purpose of performing multiple time-scale integration via the</span>
+<span class="sd">    RESPA2 splitting scheme of Morrone, Zhou, and Berne :cite:`Morrone_2010`. Also,</span>
+<span class="sd">    assigns the provided `force_group_index` to this new group and `force_group_index+1`</span>
+<span class="sd">    to the original :OpenMM:`NonbondedForce`. When used in an instance of any subclass</span>
+<span class="sd">    of :class:`AbstractMiddleRespaIntegrator`, the new force group must be set as</span>
+<span class="sd">    embodied by the :OpenMM:`NonbondedForce` as opposed to being complimentary to it.</span>
 
 <span class="sd">    .. warning:</span>
 <span class="sd">        The new force group is not intended to contribute to the system energy. Its sole</span>
@@ -84,7 +70,7 @@
 <span class="sd">    ----------</span>
 <span class="sd">        system : openmm.System</span>
 <span class="sd">            The system the inner force will be added to, which must contain a</span>
-<span class="sd">            NonbondedForce_.</span>
+<span class="sd">            :OpenMM:`NonbondedForce`.</span>
 <span class="sd">        inner_switch : float or unit.Quantity</span>
 <span class="sd">            The inner switching distance, where the interaction of an atom pair begins</span>
 <span class="sd">            to switch off to zero.</span>
@@ -92,8 +78,9 @@
 <span class="sd">            The inner cutoff distance, where the interaction of an atom pairs completely</span>
 <span class="sd">            switches off.</span>
 <span class="sd">        force_group_index : int</span>
-<span class="sd">            The force group the new interactions will belong to. The old NonbondedForce_</span>
-<span class="sd">            will be automatically assigned to `force_group_index+1`.</span>
+<span class="sd">            The force group the new interactions will belong to. The old</span>
+<span class="sd">            :OpenMM:`NonbondedForce` will be automatically assigned to</span>
+<span class="sd">            `force_group_index+1`.</span>
 
 <span class="sd">    Example</span>
 <span class="sd">    -------</span>
@@ -193,7 +180,7 @@
 <div class="viewcode-block" id="CustomIntegrator">
 <a class="viewcode-back" href="../../pythonapi/integrators.html#ufedmm.integrators.CustomIntegrator">[docs]</a>
 <span class="k">class</span> <span class="nc">CustomIntegrator</span><span class="p">(</span><span class="n">openmm</span><span class="o">.</span><span class="n">CustomIntegrator</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;An extension of OpenMM&#39;s CustomIntegrator_ class with an extra per-dof variable</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;An extension of :OpenMM:`CustomIntegrator` class with an extra per-dof variable</span>
 <span class="sd">    named `temperature`, whose content is the temperature of the heat bath associated to</span>
 <span class="sd">    each degree of freedom. A per-dof temperature is necessary if the extended-space</span>
 <span class="sd">    variables and the physical system are coupled adiabatically to thermostats at</span>

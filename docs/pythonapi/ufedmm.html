@@ -39,13 +39,13 @@
             
   <section id="module-ufedmm.ufedmm">
 <span id="ufedmm"></span><h1>ufedmm<a class="headerlink" href="#module-ufedmm.ufedmm" title="Link to this heading">¶</a></h1>
-<dl class="py class">
+<dl class="py class" id="module-ufedmm">
 <dt class="sig sig-object py" id="ufedmm.ufedmm.CollectiveVariable">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ufedmm.ufedmm.</span></span><span class="sig-name descname"><span class="pre">CollectiveVariable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#CollectiveVariable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ufedmm.CollectiveVariable" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>A function of the particle coordinates, evaluated by means of an OpenMM <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Force.html">Force</a>
+<p>A function of the particle coordinates, evaluated by means of an <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Force.html">openmm.Force</a>
 object.</p>
-<p>Quoting OpenMM’s <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html">CustomCVForce</a> manual entry:</p>
+<p>Quoting the manual entry for <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html">openmm.CustomCVForce</a>:</p>
 <blockquote>
 <div><p>“Each collective variable is defined by a Force object. The Force’s potential
 energy is computed, and that becomes the value of the variable. This provides
@@ -57,7 +57,7 @@ be used as a collective variable.”</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>id</strong> (<em>str</em>) – A valid identifier string for this collective variable.</p></li>
-<li><p><strong>force</strong> (<em>openmm.Force</em>) – An OpenMM <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Force.html">Force</a> object whose energy function is used to evaluate this
+<li><p><strong>force</strong> (<em>openmm.Force</em>) – An <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Force.html">openmm.Force</a> object whose energy function is used to evaluate this
 collective variable.</p></li>
 </ul>
 </dd>
@@ -230,14 +230,15 @@ given length of the simulation box in the x direction.</p>
 <dt class="sig sig-object py" id="ufedmm.ufedmm.ExtendedSpaceContext">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ufedmm.ufedmm.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">system</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ufedmm.ExtendedSpaceContext" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Context</span></code></p>
-<p>An extension of OpenMM’s <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html">Context</a> class.</p>
+<p>An extension of the <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html">openmm.Context</a> class.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>variables</strong> (<em>list</em><em>(</em><a class="reference internal" href="#ufedmm.ufedmm.DynamicalVariable" title="ufedmm.ufedmm.DynamicalVariable"><em>DynamicalVariable</em></a><em>)</em>) – The dynamical variables to be added to the system’s phase space.</p></li>
-<li><p><strong>system</strong> (<em>openmm.System</em>) – The <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html">System</a> which will be simulated</p></li>
-<li><p><strong>integrator</strong> (<em>openmm.Integrator</em>) – The <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Integrator.html">Integrator</a> which will be used to simulate the <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html">System</a>.</p></li>
-<li><p><strong>platform</strong> (<em>openmm.Platform</em>) – The <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Platform.html">Platform</a> to use for calculations.</p></li>
+<li><p><strong>system</strong> (<em>openmm.System</em>) – The <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html">openmm.System</a> which will be simulated</p></li>
+<li><p><strong>integrator</strong> (<em>openmm.Integrator</em>) – The <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Integrator.html">openmm.Integrator</a> which will be used to simulate the
+<a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html">openmm.System</a>.</p></li>
+<li><p><strong>platform</strong> (<em>openmm.Platform</em>) – The <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Platform.html">openmm.Platform</a> to use for calculations.</p></li>
 <li><p><strong>properties</strong> (<em>dict</em><em>(</em><em>str: str</em><em>)</em>) – A set of values for platform-specific properties. Keys are the property
 names.</p></li>
 </ul>
@@ -245,9 +246,9 @@ names.</p></li>
 <dt class="field-even">Variables<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
 <li><p><strong>variables</strong> (<em>list</em><em>(</em><a class="reference internal" href="#ufedmm.ufedmm.DynamicalVariable" title="ufedmm.ufedmm.DynamicalVariable"><em>DynamicalVariable</em></a><em>)</em>) – The dynamical variables added to the system’s phase space.</p></li>
-<li><p><strong>driving_forces</strong> (<em>list</em><em>[</em><em>openmm.CustomCVForce</em><em>]</em>) – A list of <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html">CustomCVForce</a> objects responsible for evaluating the potential
-energy terms which couples the extra dynamical variables to their associated
-collective variables.</p></li>
+<li><p><strong>driving_forces</strong> (<em>list</em><em>[</em><em>openmm.CustomCVForce</em><em>]</em>) – A list of <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html">openmm.CustomCVForce</a> objects responsible for evaluating the
+potential energy terms which couples the extra dynamical variables to their
+associated collective variables.</p></li>
 </ul>
 </dd>
 </dl>
@@ -329,13 +330,13 @@ with the distribution at its own specified temperature.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>variables</strong> (<em>list</em><em> of </em><a class="reference internal" href="#ufedmm.ufedmm.DynamicalVariable" title="ufedmm.ufedmm.DynamicalVariable"><em>DynamicalVariable</em></a>) – The dynamical variables to be added to the system’s phase space.</p></li>
 <li><p><strong>topology</strong> (<em>openmm.app.Topology</em>) – A Topology describing the system to be simulated.</p></li>
-<li><p><strong>system</strong> (<em>openmm.System</em>) – The OpenMM <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html">System</a> object to be simulated.</p></li>
+<li><p><strong>system</strong> (<em>openmm.System</em>) – The <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html">openmm.System</a> object to be simulated.</p></li>
 <li><p><strong>integrator</strong> (<em>openmm.Integrator</em>) – The OpenMM Integrator to use for simulating the system dynamics.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
-<li><p><strong>platform</strong> (<em>openmm.Platform</em><em>, </em><em>default=None</em>) – If not None, the OpenMM <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Platform.html">Platform</a> to use.</p></li>
+<li><p><strong>platform</strong> (<em>openmm.Platform</em><em>, </em><em>default=None</em>) – If not None, the <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Platform.html">openmm.Platform</a> to use.</p></li>
 <li><p><strong>platformProperties</strong> (<em>dict</em><em>, </em><em>default=None</em>) – If not None, a set of platform-specific properties to pass to the Context’s
 constructor.</p></li>
 </ul>
@@ -400,7 +401,7 @@ filename</p>
 <dt class="sig sig-object py" id="ufedmm.ufedmm.ExtendedSpaceState">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ufedmm.ufedmm.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceState</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceState"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ufedmm.ExtendedSpaceState" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">State</span></code></p>
-<p>An extension of OpenMM’s <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.State.html">State</a> class.</p>
+<p>An extension of the <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.State.html">openmm.State</a> class.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="ufedmm.ufedmm.ExtendedSpaceState.getDynamicalVariables">
 <span class="sig-name descname"><span class="pre">getDynamicalVariables</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceState.getDynamicalVariables"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ufedmm.ExtendedSpaceState.getDynamicalVariables" title="Link to this definition">¶</a></dt>
@@ -544,9 +545,9 @@ problems.</p></li>
 <p class="admonition-title">Warning</p>
 <p>If the temperature of any driving parameter is different from the
 particle-system temperature, then the passed integrator must be a
-<a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomIntegrator.html">CustomIntegrator</a> object containing a per-dof variable <cite>kT</cite> whose content is
-the Boltzmann constant times the temperature associated to each degree of
-freedom. This is true for all integrators available in
+<a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomIntegrator.html">openmm.CustomIntegrator</a> object containing a per-dof variable <cite>kT</cite> whose
+content is the Boltzmann constant times the temperature associated to each
+degree of freedom. This is true for all integrators available in
 <a class="reference internal" href="integrators.html#module-ufedmm.integrators" title="ufedmm.integrators"><code class="xref py py-mod docutils literal notranslate"><span class="pre">ufedmm.integrators</span></code></a>, which are subclasses of
 <a class="reference internal" href="integrators.html#ufedmm.integrators.CustomIntegrator" title="ufedmm.integrators.CustomIntegrator"><code class="xref py py-class docutils literal notranslate"><span class="pre">ufedmm.integrators.CustomIntegrator</span></code></a>.</p>
 </div>

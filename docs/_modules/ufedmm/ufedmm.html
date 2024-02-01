@@ -40,24 +40,6 @@
 <span class="sd">   :synopsis: Unified Free Energy Dynamics with OpenMM</span>
 
 <span class="sd">.. moduleauthor:: Charlles Abreu &lt;abreu@eq.ufrj.br&gt;</span>
-
-<span class="sd">.. _Context:</span>
-<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html</span>
-<span class="sd">.. _CustomCVForce:</span>
-<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html</span>
-<span class="sd">.. _CustomIntegrator:</span>
-<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomIntegrator.html</span>
-<span class="sd">.. _Force:</span>
-<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Force.html</span>
-<span class="sd">.. _Integrator:</span>
-<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Integrator.html</span>
-<span class="sd">.. _Platform:</span>
-<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Platform.html</span>
-<span class="sd">.. _System:</span>
-<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html</span>
-<span class="sd">.. _State:</span>
-<span class="sd">    http://docs.openmm.org/latest/api-python/generated/openmm.openmm.State.html</span>
-
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span> <span class="nn">functools</span>
@@ -123,10 +105,10 @@
 <div class="viewcode-block" id="CollectiveVariable">
 <a class="viewcode-back" href="../../pythonapi/ufedmm.html#ufedmm.ufedmm.CollectiveVariable">[docs]</a>
 <span class="k">class</span> <span class="nc">CollectiveVariable</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;A function of the particle coordinates, evaluated by means of an OpenMM Force_</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A function of the particle coordinates, evaluated by means of an :OpenMM:`Force`</span>
 <span class="sd">    object.</span>
 
-<span class="sd">    Quoting OpenMM&#39;s CustomCVForce_ manual entry:</span>
+<span class="sd">    Quoting the manual entry for :OpenMM:`CustomCVForce`:</span>
 
 <span class="sd">        &quot;Each collective variable is defined by a Force object. The Force&#39;s potential</span>
 <span class="sd">        energy is computed, and that becomes the value of the variable. This provides</span>
@@ -139,7 +121,7 @@
 <span class="sd">        id : str</span>
 <span class="sd">            A valid identifier string for this collective variable.</span>
 <span class="sd">        force : openmm.Force</span>
-<span class="sd">            An OpenMM Force_ object whose energy function is used to evaluate this</span>
+<span class="sd">            An :OpenMM:`Force` object whose energy function is used to evaluate this</span>
 <span class="sd">            collective variable.</span>
 
 <span class="sd">    Example</span>
@@ -792,7 +774,7 @@
 <div class="viewcode-block" id="ExtendedSpaceState">
 <a class="viewcode-back" href="../../pythonapi/ufedmm.html#ufedmm.ufedmm.ExtendedSpaceState">[docs]</a>
 <span class="k">class</span> <span class="nc">ExtendedSpaceState</span><span class="p">(</span><span class="n">openmm</span><span class="o">.</span><span class="n">State</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;An extension of OpenMM&#39;s State_ class.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;An extension of the :OpenMM:`State` class.&quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">variables</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span>
@@ -923,18 +905,19 @@
 <div class="viewcode-block" id="ExtendedSpaceContext">
 <a class="viewcode-back" href="../../pythonapi/ufedmm.html#ufedmm.ufedmm.ExtendedSpaceContext">[docs]</a>
 <span class="k">class</span> <span class="nc">ExtendedSpaceContext</span><span class="p">(</span><span class="n">openmm</span><span class="o">.</span><span class="n">Context</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;An extension of OpenMM&#39;s Context_ class.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;An extension of the :OpenMM:`Context` class.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">        variables : list(DynamicalVariable)</span>
 <span class="sd">            The dynamical variables to be added to the system&#39;s phase space.</span>
 <span class="sd">        system : openmm.System</span>
-<span class="sd">            The System_ which will be simulated</span>
+<span class="sd">            The :OpenMM:`System` which will be simulated</span>
 <span class="sd">        integrator : openmm.Integrator</span>
-<span class="sd">            The Integrator_ which will be used to simulate the System_.</span>
+<span class="sd">            The :OpenMM:`Integrator` which will be used to simulate the</span>
+<span class="sd">            :OpenMM:`System`.</span>
 <span class="sd">        platform : openmm.Platform</span>
-<span class="sd">            The Platform_ to use for calculations.</span>
+<span class="sd">            The :OpenMM:`Platform` to use for calculations.</span>
 <span class="sd">        properties : dict(str: str)</span>
 <span class="sd">            A set of values for platform-specific properties. Keys are the property</span>
 <span class="sd">            names.</span>
@@ -944,9 +927,9 @@
 <span class="sd">        variables : list(DynamicalVariable)</span>
 <span class="sd">            The dynamical variables added to the system&#39;s phase space.</span>
 <span class="sd">        driving_forces : list[openmm.CustomCVForce]</span>
-<span class="sd">            A list of CustomCVForce_ objects responsible for evaluating the potential</span>
-<span class="sd">            energy terms which couples the extra dynamical variables to their associated</span>
-<span class="sd">            collective variables.</span>
+<span class="sd">            A list of :OpenMM:`CustomCVForce` objects responsible for evaluating the</span>
+<span class="sd">            potential energy terms which couples the extra dynamical variables to their</span>
+<span class="sd">            associated collective variables.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">variables</span><span class="p">,</span> <span class="n">system</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -1147,14 +1130,14 @@
 <span class="sd">        topology : openmm.app.Topology</span>
 <span class="sd">            A Topology describing the system to be simulated.</span>
 <span class="sd">        system : openmm.System</span>
-<span class="sd">            The OpenMM System_ object to be simulated.</span>
+<span class="sd">            The :OpenMM:`System` object to be simulated.</span>
 <span class="sd">        integrator : openmm.Integrator</span>
 <span class="sd">            The OpenMM Integrator to use for simulating the system dynamics.</span>
 
 <span class="sd">    Keyword Args</span>
 <span class="sd">    ------------</span>
 <span class="sd">        platform : openmm.Platform, default=None</span>
-<span class="sd">            If not None, the OpenMM Platform_ to use.</span>
+<span class="sd">            If not None, the :OpenMM:`Platform` to use.</span>
 <span class="sd">        platformProperties : dict, default=None</span>
 <span class="sd">            If not None, a set of platform-specific properties to pass to the Context&#39;s</span>
 <span class="sd">            constructor.</span>
@@ -1374,9 +1357,9 @@
 <span class="sd">        .. warning::</span>
 <span class="sd">            If the temperature of any driving parameter is different from the</span>
 <span class="sd">            particle-system temperature, then the passed integrator must be a</span>
-<span class="sd">            CustomIntegrator_ object containing a per-dof variable `kT` whose content is</span>
-<span class="sd">            the Boltzmann constant times the temperature associated to each degree of</span>
-<span class="sd">            freedom. This is true for all integrators available in</span>
+<span class="sd">            :OpenMM:`CustomIntegrator` object containing a per-dof variable `kT` whose</span>
+<span class="sd">            content is the Boltzmann constant times the temperature associated to each</span>
+<span class="sd">            degree of freedom. This is true for all integrators available in</span>
 <span class="sd">            :mod:`ufedmm.integrators`, which are subclasses of</span>
 <span class="sd">            :class:`ufedmm.integrators.CustomIntegrator`.</span>
 

@@ -39,7 +39,7 @@
             
   <section id="module-ufedmm.integrators">
 <span id="integrators"></span><h1>integrators<a class="headerlink" href="#module-ufedmm.integrators" title="Link to this heading">¶</a></h1>
-<dl class="py class">
+<dl class="py class" id="module-integrators">
 <dt class="sig sig-object py" id="ufedmm.integrators.AbstractMiddleRespaIntegrator">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ufedmm.integrators.</span></span><span class="sig-name descname"><span class="pre">AbstractMiddleRespaIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">step_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_rattles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scheme</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'VV-Middle'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">respa_loops</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[1]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bath_loops</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">intertwine</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">embodied_force_groups</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unroll_loops</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/integrators.html#AbstractMiddleRespaIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.integrators.AbstractMiddleRespaIntegrator" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#ufedmm.integrators.CustomIntegrator" title="ufedmm.integrators.CustomIntegrator"><code class="xref py py-class docutils literal notranslate"><span class="pre">CustomIntegrator</span></code></a></p>
@@ -189,7 +189,7 @@ steps.</p></li>
 <dt class="sig sig-object py" id="ufedmm.integrators.CustomIntegrator">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ufedmm.integrators.</span></span><span class="sig-name descname"><span class="pre">CustomIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">step_size</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/integrators.html#CustomIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.integrators.CustomIntegrator" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">CustomIntegrator</span></code></p>
-<p>An extension of OpenMM’s <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomIntegrator.html">CustomIntegrator</a> class with an extra per-dof variable
+<p>An extension of <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomIntegrator.html">openmm.CustomIntegrator</a> class with an extra per-dof variable
 named <cite>temperature</cite>, whose content is the temperature of the heat bath associated to
 each degree of freedom. A per-dof temperature is necessary if the extended-space
 variables and the physical system are coupled adiabatically to thermostats at
@@ -465,25 +465,25 @@ fully-regulated version.</p></li>
 <dl class="py function">
 <dt class="sig sig-object py" id="ufedmm.integrators.add_inner_nonbonded_force">
 <span class="sig-prename descclassname"><span class="pre">ufedmm.integrators.</span></span><span class="sig-name descname"><span class="pre">add_inner_nonbonded_force</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">system</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inner_switch</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inner_cutoff</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_group_index</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/integrators.html#add_inner_nonbonded_force"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.integrators.add_inner_nonbonded_force" title="Link to this definition">¶</a></dt>
-<dd><p>To a given OpenMM <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html">System</a> containing a <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html">NonbondedForce</a> object, this function adds
-a new force group with the purpose of performing multiple time-scale integration
-according to the RESPA2 splitting scheme of Morrone, Zhou, and Berne
-<span id="id13">[<a class="reference internal" href="../references.html#id29" title="Joseph A. Morrone, Ruhong Zhou, and B. J. Berne. Molecular dynamics with multiple time scales: how to avoid pitfalls. Journal of Chemical Theory and Computation, 6(6):1798–1804, may 2010. doi:10.1021/ct100054k.">10</a>]</span>. Besides, it assigns the provided <cite>force_group_index</cite> to this
-new group and <cite>force_group_index+1</cite> to the original <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html">NonbondedForce</a>. When used in
-any instance of <a class="reference internal" href="#ufedmm.integrators.AbstractMiddleRespaIntegrator" title="ufedmm.integrators.AbstractMiddleRespaIntegrator"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractMiddleRespaIntegrator</span></code></a>, the new force group must be
-identified as being embodied by the <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html">NonbondedForce</a> as opposed to being
-complimentary to it.</p>
+<dd><p>Adds a new force group to an <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html">openmm.System</a> containing a <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html">openmm.NonbondedForce</a>
+object, with the purpose of performing multiple time-scale integration via the
+RESPA2 splitting scheme of Morrone, Zhou, and Berne <span id="id13">[<a class="reference internal" href="../references.html#id29" title="Joseph A. Morrone, Ruhong Zhou, and B. J. Berne. Molecular dynamics with multiple time scales: how to avoid pitfalls. Journal of Chemical Theory and Computation, 6(6):1798–1804, may 2010. doi:10.1021/ct100054k.">10</a>]</span>. Also,
+assigns the provided <cite>force_group_index</cite> to this new group and <cite>force_group_index+1</cite>
+to the original <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html">openmm.NonbondedForce</a>. When used in an instance of any subclass
+of <a class="reference internal" href="#ufedmm.integrators.AbstractMiddleRespaIntegrator" title="ufedmm.integrators.AbstractMiddleRespaIntegrator"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractMiddleRespaIntegrator</span></code></a>, the new force group must be set as
+embodied by the <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html">openmm.NonbondedForce</a> as opposed to being complimentary to it.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>system</strong> (<em>openmm.System</em>) – The system the inner force will be added to, which must contain a
-<a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html">NonbondedForce</a>.</p></li>
+<a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html">openmm.NonbondedForce</a>.</p></li>
 <li><p><strong>inner_switch</strong> (<em>float</em><em> or </em><em>unit.Quantity</em>) – The inner switching distance, where the interaction of an atom pair begins
 to switch off to zero.</p></li>
 <li><p><strong>inner_cutoff</strong> (<em>float</em><em> or </em><em>unit.Quantity</em>) – The inner cutoff distance, where the interaction of an atom pairs completely
 switches off.</p></li>
-<li><p><strong>force_group_index</strong> (<em>int</em>) – The force group the new interactions will belong to. The old <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html">NonbondedForce</a>
-will be automatically assigned to <cite>force_group_index+1</cite>.</p></li>
+<li><p><strong>force_group_index</strong> (<em>int</em>) – The force group the new interactions will belong to. The old
+<a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.NonbondedForce.html">openmm.NonbondedForce</a> will be automatically assigned to
+<cite>force_group_index+1</cite>.</p></li>
 </ul>
 </dd>
 </dl>
