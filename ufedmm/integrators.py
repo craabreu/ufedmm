@@ -972,3 +972,59 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
         self.addComputePerDof("v_eta", Ornstein_Uhlenbeck)
         self.addComputePerDof("v", scaling)
         self._split and self.addComputePerDof("v_eta", boost)
+
+
+class HybridLangevinNHCIntegrator(CustomIntegrator):
+    def __init__(self, temperature, time_constant, friction_coefficient, step_size):
+        super().__init__(temperature, step_size)
+        if unit.is_quantity(time_constant):
+            self._tau = time_constant.value_in_unit(unit.picoseconds)
+        else:
+            self._tau = time_constant
+        self.addPerDofVariable("kTs", 0)
+        self.addPerDofVariable("Q", 0)
+        self.addPerDofVariable("invQ", 0)
+        self.addPerDofVariable("v1", friction_coefficient)
+        self.addPerDofVariable("v2", 0)
+        self.addPerDofVariable("x0", 0)
+
+        self.addUpdateContextState()
+        self.addComputePerDof("v", "v + dt*f/m")
+        self.addConstrainVelocities()
+        self.addComputePerDof("x", "x + 0.5*dt*v")
+        self.addComputePerDof("v2", "v2 + 0.5*dt*(Q*v1^2 - kTs)*invQ")
+        self.addComputePerDof(
+            "v1", "(v1*z + 0.5*dt*(m*v^2 - kTs)*invQ)*z; z=exp(-0.25*dt*v2)"
+        )
+        self.addComputePerDof(
+            "v", "z*v + sqrt((1 - z*z)*kT/m)*gaussian; z = exp(-dt*v1)"
+        )
+        self.addComputePerDof(
+            "v1", "(v1*z + 0.5*dt*(m*v^2 - kTs)*invQ)*z; z=exp(-0.25*dt*v2)"
+        )
+        self.addComputePerDof("v2", "v2 + 0.5*dt*(Q*v1^2 - kTs)*invQ")
+        self.addComputePerDof("x", "x + 0.5*dt*v")
+        self.addComputePerDof("x0", "x")
+        self.addConstrainPositions()
+        self.addComputePerDof("v", "v + (x - x0)/dt")
+
+    def update_temperatures(self, temp, dv_temps):
+        super().update_temperatures(temp, dv_temps)
+        vars = {
+            name: self.getPerDofVariableByName(name)
+            for name in ("kT", "kTs", "Q", "invQ", "v1", "v2")
+        }
+        num_total = len(vars["kT"])
+        num_atoms = num_total - len(dv_temps)
+        zero = openmm.Vec3(0, 0, 0)
+        one = openmm.Vec3(1, 0, 0)
+        for i in range(num_atoms, num_total):
+            kTs = vars["kT"][i].x
+            mass = kTs * self._tau**2
+            vars["kT"][i] = zero
+            vars["kTs"][i] = one * kTs
+            vars["Q"][i] = one * mass
+            vars["invQ"][i] = one / mass
+            vars["v1"][i] = one / self._tau
+        for name, var in vars.items():
+            self.setPerDofVariableByName(name, var)
