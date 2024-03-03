@@ -981,10 +981,12 @@ class HybridLangevinNHCIntegrator(CustomIntegrator):
             self._tau = time_constant.value_in_unit(unit.picoseconds)
         else:
             self._tau = time_constant
-        self.addPerDofVariable("kTs", 0)
+        self.addGlobalVariable("friction", friction_coefficient)
+        self.addPerDofVariable("atom", 1)
+        self.addPerDofVariable("dv", 0)
         self.addPerDofVariable("Q", 0)
         self.addPerDofVariable("invQ", 0)
-        self.addPerDofVariable("v1", friction_coefficient)
+        self.addPerDofVariable("v1", 0)
         self.addPerDofVariable("v2", 0)
         self.addPerDofVariable("x0", 0)
 
@@ -992,17 +994,23 @@ class HybridLangevinNHCIntegrator(CustomIntegrator):
         self.addComputePerDof("v", "v + dt*f/m")
         self.addConstrainVelocities()
         self.addComputePerDof("x", "x + 0.5*dt*v")
-        self.addComputePerDof("v2", "v2 + 0.5*dt*(Q*v1^2 - kTs)*invQ")
+
+        # NHC for the dynamical variables:
+        self.addComputePerDof("v2", "v2 + 0.5*dt*(Q*v1^2 - kT)*invQ*dv")
         self.addComputePerDof(
-            "v1", "(v1*z + 0.5*dt*(m*v^2 - kTs)*invQ)*z; z=exp(-0.25*dt*v2)"
+            "v1", "(v1*z + 0.5*dt*(m*v^2 - kT)*invQ*dv)*z; z=exp(-0.25*dt*v2)"
         )
+        self.addComputePerDof("v", "v*exp(-dt*v1)")
         self.addComputePerDof(
-            "v", "z*v + sqrt((1 - z*z)*kT/m)*gaussian; z = exp(-dt*v1)"
+            "v1", "(v1*z + 0.5*dt*(m*v^2 - kT)*invQ*dv)*z; z=exp(-0.25*dt*v2)"
         )
+        self.addComputePerDof("v2", "v2 + 0.5*dt*(Q*v1^2 - kT)*invQ*dv")
+
+        # Langevin for the atoms:
         self.addComputePerDof(
-            "v1", "(v1*z + 0.5*dt*(m*v^2 - kTs)*invQ)*z; z=exp(-0.25*dt*v2)"
+            "v", "z*v + sqrt(atom*(1 - z*z)*kT/m)*gaussian; z = exp(-dt*friction*atom)"
         )
-        self.addComputePerDof("v2", "v2 + 0.5*dt*(Q*v1^2 - kTs)*invQ")
+
         self.addComputePerDof("x", "x + 0.5*dt*v")
         self.addComputePerDof("x0", "x")
         self.addConstrainPositions()
@@ -1010,21 +1018,21 @@ class HybridLangevinNHCIntegrator(CustomIntegrator):
 
     def update_temperatures(self, temp, dv_temps):
         super().update_temperatures(temp, dv_temps)
-        vars = {
-            name: self.getPerDofVariableByName(name)
-            for name in ("kT", "kTs", "Q", "invQ", "v1", "v2")
-        }
-        num_total = len(vars["kT"])
+        kT = self.getPerDofVariableByName("kT")
+        num_total = len(kT)
         num_atoms = num_total - len(dv_temps)
         zero = openmm.Vec3(0, 0, 0)
         one = openmm.Vec3(1, 0, 0)
+        vars = {
+            name: self.getPerDofVariableByName(name)
+            for name in ("atom", "dv", "Q", "invQ", "v1", "v2")
+        }
         for i in range(num_atoms, num_total):
-            kTs = vars["kT"][i].x
-            mass = kTs * self._tau**2
-            vars["kT"][i] = zero
-            vars["kTs"][i] = one * kTs
+            mass = kT[i].x * self._tau**2
+            vars["atom"][i] = zero
+            vars["dv"][i] = one
             vars["Q"][i] = one * mass
             vars["invQ"][i] = one / mass
-            vars["v1"][i] = one / self._tau
+            vars["v1"][i] = vars["v2"][i] = one / self._tau
         for name, var in vars.items():
             self.setPerDofVariableByName(name, var)

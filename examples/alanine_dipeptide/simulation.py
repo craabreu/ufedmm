@@ -14,11 +14,11 @@ parser.add_argument('--platform', dest='platform', help='the computation platfor
 args = parser.parse_args()
 
 seed = random.SystemRandom().randint(0, 2**31) if args.seed is None else args.seed
-model = ufedmm.AlanineDipeptideModel(force_field=args.ff, water=args.water, constraints=None)
+model = ufedmm.AlanineDipeptideModel(force_field=args.ff, water=args.water, constraints=openmm.app.HBonds)
 temp = 300*unit.kelvin
 gamma = 10/unit.picoseconds
-dt = 2*unit.femtoseconds
-nsteps = 1000000
+dt = 4*unit.femtoseconds
+nsteps = 100000
 mass = 30*unit.dalton*(unit.nanometer/unit.radians)**2
 Ks = 1000*unit.kilojoules_per_mole/unit.radians**2
 Ts = 1500*unit.kelvin
@@ -32,7 +32,9 @@ ufed = ufedmm.UnifiedFreeEnergyDynamics([s_phi, s_psi], temp, height, deposition
 ufedmm.serialize(ufed, 'ufed_object.yml')
 # integrator = ufedmm.GeodesicLangevinIntegrator(temp, gamma, dt)
 # integrator = ufedmm.MiddleMassiveNHCIntegrator(temp, 1/gamma, dt)
-integrator = ufedmm.MiddleMassiveGGMTIntegrator(temp, 1/gamma, dt)
+# integrator = ufedmm.MiddleMassiveGGMTIntegrator(temp, 1/gamma, dt, bath_loops=8)
+integrator = ufedmm.integrators.HybridLangevinNHCIntegrator(temp, 1/gamma, gamma, dt)
+# integrator = ufedmm.integrators.HybridLangevinGGMTIntegrator(temp, 1/gamma, gamma, dt)
 
 integrator.setRandomNumberSeed(seed)
 print(integrator)
