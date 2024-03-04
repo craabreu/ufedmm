@@ -1039,13 +1039,15 @@ class HybridLangevinNHCIntegrator(CustomIntegrator):
 
 class HybridLangevinGGMTIntegrator(CustomIntegrator):
     def __init__(
-        self, temperature, time_constant, friction_coefficient, step_size, inner_steps=8
+        self,
+        temperature,
+        time_constant,
+        friction_coefficient,
+        step_size,
+        inner_steps=None,
     ):
         super().__init__(temperature, step_size)
-        if unit.is_quantity(time_constant):
-            self._tau = time_constant.value_in_unit(unit.picoseconds)
-        else:
-            self._tau = time_constant
+        self._tau = _standardized(time_constant)
         self.addGlobalVariable("friction", friction_coefficient)
         self.addPerDofVariable("atom", 1)
         self.addPerDofVariable("invQ1", 0)
@@ -1054,49 +1056,33 @@ class HybridLangevinGGMTIntegrator(CustomIntegrator):
         self.addPerDofVariable("v2", 0)
         self.addPerDofVariable("x0", 0)
 
+        n = inner_steps or round(2000 * _standardized(step_size))  # inner_dt ~ 0.5 fs
+
+        definitions = (f"c = {0.5/n}*dt*invQ2", "x0 = 3*kT/(m*v^2)")
+        x_steps = [f"x{1+i} = x{i} + {0.5/n}*dt*v{3+i}" for i in range(n)]
+        v_steps = [
+            f"v{3+i} = v{2+i} + (3/x{i}^2 - 1)*c" + "/2" * (i == 0) for i in range(n)
+        ]
+        sep = ";\n" + 6 * " "
+        ggmt_steps = sep.join(reversed(definitions + sum(zip(v_steps, x_steps), ())))
+
         self.addUpdateContextState()
         self.addComputePerDof("v", "v + dt*f/m")
         self.addConstrainVelocities()
         self.addComputePerDof("x", "x + 0.5*dt*v")
-
-        self.addComputePerDof("v1", "v1 + 0.5*dt*(m*v^2 - kT)*invQ1")
         self.addComputePerDof("v", "v*exp(-0.5*dt*(v1 + kT*v2))")
-
-        self.addComputePerDof("x0", "3*kT/(m*v^2)")
-
-        n = inner_steps
-        fraction = 1 / n
-        steps = [
-            f"v3 = v2 + {0.25*fraction}*dt*(3/x0^2 - 1)*invQ2",
-            f"x1 = x0 + {0.5*fraction}*dt*v3",
-        ]
-        for i in range(1, n):
-            steps.extend(
-                [
-                    f"v{3+i} = v{2+i} + {0.5*fraction}*dt*(3/x{i}^2 - 1)*invQ2",
-                    f"x{1+i} = x{i} + {0.5*fraction}*dt*v{3+i}",
-                ]
-            )
-
+        self.addComputePerDof("v1", "v1 + 0.5*dt*(m*v^2/kT - 1)*invQ1")
         self.addComputePerDof(
-            "v", ";\n".join([f"(2*step(v)-1)*sqrt(3*kT/(m*x{n}))", *reversed(steps)])
+            "v2", f"v{2+n} + (3/x{n}^2 - 1)*c/2" + sep + ggmt_steps
         )
-
         self.addComputePerDof(
-            "v2",
-            ";\n".join(
-                [f"v{2+n} + {0.25*fraction}*dt*(3/x{n}^2 - 1)*invQ2", *reversed(steps)]
-            ),
+            "v", f"(2*step(v) - 1)*sqrt(3*kT/(m*x{n}))" + sep + ggmt_steps
         )
-
+        self.addComputePerDof("v1", "v1 + 0.5*dt*(m*v^2/kT - 1)*invQ1")
         self.addComputePerDof("v", "v*exp(-0.5*dt*(v1 + kT*v2))")
-        self.addComputePerDof("v1", "v1 + 0.5*dt*(m*v^2 - kT)*invQ1")
-
         self.addComputePerDof(
             "v", "z*v + sqrt(atom*(1 - z*z)*kT/m)*gaussian; z = exp(-dt*friction*atom)"
         )
-
-        # self.addComputePerDof("x", "x + 0.5*dt*v*atom")
         self.addComputePerDof("x", "x + 0.5*dt*v")
         self.addComputePerDof("x0", "x")
         self.addConstrainPositions()
@@ -1114,11 +1100,11 @@ class HybridLangevinGGMTIntegrator(CustomIntegrator):
             for name in ("atom", "invQ1", "invQ2", "v1", "v2")
         }
         for i in range(num_atoms, num_total):
-            Q1 = kT[i].x * self._tau**2
-            Q2 = 8 * Q1 / 3
+            invQ1 = 1 / self._tau**2
+            invQ2 = 3 / (8 * kT[i].x * self._tau**2)
             vars["atom"][i] = zero
-            vars["invQ1"][i] = one / Q1
-            vars["invQ2"][i] = one / Q2
+            vars["invQ1"][i] = one * invQ1
+            vars["invQ2"][i] = one * invQ2
             vars["v1"][i] = vars["v2"][i] = one / self._tau
         for name, var in vars.items():
             self.setPerDofVariableByName(name, var)
