@@ -975,13 +975,32 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
 
 
 class HybridLangevinGGMTIntegrator(CustomIntegrator):
+    """
+    A custom integrator that applies the Geodesic Langevin method to the physical
+    degrees of freedom and the Generalized Gaussian Moment Thermostat to the extended
+    phase-space variables.
+
+    Parameters
+    ----------
+        temperature : float or unit.Quantity
+            The temperature of the system.
+        time_constant : float or unit.Quantity
+            The characteristic time constant of the GGMT thermostat.
+        friction_coefficient : float or unit.Quantity
+            The friction coefficient for the Langevin dynamics.
+        step_size : float or unit.Quantity
+            The integration step size.
+        inner_step_size : float or unit.Quantity, default=0.5*unit.femtoseconds
+            The integration step size for the GGMT thermostat.
+    """
+
     def __init__(
         self,
         temperature,
         time_constant,
         friction_coefficient,
         step_size,
-        inner_steps=None,
+        inner_step_size=0.5 * unit.femtoseconds,
     ):
         super().__init__(temperature, step_size)
         self._tau = _standardized(time_constant)
@@ -993,7 +1012,7 @@ class HybridLangevinGGMTIntegrator(CustomIntegrator):
         self.addPerDofVariable("v2", 0)
         self.addPerDofVariable("x0", 0)
 
-        n = inner_steps or round(2000 * _standardized(step_size))  # inner_dt ~ 0.5 fs
+        n = max(1, round(_standardized(step_size / inner_step_size)))
 
         definitions = (f"c = {0.5/n}*dt*invQ2", "x0 = 3*kT/(m*v^2)")
         x_steps = [f"x{1+i} = x{i} + {0.5/n}*dt*v{3+i}" for i in range(n)]
