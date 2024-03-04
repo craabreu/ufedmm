@@ -774,7 +774,7 @@ class ExtendedSpaceState(openmm.State):
         positions, xvars = self._split(all_positions, asNumpy)
         return (positions, xvars) if extended else positions
 
-    def getVelocities(self, asNumpy=False, extended=False):
+    def getVelocities(self, asNumpy=False, extended=False, split=True):
         """Gets the velocities of all physical particles and optionally also gets the
         velocities of the extra particles associated to the extended- space dynamical
         variables.
@@ -785,6 +785,9 @@ class ExtendedSpaceState(openmm.State):
                 Whether to return Numpy arrays instead of lists of openmm.Vec3.
             extended : bool, default=False
                 Whether to include the velocities of the extra particles.
+            split : bool, default=True
+                Whether to return the velocities of the physical particles and the
+                velocities of the extra particles separately.
 
         Returns
         -------
@@ -802,10 +805,11 @@ class ExtendedSpaceState(openmm.State):
             Exception
                 If velocities were not requested in the ``context.getState()`` call.
         """
-        velocities = super().getVelocities(asNumpy)
-        if not extended:
-            velocities, _ = self._split(velocities, asNumpy)
-        return velocities
+        all_velocities = super().getVelocities(asNumpy)
+        if extended and not split:
+            return all_velocities
+        velocities, vvars = self._split(all_velocities, asNumpy)
+        return (velocities, vvars) if extended else velocities
 
     def getDynamicalVariables(self):
         """Gets the values of the extended-space dynamical variables.
@@ -1035,8 +1039,12 @@ class ExtendedSpaceContext(openmm.Context):
             + [v.temperature for v in self.variables]
         )
         sigma = np.sqrt(_standardized(unit.MOLAR_GAS_CONSTANT_R) * T / m)
-        random_state = np.random.RandomState(randomSeed)
-        velocities = sigma[:, np.newaxis] * random_state.normal(0, 1, (Ntotal, 3))
+        random = np.random.RandomState(randomSeed)
+        velocities = sigma[:, None] * random.normal(0, 1, (Ntotal, 3))
+        vcm = np.sum(m[:Natoms, None] * velocities[:Natoms], axis=0) / m[:Natoms].sum()
+        velocities[:Natoms] -= vcm
+        for i in range(Natoms, Ntotal):
+            velocities[i][1:] = 0
         super().setVelocities(velocities)
 
 
