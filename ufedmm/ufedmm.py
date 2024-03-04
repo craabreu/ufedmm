@@ -774,7 +774,7 @@ class ExtendedSpaceState(openmm.State):
         positions, xvars = self._split(all_positions, asNumpy)
         return (positions, xvars) if extended else positions
 
-    def getVelocities(self, asNumpy=False, extended=False):
+    def getVelocities(self, asNumpy=False, extended=False, split=True):
         """Gets the velocities of all physical particles and optionally also gets the
         velocities of the extra particles associated to the extended- space dynamical
         variables.
@@ -785,6 +785,9 @@ class ExtendedSpaceState(openmm.State):
                 Whether to return Numpy arrays instead of lists of openmm.Vec3.
             extended : bool, default=False
                 Whether to include the velocities of the extra particles.
+            split : bool, default=True
+                Whether to return the velocities of the physical particles and the
+                velocities of the extra particles separately.
 
         Returns
         -------
@@ -802,10 +805,11 @@ class ExtendedSpaceState(openmm.State):
             Exception
                 If velocities were not requested in the ``context.getState()`` call.
         """
-        velocities = super().getVelocities(asNumpy)
-        if not extended:
-            velocities, _ = self._split(velocities, asNumpy)
-        return velocities
+        all_velocities = super().getVelocities(asNumpy)
+        if extended and not split:
+            return all_velocities
+        velocities, vvars = self._split(all_velocities, asNumpy)
+        return (velocities, vvars) if extended else velocities
 
     def getDynamicalVariables(self):
         """Gets the values of the extended-space dynamical variables.
@@ -1026,17 +1030,35 @@ class ExtendedSpaceContext(openmm.Context):
             randomSeed : int, default=None
                 A seed for the random number generator.
         """
+        temperature = _standardized(temperature)
         system = self.getSystem()
         Ntotal = system.getNumParticles()
         Natoms = Ntotal - len(self.variables)
-        m = np.array([system.getParticleMass(i) / unit.dalton for i in range(Ntotal)])
-        T = np.array(
-            [_standardized(temperature)] * Natoms
-            + [v.temperature for v in self.variables]
+        masses = np.array(
+            [system.getParticleMass(i) / unit.dalton for i in range(Ntotal)]
         )
-        sigma = np.sqrt(_standardized(unit.MOLAR_GAS_CONSTANT_R) * T / m)
-        random_state = np.random.RandomState(randomSeed)
-        velocities = sigma[:, np.newaxis] * random_state.normal(0, 1, (Ntotal, 3))
+        temperatures = np.array(
+            [temperature] * Natoms + [v.temperature for v in self.variables]
+        )
+        kboltz = _standardized(unit.MOLAR_GAS_CONSTANT_R)
+        sigmas = np.sqrt(kboltz * temperatures / masses)[:, None]
+        random = np.random.RandomState(randomSeed)
+        velocities = sigmas * random.normal(0, 1, (Ntotal, 3))
+
+        total_mass = masses.sum()
+        vcm = np.sum(masses[:Natoms, None] * velocities[:Natoms], axis=0) / total_mass
+        velocities[:Natoms] -= vcm
+        num_constraints = system.getNumConstraints()
+        two_ke = np.sum(masses[:Natoms] * np.sum(velocities[:Natoms] ** 2, axis=1))
+        target_two_ke = (3 * Natoms - num_constraints) * kboltz * temperature
+        velocities[:Natoms] *= np.sqrt(target_two_ke / two_ke)
+
+        for i, v in enumerate(self.variables, start=Natoms):
+            two_ke = masses[i] * velocities[i][0] ** 2
+            target_two_ke = kboltz * v.temperature
+            velocities[i][0] *= np.sqrt(target_two_ke / two_ke)
+            velocities[i][1:] = 0
+
         super().setVelocities(velocities)
 
 

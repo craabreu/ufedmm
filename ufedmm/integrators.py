@@ -213,7 +213,7 @@ class CustomIntegrator(openmm.CustomIntegrator):
         )
         temperatures = [system_temperature] * nparticles + extended_space_temperatures
         kT = [
-            unit.MOLAR_GAS_CONSTANT_R * T * openmm.Vec3(1, 1, 1) for T in temperatures
+            unit.MOLAR_GAS_CONSTANT_R * T * openmm.Vec3(1, 0, 0) for T in temperatures
         ]
         self.setPerDofVariableByName("kT", kT)
         self._up_to_date = True
