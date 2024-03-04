@@ -49,7 +49,6 @@ ufedmm.serialize(ufed, "ufed_object.yml")
 # integrator = ufedmm.GeodesicLangevinIntegrator(temp, gamma, dt)
 # integrator = ufedmm.MiddleMassiveNHCIntegrator(temp, 1/gamma, dt)
 # integrator = ufedmm.MiddleMassiveGGMTIntegrator(temp, 1 / gamma, dt, bath_loops=8)
-# integrator = ufedmm.integrators.HybridLangevinNHCIntegrator(temp, 1/gamma, gamma, dt)
 integrator = ufedmm.integrators.HybridLangevinGGMTIntegrator(temp, 1/gamma, gamma, dt)
 
 integrator.setRandomNumberSeed(seed)
