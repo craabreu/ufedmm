@@ -1063,6 +1063,7 @@ class HybridLangevinGGMTIntegrator(CustomIntegrator):
         v_steps = [
             f"v{3+i} = v{2+i} + (3/x{i}^2 - 1)*c" + "/2" * (i == 0) for i in range(n)
         ]
+        sum_inv_x = "+".join(("0.5/x0", *(f"1/x{i}" for i in range(1, n)), f"0.5/x{n}"))
         sep = ";\n" + 6 * " "
         ggmt_steps = sep.join(reversed(definitions + sum(zip(v_steps, x_steps), ())))
 
@@ -1071,14 +1072,16 @@ class HybridLangevinGGMTIntegrator(CustomIntegrator):
         self.addConstrainVelocities()
         self.addComputePerDof("x", "x + 0.5*dt*v")
         self.addComputePerDof("v", "v*exp(-0.5*dt*(v1 + kT*v2))")
-        self.addComputePerDof("v1", "v1 + 0.5*dt*(m*v^2/kT - 1)*invQ1")
         self.addComputePerDof(
-            "v2", f"v{2+n} + (3/x{n}^2 - 1)*c/2" + sep + ggmt_steps
+            "v1",
+            f"v1 + 0.5*dt*(3*invx - 1)*invQ1"
+            f"{sep}invx = ({sum_inv_x})/{n}"
+            f"{sep}{ggmt_steps}",
         )
+        self.addComputePerDof("v2", f"v{2+n} + (3/x{n}^2 - 1)*c/2{sep}{ggmt_steps}")
         self.addComputePerDof(
-            "v", f"(2*step(v) - 1)*sqrt(3*kT/(m*x{n}))" + sep + ggmt_steps
+            "v", f"(2*step(v) - 1)*sqrt(3*kT/(m*x{n})){sep}{ggmt_steps}"
         )
-        self.addComputePerDof("v1", "v1 + 0.5*dt*(m*v^2/kT - 1)*invQ1")
         self.addComputePerDof("v", "v*exp(-0.5*dt*(v1 + kT*v2))")
         self.addComputePerDof(
             "v", "z*v + sqrt(atom*(1 - z*z)*kT/m)*gaussian; z = exp(-dt*friction*atom)"
