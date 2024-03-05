@@ -431,7 +431,7 @@ class PeriodicTask(object):
     def __init__(self, frequency):
         self.frequency = frequency
 
-    def initialize(self, simulation, force_group):
+    def initialize(self, simulation):
         pass
 
     def update(self, simulation, steps):
@@ -1102,7 +1102,7 @@ class ExtendedSpaceSimulation(app.Simulation):
                 variables, system, integrator, platform, platformProperties
             )
 
-    def add_periodic_task(self, task, force_group=0):
+    def add_periodic_task(self, task):
         """Adds a task to be executed periodically along this simulation.
 
         Parameters
@@ -1253,7 +1253,13 @@ class UnifiedFreeEnergyDynamics(object):
         self.__init__(**kw)
 
     def simulation(
-        self, topology, system, integrator, platform=None, platformProperties=None
+        self,
+        topology,
+        system,
+        integrator,
+        platform=None,
+        platformProperties=None,
+        force_group=0,
     ):
         """Returns a ExtendedSpaceSimulation object.
 
@@ -1281,6 +1287,8 @@ class UnifiedFreeEnergyDynamics(object):
                 The platform.
             platformProperties : dict, default=None
                 The platform properties.
+            force_group : int, default=0
+                The force group to which the coupling forces are added.
 
         Example
         -------
@@ -1313,19 +1321,21 @@ class UnifiedFreeEnergyDynamics(object):
             platform,
             platformProperties,
         )
+        for force in simulation.context.driving_forces:
+            force.setForceGroup(force_group)
 
         if self._metadynamics:
-            simulation.add_periodic_task(
-                _Metadynamics(
-                    self.variables,
-                    self.height,
-                    self.frequency,
-                    bias_factor=self.bias_factor,
-                    buffer_size=self.buffer_size,
-                    grid_expansion=self.grid_expansion,
-                    enforce_gridless=self.enforce_gridless,
-                ),
+            task = _Metadynamics(
+                self.variables,
+                self.height,
+                self.frequency,
+                bias_factor=self.bias_factor,
+                buffer_size=self.buffer_size,
+                grid_expansion=self.grid_expansion,
+                enforce_gridless=self.enforce_gridless,
             )
+            task.force.setForceGroup(force_group)
+            simulation.add_periodic_task(task)
 
         if any(v.temperature != self.temperature for v in self.variables):
             ntotal = system.getNumParticles()
