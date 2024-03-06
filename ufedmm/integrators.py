@@ -1014,14 +1014,21 @@ class HybridLangevinGGMTIntegrator(CustomIntegrator):
 
         n = max(1, round(_standardized(step_size / inner_step_size)))
 
-        definitions = (f"c = {0.5/n}*dt*kT2invQ2", "x0 = 3*kT/(m*v^2)")
-        x_steps = [f"x{1+i} = x{i} + {0.5/n}*dt*v{3+i}" for i in range(n)]
-        v_steps = [
-            f"v{3+i} = v{2+i} + (3/x{i}^2 - 1)*c" + "/2" * (i == 0) for i in range(n)
+        definitions = (
+            f"b = {0.5/n}*dt*kT",
+            f"c = {0.5/n}*dt*kT2invQ2",
+            "z0 = 3*kT/(2*m*v^2)",
+        )
+        zsteps = [f"z{1+i} = z{i} + v{3+i}*b" for i in range(n)]
+        vsteps = [
+            f"v{3+i} = v{2+i} + ({3/4}/z{i}^2 - 1)*c" + "/2" * (i == 0)
+            for i in range(n)
         ]
-        sum3invx = "+".join(("1.5/x0", *(f"3/x{i}" for i in range(1, n)), f"1.5/x{n}"))
+        zinvsum = "+".join(
+            (f"{3/4}/z0", *(f"{3/2}/z{i}" for i in range(1, n)), f"{3/4}/z{n}")
+        )
         sep = ";\n" + 6 * " "
-        ggmt_steps = sep.join(reversed(definitions + sum(zip(v_steps, x_steps), ())))
+        ggmt_steps = sep.join(reversed(definitions + sum(zip(vsteps, zsteps), ())))
 
         self.addUpdateContextState()
         self.addComputePerDof("v", "v + dt*f/m")
@@ -1030,15 +1037,15 @@ class HybridLangevinGGMTIntegrator(CustomIntegrator):
         self.addComputePerDof("v", "v*exp(-0.5*dt*(v1 + kT*v2))")
         self.addComputePerDof(
             "v1",
-            f"v1 + 0.5*dt*(({sum3invx})/{n} - 1)*kTinvQ1" + sep + ggmt_steps,
+            f"v1 + 0.5*dt*(({zinvsum})/{n} - 1)*kTinvQ1" + sep + ggmt_steps,
         )
-        self.addComputePerDof("v2", f"v{2+n} + (3/x{n}^2 - 1)*c/2" + sep + ggmt_steps)
+        self.addComputePerDof("v2", f"v{2+n} + ({3/4}/z{n}^2 - 1)*c/2" + sep + ggmt_steps)
         self.addComputePerDof(
-            "v", f"(2*step(v) - 1)*sqrt(3*kT/(m*x{n}))" + sep + ggmt_steps
+            "v", f"(2*step(v) - 1)*sqrt(3*kT/(2*m*z{n}))" + sep + ggmt_steps
         )
         self.addComputePerDof("v", "v*exp(-0.5*dt*(v1 + kT*v2))")
         self.addComputePerDof(
-            "v", "z*v + sqrt(atom*(1 - z*z)*kT/m)*gaussian; z = exp(-dt*friction*atom)"
+            "v", "a*v + sqrt(atom*(1 - a*a)*kT/m)*gaussian; a = exp(-dt*friction*atom)"
         )
         self.addComputePerDof("x", "x + 0.5*dt*v")
         self.addComputePerDof("xu", "x")
@@ -1052,14 +1059,19 @@ class HybridLangevinGGMTIntegrator(CustomIntegrator):
         num_atoms = num_total - len(dv_temps)
         zero = openmm.Vec3(0, 0, 0)
         one = openmm.Vec3(1, 0, 0)
+        seed = self.getRandomNumberSeed()
+        random = np.random.RandomState(seed)
         vars = {
             name: self.getPerDofVariableByName(name)
             for name in ("atom", "kTinvQ1", "kT2invQ2", "v1", "v2")
         }
+        mean_v1 = one / self._tau
+        mean_v2kT = mean_v1 * np.sqrt(3 / 8)
         for i in range(num_atoms, num_total):
             vars["atom"][i] = zero
             vars["kTinvQ1"][i] = one / self._tau**2
             vars["kT2invQ2"][i] = 3 * one / (8 * kT[i].x * self._tau**2)
-            vars["v1"][i] = vars["v2"][i] = one / self._tau
+            vars["v1"][i] = mean_v1 * (1 - 2 * random.randint(0, 1))
+            vars["v2"][i] = mean_v2kT * (1 - 2 * random.randint(0, 1)) / kT[i].x
         for name, var in vars.items():
             self.setPerDofVariableByName(name, var)
