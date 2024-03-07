@@ -1000,7 +1000,8 @@ class HybridLangevinGGMTIntegrator(CustomIntegrator):
         time_constant,
         friction_coefficient,
         step_size,
-        inner_step_size=0.5 * unit.femtoseconds,
+        inner_step_size=4 * unit.femtoseconds,
+        ggmt_step_size=1 * unit.femtoseconds,
     ):
         super().__init__(temperature, step_size)
         self._tau = _standardized(time_constant)
@@ -1012,50 +1013,58 @@ class HybridLangevinGGMTIntegrator(CustomIntegrator):
         self.addPerDofVariable("v2", 0)
         self.addPerDofVariable("xu", 0)
 
-        n = max(1, round(_standardized(step_size / inner_step_size)))
+        nrespa = max(1, round(_standardized(step_size / inner_step_size)))
+        nggmt = max(1, round(_standardized(inner_step_size / ggmt_step_size)))
+        n = nrespa * nggmt
 
         definitions = (
             f"b = {1/n}*dt*kT",
             f"c = {1/n}*dt*kT2invQ2",
             "z0 = 3*kT/(2*m*v^2)",
         )
-        zsteps = [f"z{1+i} = z{i} + v{3+i}*b" for i in range(n)]
+        zsteps = [f"z{1+i} = z{i} + v{3+i}*b" for i in range(nggmt)]
         vsteps = [
             f"v{3+i} = v{2+i} + ({3/4}/z{i}^2 - 1)*c" + "/2" * (i == 0)
-            for i in range(n)
+            for i in range(nggmt)
         ]
         zinvsum = "+".join(
-            (f"{3/4}/z0", *(f"{3/2}/z{i}" for i in range(1, n)), f"{3/4}/z{n}")
+            (f"{3/4}/z0", *(f"{3/2}/z{i}" for i in range(1, nggmt)), f"{3/4}/z{nggmt}")
         )
+        zinvmean = f"({zinvsum})/{nggmt}"
         sep = ";\n" + 6 * " "
         ggmt_steps = sep.join(reversed(definitions + sum(zip(vsteps, zsteps), ())))
 
         self.addUpdateContextState()
-        self.addComputePerDof("v", "v + dt*f/m")
-        self.addConstrainVelocities()
-        self.addComputePerDof("x", "x + 0.5*dt*v")
+        self.addComputePerDof("v", "v + dt*f1/m")
+        for _ in range(nrespa):
+            self.addComputePerDof("v", f"v + {1/nrespa}*dt*f0/m")
+            self.addConstrainVelocities()
+            self.addComputePerDof("x", f"x + {0.5/nrespa}*dt*v")
 
-        self.addComputePerDof(
-            "v", "a*v + sqrt(atom*(1 - a*a)*kT/m)*gaussian; a = exp(-dt*friction*atom)"
-        )
+            self.addComputePerDof(
+                "v",
+                "a*v + sqrt(atom*(1 - a*a)*kT/m)*gaussian"
+                + sep
+                + f"a = exp(-{1/nrespa}*dt*friction*atom)",
+            )
 
-        self.addComputePerDof("v", "v*exp(-0.5*dt*(v1 + kT*v2))")
-        self.addComputePerDof(
-            "v1",
-            f"v1 + dt*(({zinvsum})/{n} - 1)*kTinvQ1" + sep + ggmt_steps,
-        )
-        self.addComputePerDof(
-            "v2", f"v{2+n} + ({3/4}/z{n}^2 - 1)*c/2" + sep + ggmt_steps
-        )
-        self.addComputePerDof(
-            "v", f"(2*step(v) - 1)*sqrt(3*kT/(2*m*z{n}))" + sep + ggmt_steps
-        )
-        self.addComputePerDof("v", "v*exp(-0.5*dt*(v1 + kT*v2))")
+            self.addComputePerDof("v", f"v*exp(-{0.5/nrespa}*dt*(v1 + kT*v2))")
+            self.addComputePerDof(
+                "v1",
+                f"v1 + {1/nrespa}*dt*({zinvmean} - 1)*kTinvQ1" + sep + ggmt_steps,
+            )
+            self.addComputePerDof(
+                "v2", f"v{2+nggmt} + ({3/4}/z{nggmt}^2 - 1)*c/2" + sep + ggmt_steps
+            )
+            self.addComputePerDof(
+                "v", f"(2*step(v) - 1)*sqrt(3*kT/(2*m*z{nggmt}))" + sep + ggmt_steps
+            )
+            self.addComputePerDof("v", f"v*exp(-{0.5/nrespa}*dt*(v1 + kT*v2))")
 
-        self.addComputePerDof("x", "x + 0.5*dt*v")
-        self.addComputePerDof("xu", "x")
-        self.addConstrainPositions()
-        self.addComputePerDof("v", "v + (x - xu)/dt")
+            self.addComputePerDof("x", f"x + {0.5/nrespa}*dt*v")
+            self.addComputePerDof("xu", "x")
+            self.addConstrainPositions()
+            self.addComputePerDof("v", f"v + (x - xu)/({1/nrespa}*dt)")
 
     def update_temperatures(self, temp, dv_temps):
         super().update_temperatures(temp, dv_temps)
