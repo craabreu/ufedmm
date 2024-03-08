@@ -51,7 +51,7 @@ def test_ufedmm_imported():
 
 
 def test_serialization():
-    model, old = ufed_model()
+    _, old = ufed_model()
     pipe = io.StringIO()
     ufedmm.serialize(old, pipe)
     pipe.seek(0)
@@ -127,6 +127,41 @@ def test_GGMT_integrator():
     simulation.step(100)
     energy = simulation.context.getState(getEnergy=True).getPotentialEnergy()
     assert energy / energy.unit == pytest.approx(-17.78, abs=0.2)
+
+
+def test_velocities():
+    model, ufed = ufed_model(height=2.0 * unit.kilocalorie_per_mole, constraints=None)
+    integrator = ufedmm.MiddleMassiveNHCIntegrator(
+        300 * unit.kelvin, 10 * unit.femtoseconds, 1 * unit.femtoseconds
+    )
+    platform = openmm.Platform.getPlatformByName("Reference")
+    simulation = ufed.simulation(model.topology, model.system, integrator, platform)
+    simulation.context.setPositions(model.positions)
+    simulation.context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)
+    state = simulation.context.getState(getVelocities=True)
+
+    velocities = state.getVelocities(asNumpy=True, extended=True).value_in_unit(
+        unit.nanometer / unit.picosecond
+    )
+    masses = np.array(
+        [
+            model.system.getParticleMass(i).value_in_unit(unit.dalton)
+            for i in range(model.system.getNumParticles())
+        ]
+    )
+
+    n = len(velocities) - 2
+    com_velocity = (masses[:n, None] * velocities[:n, :]).sum(axis=0) / masses[:n].sum()
+    assert com_velocity[0] == pytest.approx(0, abs=1e-6)
+
+    kB = unit.MOLAR_GAS_CONSTANT_R.value_in_unit_system(unit.md_unit_system)
+    two_ke = (masses[:n] * np.linalg.norm(velocities[:n, :], axis=1) ** 2).sum()
+    temperature = two_ke / (3 * n * kB)
+    assert temperature == pytest.approx(300, abs=1e-6)
+
+    phi_v, psi_v = velocities[-2:, 0]
+    assert masses[n] * phi_v ** 2 / kB == pytest.approx(1500, abs=1e-6)
+    assert masses[n] * psi_v ** 2 / kB == pytest.approx(1500, abs=1e-6)
 
 
 def test_gridded_metadynamics():
