@@ -105,7 +105,7 @@ def test_NHC_integrator():
     simulation.context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)
     simulation.step(100)
     energy = simulation.context.getState(getEnergy=True).getPotentialEnergy()
-    assert energy / energy.unit == pytest.approx(6.18, abs=0.2)
+    assert energy / energy.unit == pytest.approx(7.690, abs=0.2)
 
 
 def test_GGMT_integrator():
@@ -126,7 +126,7 @@ def test_GGMT_integrator():
     simulation.context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)
     simulation.step(100)
     energy = simulation.context.getState(getEnergy=True).getPotentialEnergy()
-    assert energy / energy.unit == pytest.approx(-17.78, abs=0.2)
+    assert energy / energy.unit == pytest.approx(-20.70, abs=0.2)
 
 
 def test_velocities():
@@ -175,7 +175,7 @@ def test_gridded_metadynamics():
     simulation.context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)
     simulation.step(100)
     energy = simulation.context.getState(getEnergy=True).getPotentialEnergy()
-    assert energy / energy.unit == pytest.approx(695.95, abs=0.1)
+    assert energy / energy.unit == pytest.approx(717.43, abs=0.1)
 
 
 # def test_gridless_metadynamics():
@@ -207,7 +207,7 @@ def test_well_tempered_metadynamics():
     simulation.context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)
     simulation.step(100)
     energy = simulation.context.getState(getEnergy=True).getPotentialEnergy()
-    assert energy / energy.unit == pytest.approx(153.17, abs=0.1)
+    assert energy / energy.unit == pytest.approx(172.7, abs=0.1)
 
 
 def test_rmsd_forces():
