@@ -1026,17 +1026,35 @@ class ExtendedSpaceContext(openmm.Context):
             randomSeed : int, default=None
                 A seed for the random number generator.
         """
+        temperature = _standardized(temperature)
         system = self.getSystem()
         Ntotal = system.getNumParticles()
         Natoms = Ntotal - len(self.variables)
-        m = np.array([system.getParticleMass(i) / unit.dalton for i in range(Ntotal)])
-        T = np.array(
-            [_standardized(temperature)] * Natoms
-            + [v.temperature for v in self.variables]
+        masses = np.array(
+            [system.getParticleMass(i) / unit.dalton for i in range(Ntotal)]
         )
-        sigma = np.sqrt(_standardized(unit.MOLAR_GAS_CONSTANT_R) * T / m)
-        random_state = np.random.RandomState(randomSeed)
-        velocities = sigma[:, np.newaxis] * random_state.normal(0, 1, (Ntotal, 3))
+        temperatures = np.array(
+            [temperature] * Natoms + [v.temperature for v in self.variables]
+        )
+        kboltz = _standardized(unit.MOLAR_GAS_CONSTANT_R)
+        sigmas = np.sqrt(kboltz * temperatures / masses)[:, None]
+        random = np.random.RandomState(randomSeed)
+        velocities = sigmas * random.normal(0, 1, (Ntotal, 3))
+
+        total_mass = masses[:Natoms].sum()
+        vcm = np.sum(masses[:Natoms, None] * velocities[:Natoms], axis=0) / total_mass
+        velocities[:Natoms] -= vcm
+
+        two_ke = np.sum(masses[:Natoms, None] * velocities[:Natoms] ** 2)
+        target_two_ke = (3 * Natoms - system.getNumConstraints()) * kboltz * temperature
+        velocities[:Natoms] *= np.sqrt(target_two_ke / two_ke)
+
+        for i, v in enumerate(self.variables, start=Natoms):
+            two_ke = masses[i] * velocities[i][0] ** 2
+            target_two_ke = kboltz * v.temperature
+            velocities[i][0] *= np.sqrt(target_two_ke / two_ke)
+            velocities[i][1:] = 0
+
         super().setVelocities(velocities)
 
 
