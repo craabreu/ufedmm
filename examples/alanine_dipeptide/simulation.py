@@ -29,6 +29,7 @@ model = ufedmm.AlanineDipeptideModel(
 )
 temp = 300 * unit.kelvin
 gamma = 10 / unit.picoseconds
+tau = 40 * unit.femtoseconds
 dt = 4 * unit.femtoseconds
 nsteps = 1000000
 mass = 30 * unit.dalton * (unit.nanometer / unit.radians) ** 2
@@ -48,8 +49,11 @@ ufed = ufedmm.UnifiedFreeEnergyDynamics([s_phi, s_psi], temp, height, deposition
 ufedmm.serialize(ufed, "ufed_object.yml")
 # integrator = ufedmm.GeodesicLangevinIntegrator(temp, gamma, dt)
 # integrator = ufedmm.MiddleMassiveNHCIntegrator(temp, 1/gamma, dt)
-# integrator = ufedmm.MiddleMassiveGGMTIntegrator(temp, 1 / gamma, dt, bath_loops=8)
-integrator = ufedmm.integrators.HybridLangevinGGMTIntegrator(temp, 1/gamma, gamma, dt)
+# integrator = ufedmm.MiddleMassiveGGMTIntegrator(temp, tau, dt, bath_loops=8, scheme="LF-Middle")
+integrator = ufedmm.integrators.HybridLangevinNHIntegratorRESPA(temp, tau, gamma, dt)
+# integrator = ufedmm.integrators.HybridLangevinGGMTIntegrator(temp, 1/gamma, gamma, dt)
+# for force in model.system.getForces():
+#     force.setForceGroup(1)
 
 integrator.setRandomNumberSeed(seed)
 print(integrator)
@@ -57,6 +61,7 @@ print(integrator)
 platform = openmm.Platform.getPlatformByName(args.platform)
 simulation = ufed.simulation(model.topology, model.system, integrator, platform)
 simulation.context.setPositions(model.positions)
+# openmm.LocalEnergyMinimizer.minimize(simulation.context)
 simulation.context.setVelocitiesToTemperature(temp, seed)
 output = ufedmm.Tee(stdout, "output.csv")
 reporter = ufedmm.StateDataReporter(
