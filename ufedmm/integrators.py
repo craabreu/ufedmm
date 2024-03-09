@@ -6,9 +6,11 @@
 .. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
 """
 
+import typing as t
+
 import numpy as np
 import openmm
-from openmm import unit
+from cvpack import unit
 
 from ufedmm.ufedmm import _standardized
 
@@ -974,125 +976,6 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
         self._split and self.addComputePerDof("v_eta", boost)
 
 
-# class HybridLangevinGGMTIntegrator(CustomIntegrator):
-#     """
-#     A custom integrator that applies the Geodesic Langevin method to the physical
-#     degrees of freedom and the Generalized Gaussian Moment Thermostat to the extended
-#     phase-space variables.
-
-#     Parameters
-#     ----------
-#         temperature : float or unit.Quantity
-#             The temperature of the system.
-#         time_constant : float or unit.Quantity
-#             The characteristic time constant of the GGMT thermostat.
-#         friction_coefficient : float or unit.Quantity
-#             The friction coefficient for the Langevin dynamics.
-#         step_size : float or unit.Quantity
-#             The integration step size.
-#         inner_step_size : float or unit.Quantity, default=0.5*unit.femtoseconds
-#             The integration step size for the GGMT thermostat.
-#     """
-
-#     def __init__(
-#         self,
-#         temperature,
-#         time_constant,
-#         friction_coefficient,
-#         step_size,
-#         inner_step_size=1 * unit.femtoseconds,
-#         ggmt_step_size=0.5 * unit.femtoseconds,
-#     ):
-#         super().__init__(temperature, step_size)
-#         self._tau = _standardized(time_constant)
-#         self.addGlobalVariable("friction", friction_coefficient)
-#         self.addPerDofVariable("atom", 1)
-#         self.addPerDofVariable("kTinvQ1", 0)
-#         self.addPerDofVariable("kT2invQ2", 0)
-#         self.addPerDofVariable("v1", 0)
-#         self.addPerDofVariable("v2", 0)
-#         self.addPerDofVariable("xu", 0)
-
-#         nrespa = max(1, round(_standardized(step_size / inner_step_size)))
-#         nggmt = max(1, round(_standardized(inner_step_size / ggmt_step_size)))
-#         n = nrespa * nggmt
-
-#         definitions = (
-#             f"b = {1/n}*dt*kT",
-#             f"c = {1/n}*dt*kT2invQ2",
-#             "z0 = 3*kT/(2*m*v^2)",
-#         )
-#         zsteps = [f"z{1+i} = z{i} + v{3+i}*b" for i in range(nggmt)]
-#         self.v_steps = [
-#             f"v{3+i} = v{2+i} + ({3/4}/z{i}^2 - 1)*c" + "/2" * (i == 0)
-#             for i in range(nggmt)
-#         ]
-#         zinvsum = "+".join(
-#             (f"{3/4}/z0", *(f"{3/2}/z{i}" for i in range(1, nggmt)), f"{3/4}/z{nggmt}")
-#         )
-#         zinvmean = f"({zinvsum})/{nggmt}"
-#         sep = ";\n" + 6 * " "
-#         ggmt_steps = sep.join(
-#             reversed(definitions + sum(zip(self.v_steps, zsteps), ()))
-#         )
-
-#         self.addUpdateContextState()
-#         self.addComputePerDof("v", "v + dt*f1/m")
-#         for _ in range(nrespa):
-#             self.addComputePerDof("v", f"v + {1/nrespa}*dt*f0/m")
-#             self.addConstrainVelocities()
-#             self.addComputePerDof("x", f"x + {0.5/nrespa}*dt*v")
-
-#             self.addComputePerDof(
-#                 "v",
-#                 "a*v + sqrt(atom*(1 - a*a)*kT/m)*gaussian"
-#                 + sep
-#                 + f"a = exp(-{1/nrespa}*dt*friction*atom)",
-#             )
-
-#             self.addComputePerDof("v", f"v*exp(-{0.5/nrespa}*dt*(v1 + kT*v2))")
-#             self.addComputePerDof(
-#                 "v1",
-#                 f"v1 + {1/nrespa}*dt*({zinvmean} - 1)*kTinvQ1" + sep + ggmt_steps,
-#             )
-#             self.addComputePerDof(
-#                 "v2", f"v{2+nggmt} + ({3/4}/z{nggmt}^2 - 1)*c/2" + sep + ggmt_steps
-#             )
-#             self.addComputePerDof(
-#                 "v", f"(2*step(v) - 1)*sqrt(3*kT/(2*m*z{nggmt}))" + sep + ggmt_steps
-#             )
-#             self.addComputePerDof("v", f"v*exp(-{0.5/nrespa}*dt*(v1 + kT*v2))")
-
-#             self.addComputePerDof("x", f"x + {0.5/nrespa}*dt*v")
-#             self.addComputePerDof("xu", "x")
-#             self.addConstrainPositions()
-#             self.addComputePerDof("v", f"v + (x - xu)/({1/nrespa}*dt)")
-
-#     def update_temperatures(self, temp, dv_temps):
-#         super().update_temperatures(temp, dv_temps)
-#         kT = self.getPerDofVariableByName("kT")
-#         num_total = len(kT)
-#         num_atoms = num_total - len(dv_temps)
-#         zero = openmm.Vec3(0, 0, 0)
-#         one = openmm.Vec3(1, 0, 0)
-#         seed = self.getRandomNumberSeed()
-#         random = np.random.RandomState(seed)
-#         vars = {
-#             name: self.getPerDofVariableByName(name)
-#             for name in ("atom", "kTinvQ1", "kT2invQ2", "v1", "v2")
-#         }
-#         v1 = one / self._tau
-#         v2kT = v1 * np.sqrt(3 / 8)
-#         for i in range(num_atoms, num_total):
-#             vars["atom"][i] = zero
-#             vars["kTinvQ1"][i] = one / self._tau**2
-#             vars["kT2invQ2"][i] = 3 * one / (8 * kT[i].x * self._tau**2)
-#             vars["v1"][i] = v1 * (2 * random.randint(0, 1) - 1)
-#             vars["v2"][i] = v2kT * (2 * random.randint(0, 1) - 1) / kT[i].x
-#         for name, var in vars.items():
-#             self.setPerDofVariableByName(name, var)
-
-
 class HybridLangevinGGMTIntegratorRESPA(CustomIntegrator):
     """
     A custom integrator that applies the Geodesic Langevin method to the physical
@@ -1157,9 +1040,9 @@ class HybridLangevinGGMTIntegratorRESPA(CustomIntegrator):
         )
 
         self.addUpdateContextState()
-        self.addComputePerDof("v", f"v + dt*f/m*(atom + xpsv)")
+        self.addComputePerDof("v", "v + dt*f/m*(atom + xpsv)")
         self.addConstrainVelocities()
-        self.addComputePerDof("x", f"x + 0.5*dt*v*(atom + xpsv)")
+        self.addComputePerDof("x", "x + 0.5*dt*v*(atom + xpsv)")
         self.addComputePerDof(
             "v",
             "a*v + sqrt((1 - a*a)*kT/m*atom)*gaussian"
@@ -1169,7 +1052,7 @@ class HybridLangevinGGMTIntegratorRESPA(CustomIntegrator):
 
         for i in range(nrespa):
             if i > 0:
-                self.addComputePerDof("v", f"v + dt*f{xps_force_group}/m*xpsv")
+                self.addComputePerDof("v", "v + dt*f{xps_force_group}/m*xpsv")
                 self.addComputePerDof("x", "x + 0.5*dt*v*xpsv")
             self.addComputePerDof("v", "v*exp(-0.5*dt*(v1 + kT*v2)*xpsv)")
             self.addComputePerDof(
@@ -1186,7 +1069,7 @@ class HybridLangevinGGMTIntegratorRESPA(CustomIntegrator):
             if i < nrespa - 1:
                 self.addComputePerDof("x", "x + 0.5*dt*v*xpsv")
 
-        self.addComputePerDof("x", f"x + 0.5*dt*v*(atom + xpsv)")
+        self.addComputePerDof("x", "x + 0.5*dt*v*(atom + xpsv)")
         self.addComputePerDof("xu", "x")
         self.addConstrainPositions()
         self.addComputePerDof("v", f"v + (x - xu)/dt")
@@ -1220,87 +1103,70 @@ class HybridLangevinGGMTIntegratorRESPA(CustomIntegrator):
 class HybridLangevinNHIntegrator(CustomIntegrator):
     """
     A custom integrator that applies the Geodesic Langevin method to the physical
-    degrees of freedom and the Generalized Gaussian Moment Thermostat to the extended
-    phase-space variables.
+    degrees of freedom and the Nosé-Hoover Thermostat to the extended phase-space
+    variables.
 
     Parameters
     ----------
-        temperature : float or unit.Quantity
+        temperature
             The temperature of the system.
-        time_constant : float or unit.Quantity
-            The characteristic time constant of the GGMT thermostat.
-        friction_coefficient : float or unit.Quantity
+        nose_hoover_tau
+            The characteristic time constant of the Nosé-Hoover thermostat.
+        langevin_gamma
             The friction coefficient for the Langevin dynamics.
-        step_size : float or unit.Quantity
+        step_size
             The integration step size.
-        inner_step_size : float or unit.Quantity, default=0.5*unit.femtoseconds
-            The integration step size for the GGMT thermostat.
+        substep_size
+            The integration step size for the Nosé-Hoover thermostat.
     """
 
+    @unit.convert_quantities
     def __init__(
         self,
-        temperature,
-        nose_hoover_tau,
-        langevin_gamma,
-        step_size,
-        nose_hoover_steps=2,
-        nose_hoover_substeps=4,
+        temperature: unit.ScalarQuantity,
+        nose_hoover_tau: unit.ScalarQuantity,
+        langevin_gamma: unit.ScalarQuantity,
+        step_size: unit.ScalarQuantity,
+        substep_size: unit.ScalarQuantity = 1 * unit.femtoseconds,
     ):
         super().__init__(temperature, step_size)
-        self._tau = _standardized(nose_hoover_tau)
+        self._tau = nose_hoover_tau
         self.addGlobalVariable("friction", langevin_gamma)
         self.addPerDofVariable("atom", 1)
-        self.addPerDofVariable("Q", 0)
         self.addPerDofVariable("invQ", 0)
         self.addPerDofVariable("u", 0)
-        self.addPerDofVariable("w", 0)
         self.addPerDofVariable("x0", 0)
+        self.addPerDofVariable("y", 0)
 
-        n = nose_hoover_substeps * nose_hoover_steps
+        n = max(1, round(step_size / substep_size))
 
-        def v_step(iv, iu, _, fraction, assign=True):
-            expr = f"v{iv or ''}*exp(-{fraction}*dt*u{iu})"
+        def y_step(iy: int, iu: int, fraction: float, assign: bool = True) -> str:
+            expr = f"y{iy or ''}-{fraction}*dt*u{iu or ''}"
             if assign:
-                return f"v{iv+1}=" + expr
+                return f"y{iy+1}=" + expr
             return expr
 
-        def u_step(iv, iu, iw, fraction, assign=True):
-            expr = (
-                f"u{iu or ''}*exp(-{fraction}*dt*w{iw})"
-                f"+{fraction}*dt*(m*v{iv or ''}^2-kT)*invQ"
-                f"*exp(-{0.5*fraction}*dt*w{iw})"
-            )
+        def u_step(iy: int, iu: int, fraction: float, assign: bool = True) -> str:
+            expr = f"u{iu or ''}+{fraction}*dt*(m*exp(2*y{iy or ''})-kT)*invQ"
             if assign:
                 return f"u{iu+1}=" + expr
             return expr
 
-        def w_step(_, iu, iw, fraction, assign=True):
-            expr = f"w{iw or ''}+{fraction}*dt*(Q*u{iu or ''}^2-kT)*invQ"
-            if assign:
-                return f"w{iw+1}=" + expr
-            return expr
+        def compile(steps: t.Sequence[str]) -> str:
+            return (";\n" + 6 * " ").join(reversed(steps))
 
-        iv = iu = iw = 0
-        substeps = [w_step(iv, iu, iw, 0.5 / n)]
-        for _ in range(nose_hoover_substeps - 1):
-            substeps += [
-                u_step(iv, iu, iw := iw + 1, 0.5 / n),
-                v_step(iv, iu := iu + 1, iw, 1 / n),
-                u_step(iv := iv + 1, iu, iw, 0.5 / n),
-                w_step(iv, iu := iu + 1, iw, 1 / n),
+        iy = iu = 0
+        code = [
+            u_step(iy, iu, 0.5 / n),
+            y_step(iy, iu := iu + 1, 1 / n),
+        ]
+        for _ in range(n - 1):
+            code += [
+                u_step(iy := iy + 1, iu, 1 / n),
+                y_step(iy, iu := iu + 1, 1 / n),
             ]
-        substeps.append(u_step(iv, iu, iw := iw + 1, 0.5 / n))
-        v_calculation = self.setup_calculation(
-            *substeps, v_step(iv, iu := iu + 1, iw, 1 / n, assign=False)
-        )
-        substeps.append(v_step(iv, iu, iw, 1 / n))
-        u_calculation = self.setup_calculation(
-            *substeps, u_step(iv := iv + 1, iu, iw, 0.5 / n, assign=False)
-        )
-        substeps.append(u_step(iv, iu, iw, 0.5 / n))
-        w_calculation = self.setup_calculation(
-            *substeps, w_step(iv, iu := iu + 1, iw, 0.5 / n, assign=False)
-        )
+        u_code = code + [u_step(iy + 1, iu, 0.5 / n, assign=False)]
+        v_code = code + [f"(2*step(v) - 1)*exp(y{iy + 1})"]
 
         self.addUpdateContextState()
         self.addComputePerDof("v", "v+dt*f/m")
@@ -1309,40 +1175,20 @@ class HybridLangevinNHIntegrator(CustomIntegrator):
         self.addComputePerDof(
             "v", f"a*v+sqrt((1-a*a)*kT/m*atom)*gaussian; a=exp(-dt*friction*atom)"
         )
-        for _ in range(nose_hoover_steps):
-            self.addComputePerDof("v", v_calculation)
-            self.addComputePerDof("u", u_calculation)
-            self.addComputePerDof("w", w_calculation)
+
+        if n == 1:
+            self.addComputePerDof("u", "u+0.5*dt*(m*v^2-kT)*invQ")
+            self.addComputePerDof("v", "v*exp(-dt*u)")
+            self.addComputePerDof("u", "u+0.5*dt*(m*v^2-kT)*invQ")
+        else:
+            self.addComputePerDof("y", "log(abs(v))")
+            self.addComputePerDof("v", compile(v_code))
+            self.addComputePerDof("u", compile(u_code))
+
         self.addComputePerDof("x", "x+0.5*dt*v")
         self.addComputePerDof("x0", "x")
         self.addConstrainPositions()
         self.addComputePerDof("v", f"v+(x-x0)/dt")
-
-    @staticmethod
-    def v_step(iv, iu, _, fraction, assign=True):
-        ivm1 = (iv - 1) or ""
-        iu = iu or ""
-        return f"v{iv}=" * assign + f"v{ivm1}*exp(-{fraction}*dt*u{iu})"
-
-    @staticmethod
-    def u_step(iv, iu, iw, fraction, assign=True):
-        iv = iv or ""
-        ium1 = (iu - 1) or ""
-        iw = iw or ""
-        return f"u{iu}=" * assign + (
-            f"(u{ium1}*a{iw}+{fraction}*dt*(m*v{iv}^2-kT)*invQ)*a{iw}"
-            f"; a{iw}=exp(-{fraction}*dt*w{iw})"
-        )
-
-    @staticmethod
-    def w_step(_, iu, iw, fraction, assign=True):
-        iu = iu or ""
-        iwm1 = (iw - 1) or ""
-        return f"w{iw}=" * assign + f"w{iwm1}+{fraction}*dt*(Q*u{iu}^2-kT)*invQ"
-
-    @staticmethod
-    def setup_calculation(*substeps):
-        return (";\n" + 6 * " ").join(reversed(substeps))
 
     def update_temperatures(self, temp, dv_temps):
         super().update_temperatures(temp, dv_temps)
@@ -1354,16 +1200,12 @@ class HybridLangevinNHIntegrator(CustomIntegrator):
         seed = self.getRandomNumberSeed()
         random = np.random.RandomState(seed)
         vars = {
-            name: self.getPerDofVariableByName(name)
-            for name in ("atom", "Q", "invQ", "u", "w")
+            name: self.getPerDofVariableByName(name) for name in ("atom", "invQ", "u")
         }
         for i in range(num_atoms, num_total):
-            q = kT[i].x * self._tau**2
             vars["atom"][i] = zero
-            vars["Q"][i] = one * q
-            vars["invQ"][i] = one / q
+            vars["invQ"][i] = one / (kT[i].x * self._tau**2)
             vars["u"][i] = one * (2 * random.randint(0, 1) - 1) / self._tau
-            vars["w"][i] = one * (2 * random.randint(0, 1) - 1) / self._tau
         for name, var in vars.items():
             self.setPerDofVariableByName(name, var)
 

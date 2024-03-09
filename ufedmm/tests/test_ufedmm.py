@@ -160,8 +160,8 @@ def test_velocities():
     assert temperature == pytest.approx(300, abs=1e-6)
 
     phi_v, psi_v = velocities[-2:, 0]
-    assert masses[n] * phi_v ** 2 / kB == pytest.approx(1500, abs=1e-6)
-    assert masses[n] * psi_v ** 2 / kB == pytest.approx(1500, abs=1e-6)
+    assert masses[n] * phi_v**2 / kB == pytest.approx(1500, abs=1e-6)
+    assert masses[n] * psi_v**2 / kB == pytest.approx(1500, abs=1e-6)
 
 
 def test_gridded_metadynamics():
