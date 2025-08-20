@@ -140,6 +140,8 @@ class StateDataReporter(app.StateDataReporter):
         self._backSteps = -sum(items)
         if self._multitemps:
             self._needsVelocities = self._needEnergy = True
+            if openmm.__version__ >= '8.3':
+                self._includes = ['velocities', 'energy']
 
     def _add_item(self, lst, item):
         if self._backSteps == 0:
