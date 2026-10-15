@@ -93,6 +93,7 @@ _core = [
     ufedmm.DynamicalVariable,
     ufedmm.ExtendedSpaceContext,
     ufedmm.ExtendedSpaceSimulation,
+    ufedmm.ExtendedSpaceState,
     ufedmm.UnifiedFreeEnergyDynamics,
 ]
 _toctrees = [create_module_docs("Core", _core)] + [
