@@ -3,7 +3,7 @@
    :platform: Unix, MacOS, Windows
    :synopsis: A collection of custom collective variables
 
-.. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
+.. moduleauthor:: Charlles Abreu <craabreu@gmail.com>
 
 """
 

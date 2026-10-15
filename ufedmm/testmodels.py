@@ -3,7 +3,7 @@
    :platform: Unix, Windows
    :synopsis: Unified Free Energy Dynamics Test Model Systems
 
-.. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
+.. moduleauthor:: Charlles Abreu <craabreu@gmail.com>
 
 .. _System:
     http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html

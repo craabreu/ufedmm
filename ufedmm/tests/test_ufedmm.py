@@ -15,7 +15,7 @@ from openmm import unit
 import ufedmm
 
 
-def ufed_model(
+def ufed_model(  # noqa: PLR0913, PLR0917
     temp=300 * unit.kelvin,
     mass=50 * unit.dalton * (unit.nanometer / unit.radians) ** 2,
     Ks=1000 * unit.kilojoules_per_mole / unit.radians**2,

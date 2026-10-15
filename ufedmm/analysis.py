@@ -3,7 +3,7 @@
    :platform: Unix, Windows
    :synopsis: Unified Free Energy Dynamics with OpenMM
 
-.. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
+.. moduleauthor:: Charlles Abreu <craabreu@gmail.com>
 
 """
 
@@ -163,7 +163,7 @@ class FreeEnergyAnalyzer:
         return centers, mean_forces
 
     def mean_force_free_energy(
-        self, centers, mean_forces, sigma, platform_name="Reference", properties={}
+        self, centers, mean_forces, sigma, platform_name="Reference", properties=None
     ):
         """Returns Python functions for evaluating the potential of mean force and their
         originating mean forces as a function of the collective variables.
@@ -195,6 +195,8 @@ class FreeEnergyAnalyzer:
                 A Python function whose arguments are collective variable values and
                 whose result is the mean force at those values.
         """
+        if properties is None:
+            properties = {}
         variables = self._ufed.variables
         n = len(variables)
         try:
@@ -204,16 +206,17 @@ class FreeEnergyAnalyzer:
 
         exponent = []
         derivative = []
+        # late-binding bug, fixed in the fix-mean-force-free-energy PR
         for v, variance in zip(variables, variances):
             if v.periodic:  # von Mises
                 factor = 2 * np.pi / v._range
                 exponent.append(
-                    lambda x: (np.cos(factor * x) - 1.0) / (factor * factor * variance)
+                    lambda x: (np.cos(factor * x) - 1.0) / (factor * factor * variance)  # noqa: B023
                 )
-                derivative.append(lambda x: -np.sin(factor * x) / (factor * variance))
+                derivative.append(lambda x: -np.sin(factor * x) / (factor * variance))  # noqa: B023
             else:  # Gauss
-                exponent.append(lambda x: -0.5 * x**2 / variance)
-                derivative.append(lambda x: -x / variance)
+                exponent.append(lambda x: -0.5 * x**2 / variance)  # noqa: B023
+                derivative.append(lambda x: -x / variance)  # noqa: B023
 
         def kernel(x):
             return np.exp(np.sum(exponent[i](x[i]) for i in range(n)))
@@ -316,7 +319,7 @@ class Analyzer(FreeEnergyAnalyzer):
     def __init__(self, ufed, dataframe, bins, min_count=1, adjust_centers=False):
         super().__init__(ufed, dataframe)
         try:
-            self._bins = [bin for bin in bins]
+            self._bins = list(bins)
         except TypeError:
             self._bins = [bins] * len(ufed.variables)
         self._min_count = min_count

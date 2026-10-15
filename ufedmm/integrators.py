@@ -3,7 +3,7 @@
    :platform: Unix, Windows
    :synopsis: Unified Free Energy Dynamics Integrators
 
-.. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
+.. moduleauthor:: Charlles Abreu <craabreu@gmail.com>
 """
 
 import numpy as np
@@ -64,7 +64,9 @@ def add_inner_nonbonded_force(system, inner_switch, inner_cutoff, force_group_in
             filter(lambda f: isinstance(f, openmm.NonbondedForce), system.getForces())
         )
     except StopIteration:
-        raise Exception("add_inner_nonbonded_force requires system with NonbondedForce")
+        raise Exception(
+            "add_inner_nonbonded_force requires system with NonbondedForce"
+        ) from None
     if (
         nonbonded_force.getNumParticleParameterOffsets() > 0
         or nonbonded_force.getNumExceptionParameterOffsets() > 0
@@ -198,7 +200,7 @@ class CustomIntegrator(openmm.CustomIntegrator):
         for step in range(self.getNumComputations()):
             line = ""
             step_type, target, expr = self.getComputationStep(step)
-            if step_type == 8:
+            if step_type == 8:  # noqa: PLR2004
                 indent_level -= 1
             command = step_type_str[step_type].format(target=target, expr=expr)
             line += f"{step:4d}: " + "   " * indent_level + command
@@ -378,18 +380,22 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
            9: v <- v + 0.5*dt*f/m
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         temperature,
         step_size,
         num_rattles=0,
         scheme="VV-Middle",
-        respa_loops=[1],
+        respa_loops=None,
         bath_loops=1,
         intertwine=True,
-        embodied_force_groups=[],
+        embodied_force_groups=None,
         unroll_loops=True,
     ):
+        if respa_loops is None:
+            respa_loops = [1]
+        if embodied_force_groups is None:
+            embodied_force_groups = []
         if scheme not in ["LF-Middle", "VV-Middle"]:
             raise Exception(f"Invalid value {scheme} for keyword scheme")
         super().__init__(temperature, step_size)
@@ -775,7 +781,8 @@ class MiddleMassiveGGMTIntegrator(AbstractMiddleRespaIntegrator):
         self.addComputePerDof("v2", f"v2 + {fraction / 2}*dt*((m*v^2)^2/3 - kT^2)/Q2")
         self.addComputePerDof(
             "v",
-            f"v*exp(-{fraction}*dt*(v1 + kT*v2))/sqrt(1 + {2 * fraction}*dt*m*v^2*v2/3)",
+            f"v*exp(-{fraction}*dt*(v1 + kT*v2))"
+            f"/sqrt(1 + {2 * fraction}*dt*m*v^2*v2/3)",
         )
         self.addComputePerDof("v1", f"v1 + {fraction / 2}*dt*(m*v^2 - kT)/Q1")
         self.addComputePerDof("v2", f"v2 + {fraction / 2}*dt*((m*v^2)^2/3 - kT^2)/Q2")
@@ -892,7 +899,7 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
             ``num_rattles``.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         temperature,
         time_constant,
@@ -923,7 +930,7 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
         kT_vectors = self.getPerDofVariableByName("kT")
         tauSq = _standardized(self._tau) ** 2
         Q = [tauSq * kT for kT in kT_vectors]
-        invQ = [openmm.Vec3(*map(lambda x: 1 / x if x > 0.0 else 0.0, q)) for q in Q]
+        invQ = [openmm.Vec3(*(1 / x if x > 0.0 else 0.0 for x in q)) for q in Q]
         self.setPerDofVariableByName("invQ", invQ)
 
     def _step_initialization(self):

@@ -3,7 +3,7 @@
    :platform: Unix, Windows
    :synopsis: Unified Free Energy Dynamics Outputs
 
-.. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
+.. moduleauthor:: Charlles Abreu <craabreu@gmail.com>
 """
 
 import sys
@@ -34,13 +34,13 @@ class Tee:
     """
 
     def __init__(self, *files):
-        self._files = list()
+        self._files = []
         for output in files:
             self._files.append(open(output, "w") if isinstance(output, str) else output)
 
     def __del__(self):
         for output in self._files:
-            if output != sys.stdout and output != sys.stderr:
+            if output not in (sys.stdout, sys.stderr):
                 output.close()
 
     def write(self, message):
@@ -173,7 +173,7 @@ class StateDataReporter(app.StateDataReporter):
                     raise Exception(
                         "hillHeights keyword involked for simulation without "
                         "metadynamics bias"
-                    )
+                    ) from None
                 bias_factor = self._metadynamics.bias_factor
                 self._height_scaling = (
                     1 if bias_factor is None else bias_factor / (bias_factor - 1)
@@ -226,7 +226,7 @@ class StateDataReporter(app.StateDataReporter):
                 self._add_item(headers, f"Energy[{index}] (kJ/mole)")
         return headers
 
-    def _constructReportValues(self, simulation, state):
+    def _constructReportValues(self, simulation, state):  # noqa: PLR0912
         values = super()._constructReportValues(simulation, state)
         if self._extended_space:
             if self._multitemps:
@@ -264,7 +264,7 @@ class StateDataReporter(app.StateDataReporter):
                     self._global_parameter_states.columns,
                 )
             )
-            for index, row in self._global_parameter_states.iterrows():
+            for _, row in self._global_parameter_states.iterrows():
                 for name, value in row.items():
                     simulation.context.setParameter(name, value)
                 energy = simulation.context.getState(
