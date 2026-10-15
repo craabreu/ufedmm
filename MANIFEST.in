@@ -1,6 +1,6 @@
-include LICENSE
+include LICENSE.md
 include MANIFEST.in
-include versioneer.py
+include CODE_OF_CONDUCT.md
 
 graft ufedmm
 global-exclude *.py[cod] __pycache__ *.so

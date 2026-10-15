@@ -1,6 +1,9 @@
 import re
 
+import cvpack
+
 import ufedmm
+import ufedmm.cvpack
 
 
 def test_version_is_exported():
@@ -8,8 +11,4 @@ def test_version_is_exported():
 
 
 def test_cvpack_reexport():
-    import cvpack
-
-    import ufedmm.cvpack
-
     assert ufedmm.cvpack.Torsion is cvpack.Torsion
