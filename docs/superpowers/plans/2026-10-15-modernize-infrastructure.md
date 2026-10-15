@@ -209,7 +209,7 @@ description = "Unified Free Energy Dynamics with OpenMM"
 dynamic = ["version"]
 readme = "README.md"
 authors = [
-    { name = "Charlles Abreu", email = "abreu@eq.ufrj.br" }
+    { name = "Charlles Abreu", email = "craabreu@gmail.com" }
 ]
 license = { text = "MIT" }
 # See https://pypi.org/classifiers/
@@ -243,7 +243,7 @@ test = [
   "pytest-cov",
 ]
 ```
-The author email stays as it is; changing it isn't in scope.
+The author email is updated to `craabreu@gmail.com`, the one openxps uses (user request). PR 2 (Task 6) also updates the `.. moduleauthor::` lines in the docstrings.
 Keep `[tool.setuptools]`, `[tool.setuptools.packages.find]` and all
 `[tool.versioningit*]` tables as they are. Change `[tool.setuptools.package-data]`
 to:
@@ -647,6 +647,7 @@ Expected: about 35 violations, all from the rules listed in Step 2.
 | PLR0913, PLR0917 (public `__init__` and method signatures) | Add `# noqa: PLR0913, PLR0917` to the `def` line. Signatures are public API. |
 | PLR0912 (`ufedmm.py:29`, `io.py:229`) | Add `# noqa: PLR0912` to the `def` line. Refactoring isn't in scope. |
 | PLR2004 outside tests | Add `# noqa: PLR2004` to the line. |
+| Email (`.. moduleauthor::` in every module docstring) | Replace `abreu@eq.ufrj.br` with `craabreu@gmail.com`. |
 | B023 (`analysis.py:211-216`) | **Don't fix this in this PR.** Add `# noqa: B023` to each lambda line, plus the comment `# late-binding bug, fixed in the fix-mean-force-free-energy PR` above the loop. Task 7 fixes it with a regression test. |
 
 - [ ] **Step 3: Check that lint is clean and tests are unchanged**
@@ -668,8 +669,7 @@ Expected: all checks green.
 
 ### Task 7: Repair `mean_force_free_energy` (branch `fix-mean-force-free-energy`, separate PR)
 
-Start only after the user approves this task. Branch it from `main` once PR 2
-has merged.
+Approved by the user on 2026-10-15. Branch it from `main` once PR 2 has merged.
 
 **Background, verified 2026-10-15 in a scratch copy:**
 `FreeEnergyAnalyzer.mean_force_free_energy` is broken on current NumPy and
