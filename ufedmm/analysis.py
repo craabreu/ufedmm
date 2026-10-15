@@ -206,20 +206,23 @@ class FreeEnergyAnalyzer:
 
         exponent = []
         derivative = []
-        # late-binding bug, fixed in the fix-mean-force-free-energy PR
         for v, variance in zip(variables, variances):
             if v.periodic:  # von Mises
                 factor = 2 * np.pi / v._range
                 exponent.append(
-                    lambda x: (np.cos(factor * x) - 1.0) / (factor * factor * variance)  # noqa: B023
+                    lambda x, f=factor, var=variance: (
+                        (np.cos(f * x) - 1.0) / (f * f * var)
+                    )
                 )
-                derivative.append(lambda x: -np.sin(factor * x) / (factor * variance))  # noqa: B023
+                derivative.append(
+                    lambda x, f=factor, var=variance: -np.sin(f * x) / (f * var)
+                )
             else:  # Gauss
-                exponent.append(lambda x: -0.5 * x**2 / variance)  # noqa: B023
-                derivative.append(lambda x: -x / variance)  # noqa: B023
+                exponent.append(lambda x, var=variance: -0.5 * x**2 / var)
+                derivative.append(lambda x, var=variance: -x / var)
 
         def kernel(x):
-            return np.exp(np.sum(exponent[i](x[i]) for i in range(n)))
+            return np.exp(sum(exponent[i](x[i]) for i in range(n)))
 
         def gradient(x, i):
             return kernel(x) * derivative[i](x[i])
@@ -252,10 +255,12 @@ class FreeEnergyAnalyzer:
             for parameter, value in zip(context.parameters, x):
                 context.setParameter(parameter, value)
             state = context.getState(getParameterDerivatives=True)
-            return -state.getEnergyParameterDerivatives()._value
+            derivatives = state.getEnergyParameterDerivatives()
+            return -np.array([derivatives[p] for p in context.parameters])
 
         minimum = np.min([potential(*x) for x in grid_points])
-        return np.vectorize(potential), np.vectorize(mean_force)
+        signature = ",".join(["()"] * n) + "->(n)"
+        return np.vectorize(potential), np.vectorize(mean_force, signature=signature)
 
     def _compute_forces(self):
         variables = self._ufed.variables
