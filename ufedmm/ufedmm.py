@@ -66,7 +66,7 @@ def _add_fake_particles(force, num_particles):
             force.setReferencePositions(refpos)
 
 
-class CollectiveVariable(object):
+class CollectiveVariable:
     """A function of the particle coordinates, evaluated by means of an :OpenMM:`Force`
     object.
 
@@ -211,7 +211,7 @@ class CollectiveVariable(object):
         return effective_mass
 
 
-class DynamicalVariable(object):
+class DynamicalVariable:
     """An extended phase-space variable, whose dynamics is coupled to that of one of
     more collective variables of a system.
 
@@ -386,7 +386,7 @@ class DynamicalVariable(object):
         if self.periodic:
             energy = f"{self.min_value}+{self._range}*(x{index}/Lx-floor(x{index}/Lx))"
         else:
-            energy = f"{self.min_value}+{2*self._range}*min(pos{index},1-pos{index})"
+            energy = f"{self.min_value}+{2 * self._range}*min(pos{index},1-pos{index})"
             energy += f";pos{index}=x{index}/Lx-floor(x{index}/Lx)"
         return energy
 
@@ -427,7 +427,7 @@ def _get_parameters(variables):
     return parameters
 
 
-class PeriodicTask(object):
+class PeriodicTask:
     def __init__(self, frequency):
         self.frequency = frequency
 
@@ -549,15 +549,15 @@ class _Metadynamics(PeriodicTask):
                 *self._widths, self._bias, *self._bounds, full_periodic
             )
         expression = (
-            f'metad_bias_scale*bias({",".join(v.id for v in self.bias_variables)})'
+            f"metad_bias_scale*bias({','.join(v.id for v in self.bias_variables)})"
         )
         for i, v in enumerate(self.bias_variables):
-            expression += f";{v.id}={v._get_energy_function(i+1)}"
+            expression += f";{v.id}={v._get_energy_function(i + 1)}"
         force = openmm.CustomCVForce(expression)
         for i in range(num_bias_variables):
             x = openmm.CustomExternalForce("x")
             x.addParticle(0, [])
-            force.addCollectiveVariable(f"x{i+1}", x)
+            force.addCollectiveVariable(f"x{i + 1}", x)
         force.addTabulatedFunction("bias", self._table)
         force.addGlobalParameter("Lx", 0)
         force.addGlobalParameter("metad_bias_scale", 1)
@@ -566,19 +566,19 @@ class _Metadynamics(PeriodicTask):
 
     def _hills_force(self):
         num_bias_variables = len(self.bias_variables)
-        centers = [f"center{i+1}" for i in range(num_bias_variables)]
+        centers = [f"center{i + 1}" for i in range(num_bias_variables)]
         exponents = []
         for v, center in zip(self.bias_variables, centers):
             if v.periodic:  # von Mises
                 factor = 2 * np.pi / v._range
                 exponents.append(
-                    f"{1.0/(factor*v.sigma)**2}*(cos({factor}*({v.id}-{center}))-1)"
+                    f"{1.0 / (factor * v.sigma) ** 2}*(cos({factor}*({v.id}-{center}))-1)"
                 )
             else:  # Gauss
-                exponents.append(f"({-0.5/v.sigma**2})*({v.id}-{center})^2")
-        expression = f'height*exp({"+".join(exponents)})'
+                exponents.append(f"({-0.5 / v.sigma**2})*({v.id}-{center})^2")
+        expression = f"height*exp({'+'.join(exponents)})"
         for i, v in enumerate(self.bias_variables):
-            expression += f";{v.id}={v._get_energy_function(i+1)}"
+            expression += f";{v.id}={v._get_energy_function(i + 1)}"
         force = openmm.CustomCompoundBondForce(num_bias_variables, expression)
         force.addPerBondParameter("height")
         for center in centers:
@@ -977,7 +977,7 @@ class ExtendedSpaceContext(openmm.Context):
             minisystem = openmm.System()
             expression = _get_energy_function(self.variables)
             for i, v in enumerate(self.variables):
-                expression += f"; {v.id}={v._get_energy_function(index=i+1)}"
+                expression += f"; {v.id}={v._get_energy_function(index=i + 1)}"
             force = openmm.CustomCompoundBondForce(nvars, expression)
             force.addBond(range(nvars), [])
             for name, value in _get_parameters(self.variables).items():
@@ -1156,7 +1156,7 @@ class ExtendedSpaceSimulation(app.Simulation):
             self.context.loadCheckpoint(file.read())
 
 
-class UnifiedFreeEnergyDynamics(object):
+class UnifiedFreeEnergyDynamics:
     """A Unified Free-Energy Dynamics (UFED) setup.
 
     Parameters
@@ -1236,7 +1236,7 @@ class UnifiedFreeEnergyDynamics(object):
             f"height={self.height}, "
             f"frequency={self.frequency}"
         )
-        return f'<variables=[{", ".join(v.id for v in self.variables)}], {properties}>'
+        return f"<variables=[{', '.join(v.id for v in self.variables)}], {properties}>"
 
     def __getstate__(self):
         return dict(

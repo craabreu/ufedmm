@@ -20,17 +20,17 @@ from ufedmm.ufedmm import _get_energy_function, _get_parameters, _standardized
 class _RBFContext(openmm.Context):
     def __init__(self, variables, variances, centers, weights, platform, properties):
         num_particles = (len(variables) + 2) // 3
-        coordinates = [f"{x}{i+1}" for i in range(num_particles) for x in "xyz"]
+        coordinates = [f"{x}{i + 1}" for i in range(num_particles) for x in "xyz"]
         exponents = []
         for v, variance, x in zip(variables, variances, coordinates):
             if v.periodic:  # von Mises
                 factor = 2 * np.pi / v._range
                 exponents.append(
-                    f"{1.0/(variance*factor**2)}*(cos({factor}*({v.id}-{x}))-1)"
+                    f"{1.0 / (variance * factor**2)}*(cos({factor}*({v.id}-{x}))-1)"
                 )
             else:  # Gauss
-                exponents.append(f"(-{0.5/variance})*({v.id}-{x})^2")
-        expression = f'weight*exp({"+".join(exponents)})'
+                exponents.append(f"(-{0.5 / variance})*({v.id}-{x})^2")
+        expression = f"weight*exp({'+'.join(exponents)})"
 
         force = openmm.CustomCompoundBondForce(num_particles, expression)
         force.addPerBondParameter("weight")
@@ -53,7 +53,7 @@ class _RBFContext(openmm.Context):
         self.setPositions(positions)
 
 
-class FreeEnergyAnalyzer(object):
+class FreeEnergyAnalyzer:
     """Calculate free energy landscapes from UFED simulation results.
 
     Parameters

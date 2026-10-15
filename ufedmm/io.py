@@ -289,7 +289,7 @@ def serialize(object, file):
 def deserialize(file):
     """Deserializes a ufedmm object."""
     if isinstance(file, str):
-        with open(file, "r") as f:
+        with open(file) as f:
             object = yaml.load(f.read(), Loader=yaml.CLoader)
     else:
         object = yaml.load(file.read(), Loader=yaml.CLoader)

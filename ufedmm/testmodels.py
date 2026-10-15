@@ -20,7 +20,7 @@ from openmm import app, unit
 import ufedmm
 
 
-class AlanineDipeptideModel(object):
+class AlanineDipeptideModel:
     """A system consisting of a single alanine-dipeptide molecule in a vacuum or
     solvated in explicit water.
 
