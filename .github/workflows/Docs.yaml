@@ -28,7 +28,7 @@ jobs:
 
       - uses: mamba-org/provision-with-micromamba@main
         with:
-          environment-file: ufedmm/devtools/conda-envs/test_env.yaml
+          environment-file: ufedmm/devtools/conda-envs/docs_env.yaml
           environment-name: docs
           channels: conda-forge
           extra-specs: |
