@@ -7,17 +7,27 @@ on:
   pull_request:
     branches:
       - "main"
+  release:
+    types: [published]
+  # Rebuild the docs of an existing release tag (also updates latest)
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to rebuild, such as v0.2.0"
+        required: true
 
 jobs:
   build_and_deploy_docs:
     name: Documentation Building and Deployment
     runs-on: ubuntu-latest
+    # Prereleases are not deployed
+    if: github.event_name != 'release' || !github.event.release.prerelease
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.REPO_TOKEN }}
-          path: ufedmm
+          ref: ${{ inputs.tag || github.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Additional info about the build
         shell: bash
@@ -26,40 +36,41 @@ jobs:
           df -h
           ulimit -a
 
-      - uses: mamba-org/provision-with-micromamba@main
+      - uses: mamba-org/setup-micromamba@v2
         with:
-          environment-file: ufedmm/devtools/conda-envs/docs_env.yaml
+          environment-file: devtools/conda-envs/docs_env.yaml
           environment-name: docs
-          channels: conda-forge
-          extra-specs: |
-            python=3.10
-            openmm=8.0
+          create-args: >-
+            python=3.13 openmm=8.6
 
       - name: Install package
+        # conda setup requires this special shell
         shell: bash -l {0}
         run: |
-          cd ufedmm/
           python -m pip install . --no-deps
           micromamba list
-
-      - name: Build Documentation
-        shell: bash -l {0}
-        run: |
-          cd ufedmm/
-          sphinx-build ./docs ./html
 
       - name: Run tests
         shell: bash -l {0}
         run: |
-          cd ufedmm/
-          pytest -v --cov=ufedmm --cov-report=term-missing --cov-report=html \
-                 --pyargs --color=yes --doctest-modules ufedmm/
+          pytest
+
+      - name: Build Documentation
+        shell: bash -l {0}
+        run: |
+          if [ -n "$RELEASE_TAG" ]; then
+            export UFEDMM_VERSION=$RELEASE_TAG
+          else
+            export UFEDMM_VERSION=dev
+          fi
+          sphinx-build ./docs ./html
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
 
       - name: Get coverage report
         id:  coverage
         shell: bash -l {0}
         run: |
-          cd ufedmm/
           COVERAGE=$(coverage report | tail -1 | awk '{print $4}')
           OFFSET=$(((${COVERAGE::-1}-35)/6-1))
           [[ $OFFSET < 0 ]] && OFFSET=0
@@ -76,29 +87,35 @@ jobs:
           label-color: 'black'
           status: ${{ steps.coverage.outputs.coverage }}
           color: ${{ steps.coverage.outputs.color }}
-          path: 'ufedmm/htmlcov/coverage.svg'
+          path: 'htmlcov/coverage.svg'
 
       - name: Deploy documentation
         shell: bash -l {0}
         run: |
           if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
             echo "Deployment is deactivated on pull requests"
+            exit 0
+          elif [ -n "$RELEASE_TAG" ]; then
+            subdirs=($RELEASE_TAG latest)
           else
-            cd ufedmm/
-            git reset --hard HEAD
-            set -x
-            echo "::group::Push page to gh-pages branch"
-            git config user.name "$(git show --format=%an -s)"
-            git config user.email "$(git show --format=%ae -s)"
-            git fetch origin
-            git switch gh-pages
-            rsync -va --delete-excluded html/ docs/
-            rsync -va --delete-excluded htmlcov/ docs/coverage/
-            touch docs/.nojekyll
-            git add -f docs/*
-            git add -f docs/.nojekyll
-            git add -f docs/coverage/*
-            git commit -m "Docs from $GITHUB_REF $GITHUB_SHA" || echo "Branch is up to date"
-            git push -f origin gh-pages
-            echo "::endgroup::"
+            subdirs=(development)
           fi
+          git reset --hard HEAD
+          set -x
+          echo "::group::Push page to gh-pages branch"
+          git config user.name "$(git show --format=%an -s)"
+          git config user.email "$(git show --format=%ae -s)"
+          git fetch origin
+          git switch gh-pages
+          for subdir in ${subdirs[@]}; do
+            dir=docs/$subdir
+            rsync -va --delete-excluded html/ $dir/
+            rsync -va --delete-excluded htmlcov/ $dir/coverage/
+            git add -f $dir/*
+          done
+          touch docs/.nojekyll
+          git commit -m "Docs from $GITHUB_REF $GITHUB_SHA" || echo "Branch is up to date"
+          git push -f origin gh-pages
+          echo "::endgroup::"
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
