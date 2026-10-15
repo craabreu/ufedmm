@@ -1,3 +1,9 @@
+=============
+Citing UFEDMM
+=============
+
+If you use UFEDMM in published work, please cite :cite:`bajpai2023`.
+
 ========
 Contents
 ========
