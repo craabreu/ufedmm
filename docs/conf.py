@@ -20,14 +20,108 @@ import sys
 
 sys.path.insert(0, os.path.abspath(".."))
 
+import ufedmm  # noqa: E402
+
+os.makedirs("api", exist_ok=True)
+
+
+def _public_members(module):
+    return sorted(
+        (
+            obj
+            for name, obj in vars(module).items()
+            if not name.startswith("_")
+            and (inspect.isclass(obj) or inspect.isfunction(obj))
+            and obj.__module__ == module.__name__
+        ),
+        key=lambda obj: obj.__name__,
+    )
+
+
+def create_class_rst_file(cls):
+    name = cls.__name__
+    methods = dict(cls.__dict__)
+    included_methods = [
+        f"    .. automethod:: {method}\n"
+        for method in sorted(methods)
+        if not method.startswith("_")
+        and (callable(getattr(cls, method)) or isinstance(methods[method], property))
+    ]
+    with open(f"api/{name}.rst", "w") as f:
+        f.writelines(
+            [
+                f"{name}\n",
+                "=" * len(name) + "\n\n",
+                ".. currentmodule:: ufedmm\n",
+                f".. autoclass:: {name}\n",
+                "    :member-order: alphabetical\n\n",
+            ]
+            + ["    .. rubric:: Methods\n\n"] * bool(included_methods)
+            + included_methods
+        )
+
+
+def create_function_rst_file(func):
+    name = func.__name__
+    with open(f"api/{name}.rst", "w") as f:
+        f.writelines(
+            [
+                f"{name}\n",
+                "=" * len(name) + "\n\n",
+                ".. currentmodule:: ufedmm\n",
+                f".. autofunction:: {name}\n",
+            ]
+        )
+
+
+def create_module_docs(title, members):
+    toctree = f"{title.lower()}.rst"
+    with open(f"api/{toctree}", "w") as f:
+        f.write(f"{title}\n{'=' * len(title)}\n\n.. toctree::\n    :titlesonly:\n\n")
+        for obj in members:
+            f.write(f"    {obj.__name__}\n")
+            if inspect.isclass(obj):
+                create_class_rst_file(obj)
+            else:
+                create_function_rst_file(obj)
+        f.write("\n.. testsetup::\n\n    from ufedmm import *")
+    return toctree
+
+
+_core = [
+    ufedmm.CollectiveVariable,
+    ufedmm.DynamicalVariable,
+    ufedmm.ExtendedSpaceContext,
+    ufedmm.ExtendedSpaceSimulation,
+    ufedmm.UnifiedFreeEnergyDynamics,
+]
+_toctrees = [create_module_docs("Core", _core)] + [
+    create_module_docs(title, _public_members(module))
+    for title, module in [
+        ("Integrators", ufedmm.integrators),
+        ("IO", ufedmm.io),
+        ("Analysis", ufedmm.analysis),
+        ("Testmodels", ufedmm.testmodels),
+    ]
+]
+
+with open("api/index.rst", "w") as f:
+    f.write(
+        "API Reference\n"
+        "=============\n"
+        "\n"
+        ".. toctree::\n"
+        "    :maxdepth: 2\n"
+        "    :titlesonly:\n"
+        "\n" + "".join(f"    {t}\n" for t in _toctrees)
+    )
 
 # -- Project information -----------------------------------------------------
 
-project = 'UFED for OpenMM'
-copyright = ("2020, Charlles Abreu. Project structure based on the "
-             "Computational Molecular Science Python Cookiecutter version 1.0")
-author = 'Charlles Abreu'
-version = ""
+version = os.getenv("UFEDMM_VERSION", ufedmm.__version__)
+project = f"UFEDMM {version}"
+copyright = r"2020-2026 C. Abreu"
+author = "Charlles Abreu"
 release = ""
 
 # -- General configuration ---------------------------------------------------
@@ -97,7 +191,7 @@ html_theme_options = {
     # 'logo_name': True,
     "github_button": False,
     "github_user": "craabreu",
-    "github_repo": "cvpack",
+    "github_repo": "ufedmm",
 }
 html_sidebars = {
     "**": ["about.html", "globaltoc.html", "searchbox.html"],
@@ -137,7 +231,7 @@ def setup(app):
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = "cvpackdoc"
+htmlhelp_basename = "ufedmmdoc"
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -163,9 +257,9 @@ latex_elements = {
 latex_documents = [
     (
         master_doc,
-        "cvpack.tex",
-        "Collective Variable Package Documentation",
-        "cvpack",
+        "ufedmm.tex",
+        "UFEDMM Documentation",
+        author,
         "manual",
     ),
 ]
@@ -175,7 +269,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [(master_doc, "cvpack", "Collective Variable Package Documentation", [author], 1)]
+man_pages = [(master_doc, "ufedmm", "UFEDMM Documentation", [author], 1)]
 
 
 # -- Options for Texinfo output ----------------------------------------------
@@ -186,11 +280,11 @@ man_pages = [(master_doc, "cvpack", "Collective Variable Package Documentation",
 texinfo_documents = [
     (
         master_doc,
-        "cvpack",
-        "Collective Variable Package Documentation",
+        "ufedmm",
+        "UFEDMM Documentation",
         author,
-        "cvpack",
-        "Useful Collective Variables for OpenMM",
+        "ufedmm",
+        "Unified Free Energy Dynamics with OpenMM",
         "Miscellaneous",
     ),
 ]
@@ -212,7 +306,11 @@ extlinks = {
     "OpenMMApp": (
         "http://docs.openmm.org/latest/api-python/generated/openmm.app.%s.html",
         "app.%s",
-    )
+    ),
+    "CVPack": (
+        "https://craabreu.github.io/cvpack/latest/api/%s.html",
+        "cvpack.%s",
+    ),
 }
 
 # Copy button configuration

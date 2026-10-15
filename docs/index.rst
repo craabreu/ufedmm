@@ -8,7 +8,8 @@ Contents
    readme
    installation
    usage
-   pythonapi/index
+   api/index
+   cvpack
    contributing
    authors
    changelog
