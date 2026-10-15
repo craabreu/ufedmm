@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - mdtools
 dependencies:
-    # Base depends
+  # Base dependencies
   - python
   - pip
   - numpy
@@ -13,7 +13,11 @@ dependencies:
   - scipy
   - cvpack
 
-    # Conda build
+  # Conda build
   - anaconda-client
   - conda-build
-  - boa
+
+  # PyPI build
+  - pip:
+    - build
+    - twine
