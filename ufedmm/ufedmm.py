@@ -1398,14 +1398,19 @@ class UnifiedFreeEnergyDynamics:
                 ),
             )
 
-        if any(v.temperature != self.temperature for v in self.variables):
+        # UFEDMM integrators need the variable temperatures even if they are all equal
+        # to the system temperature, so that the extra particles move along x only
+        ufedmm_integrator = isinstance(integrator, ufedmm.integrators.CustomIntegrator)
+        if ufedmm_integrator or any(
+            v.temperature != self.temperature for v in self.variables
+        ):
             ntotal = system.getNumParticles()
             nvars = len(self.variables)
             simulation.context.setPositions(
                 [openmm.Vec3(0, 0, 0)] * (ntotal - nvars), [0] * nvars
             )
             vartemps = [v.temperature for v in self.variables]
-            if isinstance(integrator, ufedmm.integrators.CustomIntegrator):
+            if ufedmm_integrator:
                 integrator.update_temperatures(self.temperature, vartemps)
             else:
                 temperatures = [self.temperature] * (ntotal - len(vartemps)) + vartemps

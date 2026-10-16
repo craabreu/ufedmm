@@ -153,9 +153,23 @@ def test_reporter_global_parameter_states():
 
 
 def test_multiple_temperatures_need_integrator_temperatures():
-    # With a single temperature, the integrator sets its per-dof temperatures only
-    # when it first steps, so reporting before that cannot split the temperatures.
-    simulation = reporter_simulation(Ts=300 * unit.kelvin)
+    # UnifiedFreeEnergyDynamics.simulation sets the integrator temperatures, but a
+    # simulation created directly does not until its integrator first steps, so
+    # reporting before that cannot split the temperatures.
+    model = ufedmm.AlanineDipeptideModel(constraints=None)
+    s_phi = ufedmm.DynamicalVariable("s_phi", -np.pi, np.pi, 50, 1500, model.phi, 1000)
+    integrator = ufedmm.MiddleMassiveNHCIntegrator(
+        300 * unit.kelvin, 10 * unit.femtoseconds, 1 * unit.femtoseconds
+    )
+    simulation = ufedmm.ExtendedSpaceSimulation(
+        [s_phi],
+        model.topology,
+        model.system,
+        integrator,
+        openmm.Platform.getPlatformByName("Reference"),
+    )
+    simulation.context.setPositions(model.positions)
+    simulation.context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)
     reporter = ufedmm.StateDataReporter(io.StringIO(), 1, multipleTemperatures=True)
     state = simulation.context.getState(getVelocities=True, getEnergy=True)
     with pytest.raises(ValueError, match="temperatures were not set"):
