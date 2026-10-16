@@ -15,8 +15,6 @@ import ufedmm
 TEMP = 300 * unit.kelvin
 TAU = 10 * unit.femtoseconds
 DT = 1 * unit.femtoseconds
-METAD_GROUP = 31
-KB = unit.MOLAR_GAS_CONSTANT_R.value_in_unit(unit.kilojoules_per_mole / unit.kelvin)
 
 
 def ufed_model(  # noqa: PLR0913, PLR0917
@@ -163,112 +161,6 @@ def test_respa_with_empty_outer_group_matches_inner_step_size(integrator_class):
     single.step(10 * n)
     for x, y in zip(phase_space_point(respa), phase_space_point(single)):
         assert x == pytest.approx(y, rel=1e-8, abs=1e-10)
-
-
-class HillRecorder:
-    """Records the center and height of each hill as it is deposited.
-
-    Periodic tasks report before regular reporters and receive the same state, so
-    the dynamical variables seen here are the centers of the hills just deposited.
-    """
-
-    def __init__(self, metadynamics):
-        self._metadynamics = metadynamics
-        self.centers = []
-        self.heights = []
-
-    def describeNextReport(self, simulation):
-        return self._metadynamics.describeNextReport(simulation)
-
-    def report(self, simulation, state):
-        self.centers.append(state.getDynamicalVariables())
-        self.heights.append(self._metadynamics.height)
-
-
-def von_mises_bias(variables, centers, heights, point):
-    """Sum of von Mises hills, which is what ufedmm deposits for periodic variables."""
-    exponents = 0.0
-    for i, v in enumerate(variables):
-        if v.sigma is None:
-            continue
-        factor = 2 * np.pi / v._range
-        delta = point[i] - np.asarray(centers)[:, i]
-        exponents += (np.cos(factor * delta) - 1) / (factor * v.sigma) ** 2
-    return np.sum(np.asarray(heights) * np.exp(exponents))
-
-
-def run_metadynamics(steps, **kwargs):
-    height = 2.0 * unit.kilocalorie_per_mole
-    model, ufed = ufed_model(height=height, **kwargs)
-    integrator = ufedmm.MiddleMassiveNHCIntegrator(TEMP, TAU, DT)
-    simulation = reference_simulation(model, ufed, integrator)
-    (metadynamics,) = simulation._periodic_tasks
-    metadynamics.force.setForceGroup(METAD_GROUP)
-    simulation.context.reinitialize(preserveState=True)
-    recorder = HillRecorder(metadynamics)
-    simulation.reporters.append(recorder)
-    simulation.step(steps)
-    state = simulation.context.getState(
-        getPositions=True, getEnergy=True, groups={METAD_GROUP}
-    )
-    bias = state.getPotentialEnergy().value_in_unit(unit.kilojoules_per_mole)
-    return ufed, recorder, state.getDynamicalVariables(), bias
-
-
-@pytest.mark.parametrize(
-    "enforce_gridless, bias_psi, tolerance",
-    [
-        pytest.param(False, False, 1e-4, id="gridded-1D"),
-        pytest.param(False, True, 1e-4, id="gridded-2D"),
-        pytest.param(True, False, 1e-10, id="gridless-1D"),
-        pytest.param(True, True, 1e-10, id="gridless-2D"),
-    ],
-)
-def test_metadynamics_bias_is_a_sum_of_hills(enforce_gridless, bias_psi, tolerance):
-    ufed, recorder, point, bias = run_metadynamics(
-        100, enforce_gridless=enforce_gridless, bias_psi=bias_psi
-    )
-    height = ufed.height
-    assert len(recorder.centers) == 10
-    assert recorder.heights == pytest.approx([height] * 10)
-    expected = von_mises_bias(ufed.variables, recorder.centers, recorder.heights, point)
-    assert bias == pytest.approx(expected, rel=tolerance)
-
-
-@pytest.mark.parametrize(
-    "enforce_gridless, bias_psi, tolerance",
-    [
-        pytest.param(False, False, 1e-4, id="gridded-1D"),
-        pytest.param(False, True, 1e-4, id="gridded-2D"),
-        pytest.param(True, False, 1e-10, id="gridless-1D"),
-        pytest.param(True, True, 1e-10, id="gridless-2D"),
-    ],
-)
-def test_well_tempered_metadynamics_scales_hill_heights(
-    enforce_gridless, bias_psi, tolerance
-):
-    bias_factor = 10
-    ufed, recorder, point, bias = run_metadynamics(
-        100,
-        bias_factor=bias_factor,
-        enforce_gridless=enforce_gridless,
-        bias_psi=bias_psi,
-    )
-    variables = ufed.variables
-    delta_kT = (bias_factor - 1) * KB * variables[0].temperature
-    expected_heights = [ufed.height]
-    for k in range(1, len(recorder.centers)):
-        previous = von_mises_bias(
-            variables,
-            recorder.centers[:k],
-            recorder.heights[:k],
-            recorder.centers[k],
-        )
-        expected_heights.append(ufed.height * np.exp(-previous / delta_kT))
-    assert recorder.heights == pytest.approx(expected_heights, rel=tolerance)
-    assert recorder.heights[-1] < 0.9 * ufed.height
-    expected = von_mises_bias(variables, recorder.centers, recorder.heights, point)
-    assert bias == pytest.approx(expected, rel=tolerance)
 
 
 def test_rmsd_forces():

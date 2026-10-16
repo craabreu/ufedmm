@@ -6,9 +6,9 @@ from openmm import unit
 import ufedmm
 from ufedmm.ufedmm import PeriodicTask
 
+from .test_metadynamics import METAD_GROUP
 from .test_ufedmm import (
     DT,
-    METAD_GROUP,
     TAU,
     TEMP,
     phase_space_point,
