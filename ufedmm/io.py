@@ -238,7 +238,7 @@ class StateDataReporter(app.StateDataReporter):
                 ke_context = self._ke_context
                 Nt = system.getNumParticles()
                 Nv = ke_context.getSystem().getNumParticles()
-                velocities = state.getVelocities(extended=True, split=False)
+                velocities = state.getVelocities(extended=True)
                 ke_context.setVelocities(velocities[Nt - Nv : Nt])
                 ke_context.getIntegrator().step(1)
                 ke_values = ke_context.getState(getVelocities=True).getVelocities()

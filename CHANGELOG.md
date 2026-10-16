@@ -4,14 +4,14 @@
 
 ### Breaking changes
 - UFEDMM now requires Python 3.10 or newer and OpenMM 8.4 or newer.
-- `ExtendedSpaceState.getVelocities(extended=True)` now returns a tuple with the
-  velocities of the physical particles and those of the dynamical variables, like
-  `getPositions(extended=True)`. Pass `split=False` to get a single list as before.
 
 ### Added
 - UFEDMM is published on PyPI (`pip install ufedmm`) as well as on the `mdtools`
   conda channel.
 - `ufedmm.__version__` reports the installed version.
+- `ExtendedSpaceState.getVelocities` takes a `split` argument. With `extended=True,
+  split=True`, it returns the velocities of the physical particles and the x
+  velocities of the extra particles separately.
 - A `CITATION.cff` file points to the UFEDMM paper (Bajpai et al., J. Comput.
   Chem. 2023).
 

@@ -775,7 +775,7 @@ class ExtendedSpaceState(openmm.State):
         positions, xvars = self._split(all_positions, asNumpy)
         return (positions, xvars) if extended else positions
 
-    def getVelocities(self, asNumpy=False, extended=False, split=True):
+    def getVelocities(self, asNumpy=False, extended=False, split=False):
         """Gets the velocities of all physical particles and optionally also gets the
         velocities of the extra particles associated to the extended- space dynamical
         variables.
@@ -786,20 +786,21 @@ class ExtendedSpaceState(openmm.State):
                 Whether to return Numpy arrays instead of lists of openmm.Vec3.
             extended : bool, default=False
                 Whether to include the velocities of the extra particles.
-            split : bool, default=True
+            split : bool, default=False
                 Whether to return the velocities of the physical particles and the
-                velocities of the extra particles separately.
+                x velocities of the extra particles separately. Only used if
+                `extended=True`.
 
         Returns
         -------
             list(openmm.Vec3)
-                If `asNumpy=False` and `extended=False`.
+                If `asNumpy=False`, and either `extended=False` or `split=False`.
             numpy.ndarray
-                If `asNumpy=True` and `extended=False`.
+                If `asNumpy=True`, and either `extended=False` or `split=False`.
             list(openmm.Vec3), list(float)
-                If `asNumpy=False` and `extended=True`.
+                If `asNumpy=False`, `extended=True`, and `split=True`.
             numpy.ndarray, numpy.ndarray
-                If `asNumpy=True` and `extended=True`.
+                If `asNumpy=True`, `extended=True`, and `split=True`.
 
         Raises
         ------
