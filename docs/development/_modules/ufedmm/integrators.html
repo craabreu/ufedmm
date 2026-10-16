@@ -682,10 +682,9 @@
 
 <span class="sd">    Keyword Args</span>
 <span class="sd">    ------------</span>
-<span class="sd">        nchain : int, default=2</span>
-<span class="sd">            The number of thermostats in each Nose-Hoover chain.</span>
-<span class="sd">        track_energy : bool, default=False</span>
-<span class="sd">            Whether to track the thermostat energy term.</span>
+<span class="sd">        nchain : int, default=4</span>
+<span class="sd">            The number of thermostats in each Nose-Hoover chain. Short chains can</span>
+<span class="sd">            sample stiff, nearly harmonic degrees of freedom poorly.</span>
 <span class="sd">        **kwargs</span>
 <span class="sd">            All keyword arguments in :class:`AbstractMiddleRespaIntegrator`, except</span>
 <span class="sd">            ``num_rattles``.</span>
@@ -699,7 +698,7 @@
 <span class="sd">        ... )</span>
 <span class="sd">        &gt;&gt;&gt; print(integrator)</span>
 <span class="sd">        Per-dof variables:</span>
-<span class="sd">          kT, Q, v1, v2</span>
+<span class="sd">          kT, Q, v1, v2, v3, v4</span>
 <span class="sd">        Global variables:</span>
 <span class="sd">          irespa0 = 0.0</span>
 <span class="sd">        Computation steps:</span>
@@ -710,17 +709,21 @@
 <span class="sd">           4:    v &lt;- v + 0.125*dt*f0/m</span>
 <span class="sd">           5:    x &lt;- x + 0.125*dt*v</span>
 <span class="sd">           6:    constrain positions</span>
-<span class="sd">           7:    v2 &lt;- v2 + 0.125*dt*(Q*v1^2 - kT)/Q</span>
-<span class="sd">           8:    v1 &lt;- (v1*z + 0.125*dt*(m*v^2 - kT)/Q)*z; z=exp(-0.0625*dt*v2)</span>
-<span class="sd">           9:    v &lt;- v*exp(-0.25*dt*v1)</span>
+<span class="sd">           7:    v4 &lt;- v4 + 0.125*dt*(Q*v3^2 - kT)/Q</span>
+<span class="sd">           8:    v3 &lt;- (v3*z + 0.125*dt*(Q*v2^2 - kT)/Q)*z; z=exp(-0.0625*dt*v4)</span>
+<span class="sd">           9:    v2 &lt;- (v2*z + 0.125*dt*(Q*v1^2 - kT)/Q)*z; z=exp(-0.0625*dt*v3)</span>
 <span class="sd">          10:    v1 &lt;- (v1*z + 0.125*dt*(m*v^2 - kT)/Q)*z; z=exp(-0.0625*dt*v2)</span>
-<span class="sd">          11:    v2 &lt;- v2 + 0.125*dt*(Q*v1^2 - kT)/Q</span>
-<span class="sd">          12:    x &lt;- x + 0.125*dt*v</span>
-<span class="sd">          13:    constrain positions</span>
-<span class="sd">          14:    v &lt;- v + 0.125*dt*f0/m</span>
-<span class="sd">          15:    irespa0 &lt;- irespa0 + 1</span>
-<span class="sd">          16: end</span>
-<span class="sd">          17: v &lt;- v + 0.5*dt*f1/m</span>
+<span class="sd">          11:    v &lt;- v*exp(-0.25*dt*v1)</span>
+<span class="sd">          12:    v1 &lt;- (v1*z + 0.125*dt*(m*v^2 - kT)/Q)*z; z=exp(-0.0625*dt*v2)</span>
+<span class="sd">          13:    v2 &lt;- (v2*z + 0.125*dt*(Q*v1^2 - kT)/Q)*z; z=exp(-0.0625*dt*v3)</span>
+<span class="sd">          14:    v3 &lt;- (v3*z + 0.125*dt*(Q*v2^2 - kT)/Q)*z; z=exp(-0.0625*dt*v4)</span>
+<span class="sd">          15:    v4 &lt;- v4 + 0.125*dt*(Q*v3^2 - kT)/Q</span>
+<span class="sd">          16:    x &lt;- x + 0.125*dt*v</span>
+<span class="sd">          17:    constrain positions</span>
+<span class="sd">          18:    v &lt;- v + 0.125*dt*f0/m</span>
+<span class="sd">          19:    irespa0 &lt;- irespa0 + 1</span>
+<span class="sd">          20: end</span>
+<span class="sd">          21: v &lt;- v + 0.5*dt*f1/m</span>
 <span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
@@ -728,21 +731,17 @@
         <span class="n">temperature</span><span class="p">,</span>
         <span class="n">time_constant</span><span class="p">,</span>
         <span class="n">step_size</span><span class="p">,</span>
-        <span class="n">nchain</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-        <span class="n">track_energy</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">nchain</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
         <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="k">if</span> <span class="s2">"num_rattles"</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">"num_rattles"</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2"> cannot handle constraints"</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_tau</span> <span class="o">=</span> <span class="n">_standardized</span><span class="p">(</span><span class="n">time_constant</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_nchain</span> <span class="o">=</span> <span class="n">nchain</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_track_energy</span> <span class="o">=</span> <span class="n">track_energy</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">temperature</span><span class="p">,</span> <span class="n">step_size</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addPerDofVariable</span><span class="p">(</span><span class="s2">"Q"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nchain</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">addPerDofVariable</span><span class="p">(</span><span class="sa">f</span><span class="s2">"v</span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">track_energy</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">addPerDofVariable</span><span class="p">(</span><span class="sa">f</span><span class="s2">"eta</span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
 
 <div class="viewcode-block" id="MiddleMassiveNHCIntegrator.update_temperatures">
 <a class="viewcode-back" href="../../api/MiddleMassiveNHCIntegrator.html#ufedmm.MiddleMassiveNHCIntegrator.update_temperatures">[docs]</a>

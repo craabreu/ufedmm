@@ -41,7 +41,7 @@
 <h1>MiddleMassiveNHCIntegrator<a class="headerlink" href="#middlemassivenhcintegrator" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="ufedmm.MiddleMassiveNHCIntegrator">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">ufedmm.</span></span><span class="sig-name descname"><span class="pre">MiddleMassiveNHCIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_constant</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">step_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nchain</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">track_energy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/integrators.html#MiddleMassiveNHCIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.MiddleMassiveNHCIntegrator" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">ufedmm.</span></span><span class="sig-name descname"><span class="pre">MiddleMassiveNHCIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_constant</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">step_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nchain</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/integrators.html#MiddleMassiveNHCIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.MiddleMassiveNHCIntegrator" title="Link to this definition">¶</a></dt>
 <dd><p>A massive, middle-type Nose-Hoover Chain Thermostat solver <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../references.html#id3" title="Glenn J. Martyna, Michael L. Klein, and Mark Tuckerman. Nosé-Hoover chains: The canonical ensemble via continuous dynamics. The Journal of Chemical Physics, 97(4):2635–2643, August 1992. URL: https://doi.org/10.1063%2F1.463940, doi:10.1063/1.463940.">6</a>]</span>
 with optional multiple time-scale integration via RESPA.</p>
 <p>To enable RESPA, the forces in OpenMM system must be split into distinct force
@@ -57,8 +57,8 @@ entries.</p>
 </dd>
 <dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
-<li><p><strong>nchain</strong> (<em>int</em><em>, </em><em>default=2</em>) – The number of thermostats in each Nose-Hoover chain.</p></li>
-<li><p><strong>track_energy</strong> (<em>bool</em><em>, </em><em>default=False</em>) – Whether to track the thermostat energy term.</p></li>
+<li><p><strong>nchain</strong> (<em>int</em><em>, </em><em>default=4</em>) – The number of thermostats in each Nose-Hoover chain. Short chains can
+sample stiff, nearly harmonic degrees of freedom poorly.</p></li>
 <li><p><strong>**kwargs</strong> – All keyword arguments in <a class="reference internal" href="AbstractMiddleRespaIntegrator.html#ufedmm.AbstractMiddleRespaIntegrator" title="ufedmm.AbstractMiddleRespaIntegrator"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractMiddleRespaIntegrator</span></code></a>, except
 <code class="docutils literal notranslate"><span class="pre">num_rattles</span></code>.</p></li>
 </ul>
@@ -72,7 +72,7 @@ entries.</p>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">integrator</span><span class="p">)</span>
 <span class="go">Per-dof variables:</span>
-<span class="go">  kT, Q, v1, v2</span>
+<span class="go">  kT, Q, v1, v2, v3, v4</span>
 <span class="go">Global variables:</span>
 <span class="go">  irespa0 = 0.0</span>
 <span class="go">Computation steps:</span>
@@ -83,17 +83,21 @@ entries.</p>
 <span class="go">   4:    v &lt;- v + 0.125*dt*f0/m</span>
 <span class="go">   5:    x &lt;- x + 0.125*dt*v</span>
 <span class="go">   6:    constrain positions</span>
-<span class="go">   7:    v2 &lt;- v2 + 0.125*dt*(Q*v1^2 - kT)/Q</span>
-<span class="go">   8:    v1 &lt;- (v1*z + 0.125*dt*(m*v^2 - kT)/Q)*z; z=exp(-0.0625*dt*v2)</span>
-<span class="go">   9:    v &lt;- v*exp(-0.25*dt*v1)</span>
+<span class="go">   7:    v4 &lt;- v4 + 0.125*dt*(Q*v3^2 - kT)/Q</span>
+<span class="go">   8:    v3 &lt;- (v3*z + 0.125*dt*(Q*v2^2 - kT)/Q)*z; z=exp(-0.0625*dt*v4)</span>
+<span class="go">   9:    v2 &lt;- (v2*z + 0.125*dt*(Q*v1^2 - kT)/Q)*z; z=exp(-0.0625*dt*v3)</span>
 <span class="go">  10:    v1 &lt;- (v1*z + 0.125*dt*(m*v^2 - kT)/Q)*z; z=exp(-0.0625*dt*v2)</span>
-<span class="go">  11:    v2 &lt;- v2 + 0.125*dt*(Q*v1^2 - kT)/Q</span>
-<span class="go">  12:    x &lt;- x + 0.125*dt*v</span>
-<span class="go">  13:    constrain positions</span>
-<span class="go">  14:    v &lt;- v + 0.125*dt*f0/m</span>
-<span class="go">  15:    irespa0 &lt;- irespa0 + 1</span>
-<span class="go">  16: end</span>
-<span class="go">  17: v &lt;- v + 0.5*dt*f1/m</span>
+<span class="go">  11:    v &lt;- v*exp(-0.25*dt*v1)</span>
+<span class="go">  12:    v1 &lt;- (v1*z + 0.125*dt*(m*v^2 - kT)/Q)*z; z=exp(-0.0625*dt*v2)</span>
+<span class="go">  13:    v2 &lt;- (v2*z + 0.125*dt*(Q*v1^2 - kT)/Q)*z; z=exp(-0.0625*dt*v3)</span>
+<span class="go">  14:    v3 &lt;- (v3*z + 0.125*dt*(Q*v2^2 - kT)/Q)*z; z=exp(-0.0625*dt*v4)</span>
+<span class="go">  15:    v4 &lt;- v4 + 0.125*dt*(Q*v3^2 - kT)/Q</span>
+<span class="go">  16:    x &lt;- x + 0.125*dt*v</span>
+<span class="go">  17:    constrain positions</span>
+<span class="go">  18:    v &lt;- v + 0.125*dt*f0/m</span>
+<span class="go">  19:    irespa0 &lt;- irespa0 + 1</span>
+<span class="go">  20: end</span>
+<span class="go">  21: v &lt;- v + 0.5*dt*f1/m</span>
 </pre></div>
 </div>
 <p class="rubric">Methods</p>
