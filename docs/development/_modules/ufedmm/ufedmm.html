@@ -79,6 +79,14 @@
                 <span class="nb">map</span><span class="p">(</span><span class="n">force</span><span class="o">.</span><span class="n">getParticleParameters</span><span class="p">,</span> <span class="nb">range</span><span class="p">(</span><span class="n">force</span><span class="o">.</span><span class="n">getNumParticles</span><span class="p">()))</span>
             <span class="p">)</span>
             <span class="n">force</span><span class="o">.</span><span class="n">addPerParticleParameter</span><span class="p">(</span><span class="s2">"isreal"</span><span class="p">)</span>
+            <span class="c1"># Extra particles must neither contribute to pairwise computed values</span>
+            <span class="c1"># (such as the Born radii) nor carry any energy</span>
+            <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">force</span><span class="o">.</span><span class="n">getNumComputedValues</span><span class="p">()):</span>
+                <span class="n">name</span><span class="p">,</span> <span class="n">expression</span><span class="p">,</span> <span class="nb">type</span> <span class="o">=</span> <span class="n">force</span><span class="o">.</span><span class="n">getComputedValueParameters</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">type</span> <span class="o">!=</span> <span class="n">force</span><span class="o">.</span><span class="n">SingleParticle</span><span class="p">:</span>
+                    <span class="n">force</span><span class="o">.</span><span class="n">setComputedValueParameters</span><span class="p">(</span>
+                        <span class="n">index</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"isreal2*V_GB; V_GB=</span><span class="si">{</span><span class="n">expression</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="nb">type</span>
+                    <span class="p">)</span>
             <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">force</span><span class="o">.</span><span class="n">getNumEnergyTerms</span><span class="p">()):</span>
                 <span class="n">expression</span><span class="p">,</span> <span class="nb">type</span> <span class="o">=</span> <span class="n">force</span><span class="o">.</span><span class="n">getEnergyTermParameters</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
                 <span class="n">energy</span> <span class="o">=</span> <span class="p">(</span>
@@ -411,13 +419,6 @@
         <span class="n">length</span> <span class="o">=</span> <span class="n">Lx</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">periodic</span> <span class="k">else</span> <span class="n">Lx</span> <span class="o">/</span> <span class="mi">2</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">mass</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_range</span> <span class="o">/</span> <span class="n">length</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_particle_position</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">Lx</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
-        <span class="n">length</span> <span class="o">=</span> <span class="n">Lx</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">periodic</span> <span class="k">else</span> <span class="n">Lx</span> <span class="o">/</span> <span class="mi">2</span>
-        <span class="k">return</span> <span class="p">(</span>
-            <span class="n">openmm</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="n">length</span> <span class="o">*</span> <span class="p">(</span><span class="n">value</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_value</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_range</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-            <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span>
-        <span class="p">)</span>
-
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_energy_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="s2">""</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">"""Returns the algebraic expression that transforms the x coordinate of a</span>
 <span class="sd">        particle into this dynamical variables.</span>
@@ -727,9 +728,11 @@
                 <span class="k">else</span> <span class="n">functools</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">multiply</span><span class="o">.</span><span class="n">outer</span><span class="p">,</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">hills</span><span class="p">))</span>
             <span class="p">)</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_full_periodic</span><span class="p">:</span>
-                <span class="k">for</span> <span class="n">axis</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bias_variables</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bias_variables</span><span class="p">):</span>
                     <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">periodic</span><span class="p">:</span>
-                        <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extra_points</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>
+                        <span class="c1"># The first variable runs fastest, so it is the last axis</span>
+                        <span class="n">axis</span> <span class="o">=</span> <span class="n">ndim</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">index</span>
+                        <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extra_points</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>
                         <span class="n">begin</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
                             <span class="nb">slice</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span> <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">axis</span> <span class="k">else</span> <span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
                             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ndim</span><span class="p">)</span>
@@ -1070,7 +1073,7 @@
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">            positions : list of openmm.Vec3</span>
+<span class="sd">            positions : list of openmm.Vec3 or numpy.ndarray or unit.Quantity</span>
 <span class="sd">                The positions of physical particles.</span>
 
 <span class="sd">        Keyword Args</span>
@@ -1080,7 +1083,7 @@
 <span class="sd">        """</span>
         <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getState</span><span class="p">()</span><span class="o">.</span><span class="n">getPeriodicBoxVectors</span><span class="p">()</span>
         <span class="n">nvars</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">)</span>
-        <span class="n">particle_positions</span> <span class="o">=</span> <span class="n">_standardized</span><span class="p">(</span><span class="n">positions</span><span class="p">)</span>
+        <span class="n">particle_positions</span> <span class="o">=</span> <span class="p">[</span><span class="n">openmm</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="o">*</span><span class="n">xyz</span><span class="p">)</span> <span class="k">for</span> <span class="n">xyz</span> <span class="ow">in</span> <span class="n">_standardized</span><span class="p">(</span><span class="n">positions</span><span class="p">)]</span>
         <span class="k">if</span> <span class="n">extended_positions</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">extra_positions</span> <span class="o">=</span> <span class="p">[</span>
                 <span class="n">openmm</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">b</span><span class="o">.</span><span class="n">y</span> <span class="o">*</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">nvars</span> <span class="o">+</span> <span class="mi">2</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nvars</span><span class="p">)</span>
@@ -1278,12 +1281,6 @@
 <span class="sd">            steps : int</span>
 <span class="sd">                The number of steps to be executed.</span>
 <span class="sd">        """</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">integrator</span><span class="p">,</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">AbstractMiddleRespaIntegrator</span><span class="p">):</span>
-            <span class="k">if</span> <span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">integrator</span><span class="o">.</span><span class="n">_num_rattles</span> <span class="o">==</span> <span class="mi">0</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">system</span><span class="o">.</span><span class="n">getNumConstraints</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span>
-            <span class="p">):</span>
-                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">"Integrator cannot handle constraints"</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_periodic_tasks</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">task</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_periodic_tasks</span><span class="p">:</span>
                 <span class="n">task</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">steps</span><span class="p">)</span>
