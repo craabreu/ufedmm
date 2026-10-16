@@ -23,7 +23,7 @@ args = parser.parse_args()
 
 seed = random.SystemRandom().randint(0, 2**31) if args.seed is None else args.seed
 model = ufedmm.AlanineDipeptideModel(
-    force_field=args.ff, water=args.water, constraints=None
+    force_field=args.ff, water=args.water, constraints=None, rigidWater=False
 )
 temp = 300 * unit.kelvin
 gamma = 10 / unit.picoseconds

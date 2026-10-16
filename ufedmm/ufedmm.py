@@ -872,9 +872,27 @@ class ExtendedSpaceContext(openmm.Context):
             A list of :OpenMM:`CustomCVForce` objects responsible for evaluating the
             potential energy terms which couples the extra dynamical variables to their
             associated collective variables.
+
+    Raises
+    ------
+        ValueError
+            If the system has constraints and the integrator is a UFEDMM integrator
+            without RATTLE (``num_rattles=0``), which would ignore them.
     """
 
     def __init__(self, variables, system, *args, **kwargs):
+        integrator = args[0] if args else kwargs.get("integrator")
+        if (
+            getattr(integrator, "_num_rattles", None) == 0
+            and system.getNumConstraints()
+        ):
+            raise ValueError(
+                f"{integrator.__class__.__name__} without RATTLE cannot handle"
+                f" constraints, but the system has {system.getNumConstraints()}."
+                " Create the system without constraints or use an integrator with"
+                " num_rattles > 0."
+            )
+
         def get_driving_force(variables):
             driving_force = openmm.CustomCVForce(_get_energy_function(variables))
             for name, value in _get_parameters(variables).items():
