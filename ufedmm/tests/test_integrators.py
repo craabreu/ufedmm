@@ -5,8 +5,9 @@ from openmm import unit
 
 import ufedmm
 
-from .test_ufedmm import (
+from .common import (
     DT,
+    KB,
     TAU,
     TEMP,
     nonbonded_force,
@@ -15,7 +16,6 @@ from .test_ufedmm import (
     ufed_model,
 )
 
-R = unit.MOLAR_GAS_CONSTANT_R.value_in_unit(unit.kilojoules_per_mole / unit.kelvin)
 GAMMA = 10 / unit.picoseconds
 
 
@@ -122,8 +122,8 @@ def test_ggmt_extended_space_time_constants():
     # The context must stay alive while the integrator's variables are read
     simulation = reference_simulation(model, ufed, integrator)  # noqa: F841
     natoms = len(model.positions)
-    kT_atoms = R * TEMP.value_in_unit(unit.kelvin)
-    kT_extra = R * ufed.variables[0].temperature
+    kT_atoms = KB * TEMP.value_in_unit(unit.kelvin)
+    kT_extra = KB * ufed.variables[0].temperature
     tau = TAU.value_in_unit(unit.picoseconds)
     Q1 = np.array(integrator.getPerDofVariableByName("Q1"))
     Q2 = np.array(integrator.getPerDofVariableByName("Q2"))

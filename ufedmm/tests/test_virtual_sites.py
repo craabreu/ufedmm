@@ -7,21 +7,9 @@ from openmm import app, unit
 
 import ufedmm
 
+from .common import GPU_PLATFORMS
+
 TEMP = 300 * unit.kelvin
-
-
-def _usable(platform_name):
-    try:
-        platform = openmm.Platform.getPlatformByName(platform_name)
-        system = openmm.System()
-        system.addParticle(1.0)
-        openmm.Context(system, openmm.VerletIntegrator(0.001), platform)
-    except Exception:
-        return False
-    return True
-
-
-GPU_PLATFORMS = [name for name in ("CUDA", "OpenCL") if _usable(name)]
 DT = 1.5 * unit.femtoseconds
 TAU = 160 * unit.femtoseconds
 GAMMA = 10 / unit.picoseconds

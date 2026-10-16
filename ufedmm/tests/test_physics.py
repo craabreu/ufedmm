@@ -8,10 +8,7 @@ from openmm import unit
 
 import ufedmm
 
-from .test_metadynamics import end_to_end_distance
-from .test_virtual_sites import GPU_PLATFORMS
-
-R = unit.MOLAR_GAS_CONSTANT_R.value_in_unit(unit.kilojoules_per_mole / unit.kelvin)
+from .common import GPU_PLATFORMS, KB, end_to_end_distance
 
 # A bath of independent harmonic oscillators. Like the atoms of a UFED system, the
 # first NUM_ATOMS particles are thermostatted at T in all directions. Like its extra
@@ -43,8 +40,8 @@ def oscillator_bath(integrator, seed=1):
     velocities = np.zeros((NUM_ATOMS + NUM_EXTRA, 3))
     for dofs, temperature in ((np.s_[:NUM_ATOMS, :], T), (np.s_[NUM_ATOMS:, 0], TS)):
         shape = positions[dofs].shape
-        positions[dofs] = rng.normal(0, np.sqrt(R * temperature / STIFFNESS), shape)
-        velocities[dofs] = rng.normal(0, np.sqrt(R * temperature / MASS), shape)
+        positions[dofs] = rng.normal(0, np.sqrt(KB * temperature / STIFFNESS), shape)
+        velocities[dofs] = rng.normal(0, np.sqrt(KB * temperature / MASS), shape)
     context.setPositions(positions)
     context.setVelocities(velocities)
     return context
@@ -99,7 +96,7 @@ def test_thermostats_sample_each_temperature(make_integrator, regulated):
         "extra along x": (np.s_[NUM_ATOMS:, 0], TS),
     }
     for group, (dofs, temperature) in groups.items():
-        kT = R * temperature
+        kT = KB * temperature
         expected = {
             "kinetic": 0.5 * kT,
             "potential": 0.5 * kT,
