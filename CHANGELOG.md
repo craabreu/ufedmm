@@ -86,5 +86,9 @@
   `IndexError`, or with a shuffled index, pair forces with the wrong samples.
 - `ExtendedSpaceContext.setPositions` accepts positions as a NumPy array, such as
   `State.getPositions(asNumpy=True)`.
+- `ExtendedSpaceContext.setPeriodicBoxVectors` keeps the values and rates of
+  change of the dynamical variables. It rescaled the masses of the extra particles
+  but not their x coordinates and velocities, so changing the box changed every
+  variable.
 - `Tee` closes only the files it opened from file names, not the streams passed to
   it.

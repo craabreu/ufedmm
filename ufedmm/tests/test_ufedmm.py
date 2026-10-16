@@ -302,11 +302,24 @@ def test_many_variables_are_split_among_driving_forces():
     assert energy == pytest.approx(np.sum(0.5 * Ks * delta**2))
 
 
-def test_set_periodic_box_vectors_rescales_extra_particle_masses():
+def extra_particle_state(context):
+    """Variable values, x velocities, and kinetic energies of the extra particles."""
+    state = context.getState(getPositions=True, getVelocities=True)
+    _, vx = state.getVelocities(asNumpy=True, extended=True, split=True)
+    system = context.getSystem()
+    ntotal = system.getNumParticles()
+    masses = [system.getParticleMass(i)._value for i in range(ntotal - 2, ntotal)]
+    vx = vx.value_in_unit(unit.nanometers / unit.picosecond)
+    return np.array(state.getDynamicalVariables()), vx, 0.5 * np.array(masses) * vx**2
+
+
+def test_set_periodic_box_vectors_keeps_dynamical_variables():
     model, ufed = ufed_model()
     integrator = ufedmm.MiddleMassiveNHCIntegrator(TEMP, TAU, DT)
     simulation = reference_simulation(model, ufed, integrator)
+    simulation.step(20)
     context = simulation.context
+    values, vx, kinetic = extra_particle_state(context)
     Lx = 3.0
     context.setPeriodicBoxVectors(
         openmm.Vec3(Lx, 0, 0), openmm.Vec3(0, 2.5, 0), openmm.Vec3(0, 0, 2.5)
@@ -317,10 +330,28 @@ def test_set_periodic_box_vectors_rescales_extra_particle_masses():
     for i, v in enumerate(ufed.variables):
         mass = system.getParticleMass(natoms + i).value_in_unit(unit.dalton)
         assert mass == pytest.approx(v.mass * (v._range / Lx) ** 2)
+    new_values, new_vx, new_kinetic = extra_particle_state(context)
+    assert new_values == pytest.approx(values)
+    assert new_vx == pytest.approx(vx * Lx / 2.5)  # the same rate of change
+    assert new_kinetic == pytest.approx(kinetic)
     with pytest.raises(ValueError, match="orthorhombic"):
         context.setPeriodicBoxVectors(
             openmm.Vec3(Lx, 0, 0), openmm.Vec3(0.5, 2.5, 0), openmm.Vec3(0, 0, 2.5)
         )
+
+
+def test_set_periodic_box_vectors_before_positions():
+    model, ufed = ufed_model()
+    integrator = ufedmm.MiddleMassiveNHCIntegrator(TEMP, TAU, DT)
+    platform = openmm.Platform.getPlatformByName("Reference")
+    context = ufedmm.ExtendedSpaceContext(
+        ufed.variables, model.system, integrator, platform
+    )
+    context.setPeriodicBoxVectors(
+        openmm.Vec3(3, 0, 0), openmm.Vec3(0, 2.5, 0), openmm.Vec3(0, 0, 2.5)
+    )
+    context.setPositions(model.positions)
+    assert context.getParameter("Lx") == pytest.approx(3)
 
 
 def test_velocities_to_temperature_with_center_of_mass_motion_remover():
