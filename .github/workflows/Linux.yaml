@@ -20,13 +20,31 @@ jobs:
     name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, OpenMM ${{ matrix.openmm-version }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest]
-        python-version: [3.9, "3.10"]
-        openmm-version: ["7.7", "8.1"]
+        include:
+          - os: ubuntu-latest
+            python-version: "3.14"
+            openmm-version: "8.6"
+
+          - os: ubuntu-latest
+            python-version: "3.13"
+            openmm-version: "8.6"
+
+          - os: ubuntu-latest
+            python-version: "3.12"
+            openmm-version: "8.5"
+
+          - os: ubuntu-latest
+            python-version: "3.11"
+            openmm-version: "8.4"
+
+          - os: ubuntu-latest
+            python-version: "3.10"
+            openmm-version: "8.4"
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Additional info about the build
         shell: bash
@@ -35,13 +53,11 @@ jobs:
           df -h
           ulimit -a
 
-      # More info on options: https://github.com/marketplace/actions/provision-with-micromamba
-      - uses: mamba-org/provision-with-micromamba@main
+      - uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: devtools/conda-envs/test_env.yaml
           environment-name: test
-          channels: conda-forge
-          extra-specs: |
+          create-args: >-
             python=${{ matrix.python-version }}
             openmm=${{ matrix.openmm-version }}
 
@@ -56,11 +72,11 @@ jobs:
         # conda setup requires this special shell
         shell: bash -l {0}
         run: |
-          pytest -v --cov=ufedmm --cov-report=xml --color=yes --doctest-modules ufedmm/
+          pytest
 
       - name: CodeCov
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v4
         with:
-          file: ./coverage.xml
+          files: ./coverage.xml
           flags: unittests
           name: codecov-${{ matrix.os }}-py${{ matrix.python-version }}

@@ -19,10 +19,9 @@ requirements:
     - versioningit
     - pip
   run:
-    - python
-    - importlib-resources  # [py<310]
+    - python >=3.10
     - numpy
-    - openmm
+    - openmm >=8.4
     - pandas
     - pyyaml
     - scipy
@@ -37,8 +36,8 @@ about:
   summary: Unified Free Energy Dynamics with OpenMM
   license: MIT
   license_family: MIT
-  license_file: LICENSE
-  doc_url: https://craabreu.github.io/ufedmm
+  license_file: LICENSE.md
+  doc_url: https://craabreu.github.io/ufedmm/latest
   dev_url: https://github.com/craabreu/ufedmm
 
 extra:

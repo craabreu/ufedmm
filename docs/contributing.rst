@@ -39,11 +39,7 @@ Prerequisites:
 
 1. pytest and pytest-cov
 
-2. isort
-
-3. flake8
-
-4. autopep8 (recommended)
+2. ruff
 
 To set up `ufedmm` for local development:
 
@@ -60,9 +56,9 @@ To set up `ufedmm` for local development:
 
    Now you can make your changes locally.
 
-4. When you're done making changes, run all the checks, doc builder and spell checker with `tox <http://tox.readthedocs.io/en/latest/install.html>`_ one command::
+4. When you're done making changes, run the tests::
 
-    devtools/run_tests.sh
+    pytest
 
 5. Commit your changes and push your branch to GitHub::
 
@@ -79,20 +75,14 @@ If you need some code review or feedback while you're developing the code just m
 
 For merging, you should:
 
-1. Include passing tests (run ``devtools/run_tests.sh``) [1]_.
+1. Include passing tests (run ``pytest``).
 2. Update documentation when there's new API, functionality etc.
 3. Add a note to ``docs/changelog.rst`` about the changes.
 4. Add yourself to ``docs/authors.rst``.
-
-.. [1] If you don't have all the necessary python versions available locally you can rely on Travis - it will
-       `run the tests <https://travis-ci.org/craabreu/ufedmm/pull_requests>`_ for each change you add in the pull request.
-
-       It will be slower though ...
 
 Tips
 ----
 
 To help formatting your code, run::
 
-    autopep8 --in-place ufedmm/<modified-file>.py
-    isort ufedmm/<modified-file>.py
+    devtools/scripts/format_and_check.sh

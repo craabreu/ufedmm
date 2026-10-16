@@ -832,7 +832,8 @@ class ExtendedSpaceState(openmm.State):
             ...     [s_phi, s_psi], model.system, integrator
             ... )
             >>> context.setPositions(model.positions)
-            >>> context.getState(getPositions=True).getDynamicalVariables()
+            >>> state = context.getState(getPositions=True)
+            >>> [float(x) for x in state.getDynamicalVariables()]
             [-3.141592653589793, -3.141592653589793]
         """
         _, xvars = self._split(super().getPositions())
