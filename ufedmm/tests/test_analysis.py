@@ -154,3 +154,51 @@ def test_centers_and_mean_forces(index, adjust_centers):
     assert 0 < len(centers[0]) < 25
     assert np.array(centers) == pytest.approx(expected_centers)
     assert np.array(mean_forces) == pytest.approx(expected_forces)
+
+
+def test_metadynamics_bias_free_energy_without_height_column():
+    # Without a "Height" column, every hill has the UFED height. Non-periodic
+    # variables use Gaussian kernels.
+    model = ufedmm.AlanineDipeptideModel()
+    sigma = 0.4
+    s_phi = ufedmm.DynamicalVariable(
+        "s_phi", -3, 3, 50, 300, model.phi, 1000, periodic=False, sigma=sigma
+    )
+    ufed = ufedmm.UnifiedFreeEnergyDynamics([s_phi], 300, height=1.5, frequency=10)
+    centers = np.array([-1.0, 0.0, 0.7])
+    analyzer = ufedmm.FreeEnergyAnalyzer(ufed, pd.DataFrame({"s_phi": centers}))
+    free_energy = analyzer.metadynamics_bias_free_energy()
+    for x in (-0.5, 0.2, 2.0):
+        expected = -1.5 * np.sum(np.exp(-0.5 * ((x - centers) / sigma) ** 2))
+        assert free_energy(x) == pytest.approx(expected)
+
+
+def test_mean_force_fit_accepts_a_single_sigma():
+    ufed = periodic_ufed()
+    analyzer = ufedmm.FreeEnergyAnalyzer(ufed, dataframe=None)
+    grid = np.array(list(itertools.product([-2.0, -0.3, 1.1], [-0.6, 0.1, 0.7])))
+    centers = [grid[:, 0], grid[:, 1]]
+    mean_forces = [np.sin(grid[:, 0]), np.cos(grid[:, 1])]
+    _, single = analyzer.mean_force_free_energy(centers, mean_forces, 0.5)
+    _, both = analyzer.mean_force_free_energy(centers, mean_forces, [0.5, 0.5])
+    assert single(grid[:, 0], grid[:, 1]) == pytest.approx(both(grid[:, 0], grid[:, 1]))
+
+
+@pytest.mark.parametrize("sigma", [None, 0.6], ids=["default-sigma", "given-sigma"])
+def test_deprecated_analyzer_matches_free_energy_analyzer(sigma):
+    ufed = periodic_ufed()
+    dataframe = sampled_dataframe()
+    bins = [5, 4]
+    analyzer = ufedmm.Analyzer(ufed, dataframe, bins, min_count=3)
+    potential, mean_force = analyzer.free_energy_functions(sigma=sigma, factor=2)
+
+    reference = ufedmm.FreeEnergyAnalyzer(ufed, dataframe)
+    centers, mean_forces = reference.centers_and_mean_forces(bins, min_count=3)
+    if sigma is None:
+        sigma = [2 * 2 * np.pi / n for n in bins]
+    expected_potential, expected_mean_force = reference.mean_force_free_energy(
+        centers, mean_forces, sigma
+    )
+    points = (np.array([-1.0, 0.3, 2.5]), np.array([0.4, -2.0, 1.0]))
+    assert potential(*points) == pytest.approx(expected_potential(*points))
+    assert mean_force(*points) == pytest.approx(expected_mean_force(*points))
