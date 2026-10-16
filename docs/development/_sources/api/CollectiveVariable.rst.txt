@@ -1,0 +1,11 @@
+CollectiveVariable
+==================
+
+.. currentmodule:: ufedmm
+.. autoclass:: CollectiveVariable
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: effective_mass
+    .. automethod:: evaluate

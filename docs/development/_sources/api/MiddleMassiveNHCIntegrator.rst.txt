@@ -1,0 +1,10 @@
+MiddleMassiveNHCIntegrator
+==========================
+
+.. currentmodule:: ufedmm
+.. autoclass:: MiddleMassiveNHCIntegrator
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: update_temperatures

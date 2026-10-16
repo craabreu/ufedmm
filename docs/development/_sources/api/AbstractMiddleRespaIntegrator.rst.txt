@@ -1,0 +1,7 @@
+AbstractMiddleRespaIntegrator
+=============================
+
+.. currentmodule:: ufedmm
+.. autoclass:: AbstractMiddleRespaIntegrator
+    :member-order: alphabetical
+

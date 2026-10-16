@@ -1,0 +1,12 @@
+FreeEnergyAnalyzer
+==================
+
+.. currentmodule:: ufedmm
+.. autoclass:: FreeEnergyAnalyzer
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: centers_and_mean_forces
+    .. automethod:: mean_force_free_energy
+    .. automethod:: metadynamics_bias_free_energy

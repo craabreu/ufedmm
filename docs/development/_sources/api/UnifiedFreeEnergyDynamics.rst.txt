@@ -1,0 +1,10 @@
+UnifiedFreeEnergyDynamics
+=========================
+
+.. currentmodule:: ufedmm
+.. autoclass:: UnifiedFreeEnergyDynamics
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: simulation

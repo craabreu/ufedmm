@@ -1,0 +1,13 @@
+ExtendedSpaceSimulation
+=======================
+
+.. currentmodule:: ufedmm
+.. autoclass:: ExtendedSpaceSimulation
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: add_periodic_task
+    .. automethod:: loadCheckpoint
+    .. automethod:: saveCheckpoint
+    .. automethod:: step

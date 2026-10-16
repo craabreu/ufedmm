@@ -1,0 +1,7 @@
+AlanineDipeptideModel
+=====================
+
+.. currentmodule:: ufedmm
+.. autoclass:: AlanineDipeptideModel
+    :member-order: alphabetical
+

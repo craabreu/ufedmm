@@ -4,7 +4,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ufedmm.integrators &#8212; UFED for OpenMM  documentation</title>
+    <title>ufedmm.integrators &#8212; UFEDMM dev  documentation</title>
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
     <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
     <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
@@ -51,7 +51,7 @@
 
 
 <div class="viewcode-block" id="add_inner_nonbonded_force">
-<a class="viewcode-back" href="../../pythonapi/integrators.html#ufedmm.integrators.add_inner_nonbonded_force">[docs]</a>
+<a class="viewcode-back" href="../../api/add_inner_nonbonded_force.html#ufedmm.add_inner_nonbonded_force">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">add_inner_nonbonded_force</span><span class="p">(</span><span class="n">system</span><span class="p">,</span> <span class="n">inner_switch</span><span class="p">,</span> <span class="n">inner_cutoff</span><span class="p">,</span> <span class="n">force_group_index</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Adds a new force group to an :OpenMM:`System` containing a :OpenMM:`NonbondedForce`</span>
@@ -181,7 +181,7 @@
 
 
 <div class="viewcode-block" id="CustomIntegrator">
-<a class="viewcode-back" href="../../pythonapi/integrators.html#ufedmm.integrators.CustomIntegrator">[docs]</a>
+<a class="viewcode-back" href="../../api/CustomIntegrator.html#ufedmm.CustomIntegrator">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">CustomIntegrator</span><span class="p">(</span><span class="n">openmm</span><span class="o">.</span><span class="n">CustomIntegrator</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""An extension of :OpenMM:`CustomIntegrator` class with an extra per-dof variable</span>
 <span class="sd">    named `temperature`, whose content is the temperature of the heat bath associated to</span>
@@ -251,6 +251,8 @@
             <span class="n">readable_lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
         <span class="k">return</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">readable_lines</span><span class="p">)</span>
 
+<div class="viewcode-block" id="CustomIntegrator.update_temperatures">
+<a class="viewcode-back" href="../../api/CustomIntegrator.html#ufedmm.CustomIntegrator.update_temperatures">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">update_temperatures</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">system_temperature</span><span class="p">,</span> <span class="n">extended_space_temperatures</span><span class="p">):</span>
         <span class="n">nparticles</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">getPerDofVariableByName</span><span class="p">(</span><span class="s2">"kT"</span><span class="p">))</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span>
             <span class="n">extended_space_temperatures</span>
@@ -260,10 +262,11 @@
             <span class="n">unit</span><span class="o">.</span><span class="n">MOLAR_GAS_CONSTANT_R</span> <span class="o">*</span> <span class="n">T</span> <span class="o">*</span> <span class="n">openmm</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">T</span> <span class="ow">in</span> <span class="n">temperatures</span>
         <span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">setPerDofVariableByName</span><span class="p">(</span><span class="s2">"kT"</span><span class="p">,</span> <span class="n">kT</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_up_to_date</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_up_to_date</span> <span class="o">=</span> <span class="kc">True</span></div>
+
 
 <div class="viewcode-block" id="CustomIntegrator.step">
-<a class="viewcode-back" href="../../pythonapi/integrators.html#ufedmm.integrators.CustomIntegrator.step">[docs]</a>
+<a class="viewcode-back" href="../../api/CustomIntegrator.html#ufedmm.CustomIntegrator.step">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">steps</span><span class="p">):</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_up_to_date</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">update_temperatures</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">temperature</span><span class="p">,</span> <span class="p">[])</span>
@@ -273,7 +276,7 @@
 
 
 <div class="viewcode-block" id="AbstractMiddleRespaIntegrator">
-<a class="viewcode-back" href="../../pythonapi/integrators.html#ufedmm.integrators.AbstractMiddleRespaIntegrator">[docs]</a>
+<a class="viewcode-back" href="../../api/AbstractMiddleRespaIntegrator.html#ufedmm.AbstractMiddleRespaIntegrator">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">AbstractMiddleRespaIntegrator</span><span class="p">(</span><span class="n">CustomIntegrator</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""An abstract class for middle-type, multiple time-scale integrators.</span>
 
@@ -566,7 +569,7 @@
 
 
 <div class="viewcode-block" id="GeodesicLangevinIntegrator">
-<a class="viewcode-back" href="../../pythonapi/integrators.html#ufedmm.integrators.GeodesicLangevinIntegrator">[docs]</a>
+<a class="viewcode-back" href="../../api/GeodesicLangevinIntegrator.html#ufedmm.GeodesicLangevinIntegrator">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">GeodesicLangevinIntegrator</span><span class="p">(</span><span class="n">AbstractMiddleRespaIntegrator</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""A geodesic Langevin integrator :cite:`Leimkuhler_2016`, which can be integrated</span>
 <span class="sd">    by using either the LF-Middle or the VV-Middle scheme :cite:`Zhang_2019`.</span>
@@ -651,7 +654,7 @@
 
 
 <div class="viewcode-block" id="MiddleMassiveNHCIntegrator">
-<a class="viewcode-back" href="../../pythonapi/integrators.html#ufedmm.integrators.MiddleMassiveNHCIntegrator">[docs]</a>
+<a class="viewcode-back" href="../../api/MiddleMassiveNHCIntegrator.html#ufedmm.MiddleMassiveNHCIntegrator">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">MiddleMassiveNHCIntegrator</span><span class="p">(</span><span class="n">AbstractMiddleRespaIntegrator</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""A massive, middle-type Nose-Hoover Chain Thermostat solver :cite:`Martyna_1992`</span>
 <span class="sd">    with optional multiple time-scale integration via RESPA.</span>
@@ -731,10 +734,13 @@
             <span class="k">if</span> <span class="n">track_energy</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">addPerDofVariable</span><span class="p">(</span><span class="sa">f</span><span class="s2">"eta</span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
 
+<div class="viewcode-block" id="MiddleMassiveNHCIntegrator.update_temperatures">
+<a class="viewcode-back" href="../../api/MiddleMassiveNHCIntegrator.html#ufedmm.MiddleMassiveNHCIntegrator.update_temperatures">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">update_temperatures</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">system_temperature</span><span class="p">,</span> <span class="n">extended_space_temperatures</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">update_temperatures</span><span class="p">(</span><span class="n">system_temperature</span><span class="p">,</span> <span class="n">extended_space_temperatures</span><span class="p">)</span>
         <span class="n">Q</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_tau</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">kT</span> <span class="k">for</span> <span class="n">kT</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">getPerDofVariableByName</span><span class="p">(</span><span class="s2">"kT"</span><span class="p">)]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">setPerDofVariableByName</span><span class="p">(</span><span class="s2">"Q"</span><span class="p">,</span> <span class="n">Q</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setPerDofVariableByName</span><span class="p">(</span><span class="s2">"Q"</span><span class="p">,</span> <span class="n">Q</span><span class="p">)</span></div>
+
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_bath</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">):</span>
         <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nchain</span>
@@ -760,7 +766,7 @@
 
 
 <div class="viewcode-block" id="MiddleMassiveGGMTIntegrator">
-<a class="viewcode-back" href="../../pythonapi/integrators.html#ufedmm.integrators.MiddleMassiveGGMTIntegrator">[docs]</a>
+<a class="viewcode-back" href="../../api/MiddleMassiveGGMTIntegrator.html#ufedmm.MiddleMassiveGGMTIntegrator">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">MiddleMassiveGGMTIntegrator</span><span class="p">(</span><span class="n">AbstractMiddleRespaIntegrator</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""A massive, middle-type Generalized Gaussian Moment Thermostat :cite:`Liu_2000`</span>
 <span class="sd">    solver with optional multiple time-scale integration via RESPA.</span>
@@ -815,9 +821,14 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">addPerDofVariable</span><span class="p">(</span><span class="s2">"v1"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addPerDofVariable</span><span class="p">(</span><span class="s2">"v2"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
 
+<div class="viewcode-block" id="MiddleMassiveGGMTIntegrator.set_extended_space_time_constants">
+<a class="viewcode-back" href="../../api/MiddleMassiveGGMTIntegrator.html#ufedmm.MiddleMassiveGGMTIntegrator.set_extended_space_time_constants">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">set_extended_space_time_constants</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">time_constants</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_xs_taus</span> <span class="o">=</span> <span class="p">[</span><span class="n">_standardized</span><span class="p">(</span><span class="n">tau</span><span class="p">)</span> <span class="k">for</span> <span class="n">tau</span> <span class="ow">in</span> <span class="n">time_constants</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_xs_taus</span> <span class="o">=</span> <span class="p">[</span><span class="n">_standardized</span><span class="p">(</span><span class="n">tau</span><span class="p">)</span> <span class="k">for</span> <span class="n">tau</span> <span class="ow">in</span> <span class="n">time_constants</span><span class="p">]</span></div>
 
+
+<div class="viewcode-block" id="MiddleMassiveGGMTIntegrator.update_temperatures">
+<a class="viewcode-back" href="../../api/MiddleMassiveGGMTIntegrator.html#ufedmm.MiddleMassiveGGMTIntegrator.update_temperatures">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">update_temperatures</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">system_temperature</span><span class="p">,</span> <span class="n">extended_space_temperatures</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">update_temperatures</span><span class="p">(</span><span class="n">system_temperature</span><span class="p">,</span> <span class="n">extended_space_temperatures</span><span class="p">)</span>
         <span class="n">kT_vectors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getPerDofVariableByName</span><span class="p">(</span><span class="s2">"kT"</span><span class="p">)</span>
@@ -831,7 +842,8 @@
             <span class="n">Q1</span> <span class="o">=</span> <span class="p">[</span><span class="n">kT</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tau</span><span class="o">**</span><span class="mi">2</span> <span class="k">for</span> <span class="n">kT</span> <span class="ow">in</span> <span class="n">kT_vectors</span><span class="p">]</span>
             <span class="n">Q2</span> <span class="o">=</span> <span class="p">[</span><span class="mi">8</span> <span class="o">/</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">kT3</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tau</span><span class="o">**</span><span class="mi">2</span> <span class="k">for</span> <span class="n">kT3</span> <span class="ow">in</span> <span class="n">kT3_vectors</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">setPerDofVariableByName</span><span class="p">(</span><span class="s2">"Q1"</span><span class="p">,</span> <span class="n">Q1</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">setPerDofVariableByName</span><span class="p">(</span><span class="s2">"Q2"</span><span class="p">,</span> <span class="n">Q2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setPerDofVariableByName</span><span class="p">(</span><span class="s2">"Q2"</span><span class="p">,</span> <span class="n">Q2</span><span class="p">)</span></div>
+
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_bath</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">"v1"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"v1 + </span><span class="si">{</span><span class="n">fraction</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">2</span><span class="si">}</span><span class="s2">*dt*(m*v^2 - kT)/Q1"</span><span class="p">)</span>
@@ -847,7 +859,7 @@
 
 
 <div class="viewcode-block" id="RegulatedNHLIntegrator">
-<a class="viewcode-back" href="../../pythonapi/integrators.html#ufedmm.integrators.RegulatedNHLIntegrator">[docs]</a>
+<a class="viewcode-back" href="../../api/RegulatedNHLIntegrator.html#ufedmm.RegulatedNHLIntegrator">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">RegulatedNHLIntegrator</span><span class="p">(</span><span class="n">AbstractMiddleRespaIntegrator</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""A regulated version of the massive Nose-Hoover-Langevin</span>
 <span class="sd">    :cite:`Samoletov_2007,Leimkuhler_2009` method. Regulation means that the system</span>
@@ -985,13 +997,16 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">"aa"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">"bb"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
 
+<div class="viewcode-block" id="RegulatedNHLIntegrator.update_temperatures">
+<a class="viewcode-back" href="../../api/RegulatedNHLIntegrator.html#ufedmm.RegulatedNHLIntegrator.update_temperatures">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">update_temperatures</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">system_temperature</span><span class="p">,</span> <span class="n">extended_space_temperatures</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">update_temperatures</span><span class="p">(</span><span class="n">system_temperature</span><span class="p">,</span> <span class="n">extended_space_temperatures</span><span class="p">)</span>
         <span class="n">kT_vectors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getPerDofVariableByName</span><span class="p">(</span><span class="s2">"kT"</span><span class="p">)</span>
         <span class="n">tauSq</span> <span class="o">=</span> <span class="n">_standardized</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tau</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
         <span class="n">Q</span> <span class="o">=</span> <span class="p">[</span><span class="n">tauSq</span> <span class="o">*</span> <span class="n">kT</span> <span class="k">for</span> <span class="n">kT</span> <span class="ow">in</span> <span class="n">kT_vectors</span><span class="p">]</span>
         <span class="n">invQ</span> <span class="o">=</span> <span class="p">[</span><span class="n">openmm</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">x</span> <span class="k">if</span> <span class="n">x</span> <span class="o">&gt;</span> <span class="mf">0.0</span> <span class="k">else</span> <span class="mf">0.0</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">q</span><span class="p">))</span> <span class="k">for</span> <span class="n">q</span> <span class="ow">in</span> <span class="n">Q</span><span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">setPerDofVariableByName</span><span class="p">(</span><span class="s2">"invQ"</span><span class="p">,</span> <span class="n">invQ</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setPerDofVariableByName</span><span class="p">(</span><span class="s2">"invQ"</span><span class="p">,</span> <span class="n">invQ</span><span class="p">)</span></div>
+
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_step_initialization</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">"c"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"sqrt(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_n</span><span class="si">}</span><span class="s2">*kT/m)"</span><span class="p">)</span>
@@ -1048,7 +1063,7 @@
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
-<h1 class="logo"><a href="../../index.html">UFED for OpenMM</a></h1>
+<h1 class="logo"><a href="../../index.html">UFEDMM dev</a></h1>
 
 
 
@@ -1067,7 +1082,8 @@
 <li class="toctree-l1"><a class="reference internal" href="../../readme.html#contributing">Contributing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../pythonapi/index.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../cvpack.html">collective variable package</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../authors.html">Authors</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
@@ -1090,7 +1106,7 @@
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &#169;2020, Charlles Abreu. Project structure based on the Computational Molecular Science Python Cookiecutter version 1.0.
+      &#169;2020-2026 C. Abreu.
       
       |
       Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>

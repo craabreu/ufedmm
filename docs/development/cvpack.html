@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>collective variable package &#8212; UFEDMM dev  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=572d9513" />
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=ccdb6887"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Contributing" href="contributing.html" />
+    <link rel="prev" title="AlanineDipeptideModel" href="api/AlanineDipeptideModel.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="collective-variable-package">
+<h1>collective variable package<a class="headerlink" href="#collective-variable-package" title="Link to this heading">¶</a></h1>
+<p>The <code class="docutils literal notranslate"><span class="pre">ufedmm.cvpack</span></code> module re-exports <a class="reference external" href="https://github.com/craabreu/cvpack">CVPack</a>,
+an external library of useful collective variables.</p>
+<p>Some examples of collective variables implemented in <code class="docutils literal notranslate"><span class="pre">CVPack</span></code> are:</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt><a class="reference external" href="https://craabreu.github.io/cvpack/latest/api/Angle.html">Angle</a>:</dt><dd><p>angle formed by three atoms</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference external" href="https://craabreu.github.io/cvpack/latest/api/AtomicFunction.html">Atomic Function</a>:</dt><dd><p>a user-defined function of the coordinates of a group of atoms</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference external" href="https://craabreu.github.io/cvpack/latest/api/AttractionStrength.html">Attraction Strength</a>:</dt><dd><p>strength of the attraction between two groups of atoms</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference external" href="https://craabreu.github.io/cvpack/latest/api/CentroidFunction.html">Centroid Function</a>:</dt><dd><p>a user-defined function of the centroids of groups of atoms</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference external" href="https://craabreu.github.io/cvpack/latest/api/Distance.html">Distance</a>:</dt><dd><p>distance between two atoms</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference external" href="https://craabreu.github.io/cvpack/latest/api/HelixAngleContent.html">Helix angle content</a>:</dt><dd><p>alpha-helix angle content of a sequence of residues</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference external" href="https://craabreu.github.io/cvpack/latest/api/HelixHBondContent.html">Helix H-bond content</a>:</dt><dd><p>alpha-helix hydrogen-bond content of a sequence of residues</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference external" href="https://craabreu.github.io/cvpack/latest/api/HelixRMSDContent.html">Helix RMSD content</a>:</dt><dd><p>alpha-helix RMSD content of a sequence of residues</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference external" href="https://craabreu.github.io/cvpack/latest/api/HelixTorsionContent.html">Helix torsion content</a>:</dt><dd><p>alpha-helix Ramachandran content of a sequence of residues</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference external" href="https://craabreu.github.io/cvpack/latest/api/NumberOfContacts.html">Number of contacts</a>:</dt><dd><p>number of contacts between two groups of atoms</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference external" href="https://craabreu.github.io/cvpack/latest/api/RadiusOfGyration.html">Radius of gyration</a>:</dt><dd><p>radius of gyration of a group of atoms</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference external" href="https://craabreu.github.io/cvpack/latest/api/RMSD.html">RMSD</a>:</dt><dd><p>root-mean-square deviation of atoms with respect to a reference structure</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference external" href="https://craabreu.github.io/cvpack/latest/api/Torsion.html">Torsion</a>:</dt><dd><p>torsion angle formed by four atoms</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference external" href="https://craabreu.github.io/cvpack/latest/api/TorsionSimilarity.html">Torsion similarity</a>:</dt><dd><p>degree of similarity between pairs of torsion angles</p>
+</dd>
+</dl>
+</li>
+</ul>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">UFEDMM dev</a></h1>
+
+
+
+
+
+
+
+
+
+
+
+<h3><a href="index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="readme.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="readme.html#installation">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="readme.html#contributing">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/index.html">API Reference</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">collective variable package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="authors.html">Authors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">Bibliography</a></li>
+</ul>
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2020-2026 C. Abreu.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/cvpack.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>DynamicalVariable &#8212; UFEDMM dev  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=572d9513" />
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=ccdb6887"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="ExtendedSpaceContext" href="ExtendedSpaceContext.html" />
+    <link rel="prev" title="CollectiveVariable" href="CollectiveVariable.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="dynamicalvariable">
+<h1>DynamicalVariable<a class="headerlink" href="#dynamicalvariable" title="Link to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="ufedmm.DynamicalVariable">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">ufedmm.</span></span><span class="sig-name descname"><span class="pre">DynamicalVariable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mass</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colvars</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">potential</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">periodic</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">parameters</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#DynamicalVariable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.DynamicalVariable" title="Link to this definition">¶</a></dt>
+<dd><p>An extended phase-space variable, whose dynamics is coupled to that of one of
+more collective variables of a system.</p>
+<p>The coupling occurs in the form of a potential energy term involving this dynamical
+variable and its associated collective variables.</p>
+<p>The default potential is a harmonic driving of the type:</p>
+<div class="math notranslate nohighlight">
+\[V(s, \mathbf r) = \frac{\kappa}{2} [s - q(\mathbf r)]^2\]</div>
+<p>where <span class="math notranslate nohighlight">\(s\)</span> is the new dynamical variable, <span class="math notranslate nohighlight">\(q(\mathbf r)\)</span> is its
+associated collective variable, and <span class="math notranslate nohighlight">\(kappa\)</span> is a force constant.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>id</strong> (<em>str</em>) – A valid identifier string for this dynamical variable.</p></li>
+<li><p><strong>min_value</strong> (<em>float</em><em> or </em><em>unit.Quantity</em>) – The minimum allowable value for this dynamical variable.</p></li>
+<li><p><strong>max_value</strong> (<em>float</em><em> or </em><em>unit.Quantity</em>) – The maximum allowable value for this dynamical variable.</p></li>
+<li><p><strong>mass</strong> (<em>float</em><em> or </em><em>unit.Quantity</em>) – The mass assigned to this dynamical variable, whose unit of measurement must
+be compatible with <cite>unit.dalton*(unit.nanometers/X)**2</cite>, where <cite>X</cite> is the
+unit of measurement of the dynamical variable itself.</p></li>
+<li><p><strong>temperature</strong> (<em>float</em><em> or </em><em>unit.Quantity</em>) – The temperature of the heat bath attached to this variable.</p></li>
+<li><p><strong>colvars</strong> (<a class="reference internal" href="CollectiveVariable.html#ufedmm.CollectiveVariable" title="ufedmm.ufedmm.CollectiveVariable"><code class="xref py py-class docutils literal notranslate"><span class="pre">CollectiveVariable</span></code></a> or list thereof) – Either a single colective variable or a list.</p></li>
+<li><p><strong>potential</strong> (<em>float</em><em> or </em><em>unit.Quantity</em><em> or </em><em>str</em>) – Either the value of the force constant of a harmonic driving potential or an
+algebraic expression giving the energy of the system as a function of this
+dynamical variable and its associated collective variable. Such expression
+can also contain a set of global parameters, whose values must be passed as
+keyword arguments (see below).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>periodic</strong> (<em>bool</em><em>, </em><em>default=True</em>) – Whether the collective variable is periodic with period
+<cite>L=max_value-min_value</cite>.</p></li>
+<li><p><strong>sigma</strong> (<em>float</em><em> or </em><em>unit.Quantity</em><em>, </em><em>default=None</em>) – The standard deviation. If this is <cite>None</cite>, then no bias will be considered.</p></li>
+<li><p><strong>grid_size</strong> (<em>int</em><em>, </em><em>default=None</em>) – The grid size. If this is <cite>None</cite> and <cite>sigma</cite> is finite, then a convenient
+value will be automatically chosen.</p></li>
+<li><p><strong>**parameters</strong> – Names and values of global parameters present in the algebraic expression
+defined as <cite>potential</cite> (see above).</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openmm</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">ufedmm</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cv</span> <span class="o">=</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">CollectiveVariable</span><span class="p">(</span><span class="s1">'psi'</span><span class="p">,</span> <span class="n">openmm</span><span class="o">.</span><span class="n">CustomTorsionForce</span><span class="p">(</span><span class="s1">'theta'</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cv</span><span class="o">.</span><span class="n">force</span><span class="o">.</span><span class="n">addTorsion</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="p">[])</span>
+<span class="go">0</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mass</span> <span class="o">=</span> <span class="mi">50</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">dalton</span><span class="o">*</span><span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span><span class="o">/</span><span class="n">unit</span><span class="o">.</span><span class="n">radians</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">K</span> <span class="o">=</span> <span class="mi">1000</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">kilojoules_per_mole</span><span class="o">/</span><span class="n">unit</span><span class="o">.</span><span class="n">radians</span><span class="o">**</span><span class="mi">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Ts</span> <span class="o">=</span> <span class="mi">1500</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ufedmm</span><span class="o">.</span><span class="n">DynamicalVariable</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="s1">'s_psi'</span><span class="p">,</span> <span class="o">-</span><span class="mi">180</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">degrees</span><span class="p">,</span> <span class="mi">180</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">degrees</span><span class="p">,</span> <span class="n">mass</span><span class="p">,</span> <span class="n">Ts</span><span class="p">,</span> <span class="n">cv</span><span class="p">,</span> <span class="n">K</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="go">&lt;s_psi in [-3.141592653589793, 3.141592653589793], periodic, m=50, T=1500&gt;</span>
+</pre></div>
+</div>
+<p class="rubric">Methods</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.DynamicalVariable.evaluate">
+<span class="sig-name descname"><span class="pre">evaluate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Lx</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#DynamicalVariable.evaluate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.DynamicalVariable.evaluate" title="Link to this definition">¶</a></dt>
+<dd><p>Computes the value of this dynamical variable for a given x coordinate and a
+given length of the simulation box in the x direction.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>float</em><em> or </em><em>unit.Quantity</em>) – The x coordinate.</p></li>
+<li><p><strong>Lx</strong> (<em>float</em><em> or </em><em>unit.Quantity</em>) – The length of the simulation box in the x direction.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">UFEDMM dev</a></h1>
+
+
+
+
+
+
+
+
+
+
+
+<h3><a href="../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../readme.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../readme.html#installation">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../readme.html#contributing">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html">Usage</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="core.html">Core</a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrators.html">Integrators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="io.html">IO</a></li>
+<li class="toctree-l2"><a class="reference internal" href="analysis.html">Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="testmodels.html">Testmodels</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../cvpack.html">collective variable package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../authors.html">Authors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../glossary.html">Glossary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">Bibliography</a></li>
+</ul>
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2020-2026 C. Abreu.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/api/DynamicalVariable.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
