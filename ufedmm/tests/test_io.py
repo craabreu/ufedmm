@@ -1,3 +1,4 @@
+import gc
 import io
 
 import numpy as np
@@ -33,3 +34,17 @@ def test_state_data_reporter_with_multiple_temperatures():
     for row in rows:
         temperatures = [float(value) for value in row.split(",")[1:]]
         assert all(np.isfinite(t) and t > 0 for t in temperatures)
+
+
+def test_tee_writes_to_all_outputs_and_closes_only_its_own_files(tmp_path):
+    stream = io.StringIO()
+    path = tmp_path / "output.txt"
+    tee = ufedmm.Tee(stream, str(path))
+    print("first line", file=tee)
+    tee.write("second line\n")
+    tee.flush()
+    del tee
+    gc.collect()
+    assert not stream.closed
+    assert stream.getvalue() == "first line\nsecond line\n"
+    assert path.read_text() == "first line\nsecond line\n"

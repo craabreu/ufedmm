@@ -6,8 +6,6 @@
 .. moduleauthor:: Charlles Abreu <craabreu@gmail.com>
 """
 
-import sys
-
 import openmm
 import yaml
 from openmm import app, unit
@@ -35,13 +33,17 @@ class Tee:
 
     def __init__(self, *files):
         self._files = []
+        self._opened = []
         for output in files:
-            self._files.append(open(output, "w") if isinstance(output, str) else output)
+            if isinstance(output, str):
+                self._opened.append(open(output, "w"))
+                self._files.append(self._opened[-1])
+            else:
+                self._files.append(output)
 
     def __del__(self):
-        for output in self._files:
-            if output not in (sys.stdout, sys.stderr):
-                output.close()
+        for output in self._opened:
+            output.close()
 
     def write(self, message):
         for output in self._files:
