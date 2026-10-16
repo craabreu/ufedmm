@@ -715,7 +715,7 @@ class _Metadynamics(PeriodicTask):
             self._total_hills = self.force.getNumBonds()
             for index, parameters in enumerate(parameter_array):
                 self.force.setBondParameters(index, self.particles, parameters)
-            for index in range(self._total_hills - nhills):
+            for index in range(nhills, self._total_hills):
                 self.force.setBondParameters(index, self.particles, [0] * npars)
             context.reinitialize(preserveState=True)
         self.height = np.fromfile(file, count=1)[0]

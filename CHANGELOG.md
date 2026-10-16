@@ -56,3 +56,6 @@
   `loadCheckpoint` can be added with `ExtendedSpaceSimulation.add_periodic_task`.
   They used to fail with a `TypeError`, because those base-class methods took
   different arguments from the ones the simulation passes.
+- Loading a gridless metadynamics checkpoint into a simulation that has deposited
+  more hills than the checkpoint holds keeps the restored hills. It used to erase
+  the first hills instead of the extra ones.
