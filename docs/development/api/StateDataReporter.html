@@ -48,7 +48,11 @@ which outputs information about a simulation, such as energy, temperature, etc.<
 <p>Besides, if it is added to an <a class="reference internal" href="ExtendedSpaceSimulation.html#ufedmm.ExtendedSpaceSimulation" title="ufedmm.ufedmm.ExtendedSpaceSimulation"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtendedSpaceSimulation</span></code></a>
 object, e.g. one created through the
 <code class="xref py py-func docutils literal notranslate"><span class="pre">simulation()</span></code> method, then a
-new set of keywords are available.</p>
+new set of keywords are available. In this case, the reported temperature is
+that of the physical system, excluding the extra particles of the extended-space
+variables, and so is the reported density, unless a total mass is passed. The
+kinetic energies of the extra particles are still part of the reported kinetic
+and total energies.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">

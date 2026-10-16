@@ -44,6 +44,7 @@
 <span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">functools</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">deepcopy</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
@@ -1285,8 +1286,11 @@
             <span class="k">for</span> <span class="n">task</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_periodic_tasks</span><span class="p">:</span>
                 <span class="n">task</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">steps</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">reporters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_periodic_tasks</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">reporters</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_simulate</span><span class="p">(</span><span class="n">endStep</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">currentStep</span> <span class="o">+</span> <span class="n">steps</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">reporters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reporters</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_periodic_tasks</span><span class="p">)</span> <span class="p">:]</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_simulate</span><span class="p">(</span><span class="n">endStep</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">currentStep</span> <span class="o">+</span> <span class="n">steps</span><span class="p">)</span>
+            <span class="k">finally</span><span class="p">:</span>
+                <span class="c1"># Also when interrupted, or the tasks would run twice from then on</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">reporters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reporters</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_periodic_tasks</span><span class="p">)</span> <span class="p">:]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_simulate</span><span class="p">(</span><span class="n">endStep</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">currentStep</span> <span class="o">+</span> <span class="n">steps</span><span class="p">)</span></div>
 
@@ -1313,6 +1317,26 @@
             <span class="k">for</span> <span class="n">task</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_periodic_tasks</span><span class="p">:</span>
                 <span class="n">task</span><span class="o">.</span><span class="n">loadCheckpoint</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">context</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">loadCheckpoint</span><span class="p">(</span><span class="n">file</span><span class="o">.</span><span class="n">read</span><span class="p">())</span></div>
+
+
+<div class="viewcode-block" id="ExtendedSpaceSimulation.saveState">
+<a class="viewcode-back" href="../../api/ExtendedSpaceSimulation.html#ufedmm.ExtendedSpaceSimulation.saveState">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">saveState</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Saves the current state of the simulation to a file, like</span>
+<span class="sd">        ``saveState`` in OpenMM's ``Simulation``.</span>
+
+<span class="sd">        .. warning::</span>
+<span class="sd">            A saved state does not include the state of periodic tasks, such as the</span>
+<span class="sd">            metadynamics bias. Use :meth:`saveCheckpoint` to save it too.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_periodic_tasks</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">"The saved state does not include the periodic tasks of this "</span>
+                <span class="s2">"simulation (such as a metadynamics bias). Use saveCheckpoint to "</span>
+                <span class="s2">"save them too."</span><span class="p">,</span>
+                <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">saveState</span><span class="p">(</span><span class="n">file</span><span class="p">)</span></div>
 </div>
 
 
@@ -1493,14 +1517,19 @@
                 <span class="p">),</span>
             <span class="p">)</span>
 
-        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">temperature</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">temperature</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">):</span>
+        <span class="c1"># UFEDMM integrators need the variable temperatures even if they are all equal</span>
+        <span class="c1"># to the system temperature, so that the extra particles move along x only</span>
+        <span class="n">ufedmm_integrator</span> <span class="o">=</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">integrator</span><span class="p">,</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">integrators</span><span class="o">.</span><span class="n">CustomIntegrator</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ufedmm_integrator</span> <span class="ow">or</span> <span class="nb">any</span><span class="p">(</span>
+            <span class="n">v</span><span class="o">.</span><span class="n">temperature</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">temperature</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span>
+        <span class="p">):</span>
             <span class="n">ntotal</span> <span class="o">=</span> <span class="n">system</span><span class="o">.</span><span class="n">getNumParticles</span><span class="p">()</span>
             <span class="n">nvars</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">)</span>
             <span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">setPositions</span><span class="p">(</span>
                 <span class="p">[</span><span class="n">openmm</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)]</span> <span class="o">*</span> <span class="p">(</span><span class="n">ntotal</span> <span class="o">-</span> <span class="n">nvars</span><span class="p">),</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">nvars</span>
             <span class="p">)</span>
             <span class="n">vartemps</span> <span class="o">=</span> <span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">temperature</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">]</span>
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">integrator</span><span class="p">,</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">integrators</span><span class="o">.</span><span class="n">CustomIntegrator</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">ufedmm_integrator</span><span class="p">:</span>
                 <span class="n">integrator</span><span class="o">.</span><span class="n">update_temperatures</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">temperature</span><span class="p">,</span> <span class="n">vartemps</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">temperatures</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">temperature</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">ntotal</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">vartemps</span><span class="p">))</span> <span class="o">+</span> <span class="n">vartemps</span>

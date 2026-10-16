@@ -10,4 +10,5 @@ ExtendedSpaceSimulation
     .. automethod:: add_periodic_task
     .. automethod:: loadCheckpoint
     .. automethod:: saveCheckpoint
+    .. automethod:: saveState
     .. automethod:: step

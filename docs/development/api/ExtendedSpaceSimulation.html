@@ -104,6 +104,18 @@ filename</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.ExtendedSpaceSimulation.saveState">
+<span class="sig-name descname"><span class="pre">saveState</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceSimulation.saveState"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ExtendedSpaceSimulation.saveState" title="Link to this definition">¶</a></dt>
+<dd><p>Saves the current state of the simulation to a file, like
+<code class="docutils literal notranslate"><span class="pre">saveState</span></code> in OpenMM’s <code class="docutils literal notranslate"><span class="pre">Simulation</span></code>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>A saved state does not include the state of periodic tasks, such as the
+metadynamics bias. Use <a class="reference internal" href="#ufedmm.ExtendedSpaceSimulation.saveCheckpoint" title="ufedmm.ExtendedSpaceSimulation.saveCheckpoint"><code class="xref py py-meth docutils literal notranslate"><span class="pre">saveCheckpoint()</span></code></a> to save it too.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="ufedmm.ExtendedSpaceSimulation.step">
 <span class="sig-name descname"><span class="pre">step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">steps</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceSimulation.step"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ExtendedSpaceSimulation.step" title="Link to this definition">¶</a></dt>
 <dd><p>Executed a given number of simulation steps.</p>
