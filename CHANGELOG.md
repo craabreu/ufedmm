@@ -99,3 +99,6 @@
   `RegulatedNHLIntegrator` and with any integrator whose kinetic energy expression
   uses per-dof variables other than `kT`. It used to fail with
   `Unknown variable in expression: kTc`.
+- In an extended-space simulation, the density reported by `StateDataReporter` is
+  that of the physical system. It used to include the masses of the extra
+  particles.

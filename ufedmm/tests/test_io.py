@@ -192,6 +192,20 @@ def test_reported_temperatures_exclude_extra_particles(regulated, Ts):
         assert values[name] == pytest.approx(2 * ke[natoms + i, 0] / KB, rel=1e-6)
 
 
+def test_reported_density_excludes_extra_particles():
+    simulation = reporter_simulation()
+    names, values, _ = report(simulation, density=True)
+    assert names == ["Density (g/mL)"]
+    system = simulation.context.getSystem()
+    natoms = system.getNumParticles() - 2
+    mass = sum((system.getParticleMass(i) for i in range(natoms)), 0 * unit.dalton)
+    a, b, c = simulation.context.getState().getPeriodicBoxVectors()
+    density = mass / (a[0] * b[1] * c[2])
+    assert values["Density (g/mL)"] == pytest.approx(
+        density.value_in_unit(unit.gram / unit.item / unit.milliliter), rel=1e-6
+    )
+
+
 def test_multiple_temperatures_need_integrator_temperatures():
     # UnifiedFreeEnergyDynamics.simulation sets the integrator temperatures, but a
     # simulation created directly does not until its integrator first steps, so

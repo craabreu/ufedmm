@@ -65,8 +65,9 @@ class StateDataReporter(app.StateDataReporter):
     :func:`~ufedmm.ufedmm.UnifiedFreeEnergyDynamics.simulation` method, then a
     new set of keywords are available. In this case, the reported temperature is
     that of the physical system, excluding the extra particles of the extended-space
-    variables. Their kinetic energies are still part of the reported kinetic and
-    total energies.
+    variables, and so is the reported density, unless a total mass is passed. The
+    kinetic energies of the extra particles are still part of the reported kinetic
+    and total energies.
 
     Parameters
     ----------
@@ -159,6 +160,7 @@ class StateDataReporter(app.StateDataReporter):
             lst.insert(self._backSteps, item)
 
     def _initializeConstants(self, simulation):
+        compute_total_mass = self._density and self._totalMass is None
         if self._multitemps and not self._temperature:
             self._temperature = True
             super()._initializeConstants(simulation)
@@ -168,6 +170,11 @@ class StateDataReporter(app.StateDataReporter):
 
         self._extended_space = isinstance(simulation, ufedmm.ExtendedSpaceSimulation)
         if self._extended_space:
+            if compute_total_mass:  # the density is that of the physical system
+                system = simulation.context.getSystem()
+                Nt = system.getNumParticles()
+                for i in range(Nt - len(simulation.context.variables), Nt):
+                    self._totalMass -= system.getParticleMass(i)
             self._cv_names = [
                 force.getCollectiveVariableName(i)
                 for force in simulation.context.driving_forces
