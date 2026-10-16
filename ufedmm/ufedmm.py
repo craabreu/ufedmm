@@ -42,6 +42,14 @@ def _add_fake_particles(force, num_particles):  # noqa: PLR0912
                 map(force.getParticleParameters, range(force.getNumParticles()))
             )
             force.addPerParticleParameter("isreal")
+            # Extra particles must neither contribute to pairwise computed values
+            # (such as the Born radii) nor carry any energy
+            for index in range(force.getNumComputedValues()):
+                name, expression, type = force.getComputedValueParameters(index)
+                if type != force.SingleParticle:
+                    force.setComputedValueParameters(
+                        index, name, f"isreal2*V_GB; V_GB={expression}", type
+                    )
             for index in range(force.getNumEnergyTerms()):
                 expression, type = force.getEnergyTermParameters(index)
                 energy = (

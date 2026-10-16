@@ -163,10 +163,8 @@ def test_respa_with_empty_outer_group_matches_inner_step_size(integrator_class):
         assert x == pytest.approx(y, rel=1e-8, abs=1e-10)
 
 
-def test_rmsd_forces():
-    # RMSDForce objects nested at three levels of CustomCVForce must still act only
-    # on the physical particles once the extra particles are added.
-    model, ufed = ufed_model()
+def nested_rmsd_forces(model):
+    # RMSDForce objects nested at three levels of CustomCVForce
     rmsd = openmm.RMSDForce(  # Level 1
         model.positions, np.arange(model.system.getNumParticles())
     )
@@ -175,10 +173,49 @@ def test_rmsd_forces():
     inner_cvforce = openmm.CustomCVForce("rmsd")
     inner_cvforce.addCollectiveVariable("rmsd", deepcopy(rmsd))  # Level 3
     cvforce.addCollectiveVariable("cvforce", inner_cvforce)
-    for force in (rmsd, cvforce):
+    model.system.addForce(rmsd)
+    model.system.addForce(cvforce)
+    return model.system, [rmsd, cvforce]
+
+
+def custom_nonbonded_force(model):
+    nonbonded = nonbonded_force(model.system)
+    force = openmm.CustomNonbondedForce(
+        "4*epsilon*((sigma/r)^12 - (sigma/r)^6)"
+        "; sigma=0.5*(sigma1+sigma2); epsilon=sqrt(epsilon1*epsilon2)"
+    )
+    force.addPerParticleParameter("sigma")
+    force.addPerParticleParameter("epsilon")
+    for index in range(nonbonded.getNumParticles()):
+        _, sigma, epsilon = nonbonded.getParticleParameters(index)
+        force.addParticle([sigma, epsilon])
+    for index in range(nonbonded.getNumExceptions()):
+        i, j, *_ = nonbonded.getExceptionParameters(index)
+        force.addExclusion(i, j)
+    model.system.addForce(force)
+    return model.system, [force]
+
+
+def custom_gb_force(model):
+    forcefield = openmm.app.ForceField("amber14-all.xml", "implicit/gbn2.xml")
+    system = forcefield.createSystem(model.topology, removeCMMotion=False)
+    forces = [f for f in system.getForces() if isinstance(f, openmm.CustomGBForce)]
+    assert forces
+    return system, forces
+
+
+@pytest.mark.parametrize(
+    "build",
+    [nested_rmsd_forces, custom_nonbonded_force, custom_gb_force],
+    ids=["nested-RMSD", "CustomNonbondedForce", "CustomGBForce"],
+)
+def test_extra_particles_do_not_change_physical_forces(build):
+    # Forces that act on all particles must ignore the extra ones.
+    model, ufed = ufed_model()
+    system, tested_forces = build(model)
+    for force in tested_forces:
         force.setForceGroup(1)
-        model.system.addForce(force)
-    plain_system = deepcopy(model.system)
+    plain_system = deepcopy(system)
 
     rng = np.random.default_rng(1234)
     displacements = rng.normal(scale=0.01, size=(len(model.positions), 3))
@@ -192,14 +229,14 @@ def test_rmsd_forces():
     expected = plain.getState(getEnergy=True, getForces=True, groups={1})
 
     integrator = ufedmm.MiddleMassiveNHCIntegrator(TEMP, TAU, DT)
-    simulation = ufed.simulation(model.topology, model.system, integrator, platform)
+    simulation = ufed.simulation(model.topology, system, integrator, platform)
     simulation.context.setPositions(positions)
     state = simulation.context.getState(getEnergy=True, getForces=True, groups={1})
 
     kJ_mol = unit.kilojoules_per_mole
     kJ_mol_nm = kJ_mol / unit.nanometer
     energy = state.getPotentialEnergy().value_in_unit(kJ_mol)
-    assert energy > 0
+    assert energy != 0
     assert energy == pytest.approx(expected.getPotentialEnergy().value_in_unit(kJ_mol))
     forces = state.getForces(asNumpy=True).value_in_unit(kJ_mol_nm)
     natoms = len(model.positions)
@@ -212,6 +249,14 @@ def test_rmsd_forces():
     simulation.step(10)
     state = simulation.context.getState(getPositions=True)
     assert np.all(np.isfinite(state.getPositions(asNumpy=True)._value))
+
+
+def test_gbsaobc_force_is_rejected():
+    model, ufed = ufed_model()
+    model.system.addForce(openmm.GBSAOBCForce())
+    integrator = ufedmm.MiddleMassiveNHCIntegrator(TEMP, TAU, DT)
+    with pytest.raises(RuntimeError, match="GBSAOBCForce"):
+        reference_simulation(model, ufed, integrator)
 
 
 @pytest.mark.parametrize("form", ["vec3-list", "numpy", "numpy-quantity"])
