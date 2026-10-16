@@ -1,3 +1,9 @@
+=============
+Citing UFEDMM
+=============
+
+If you use UFEDMM in published work, please cite :cite:`bajpai2023`.
+
 ========
 Contents
 ========
@@ -8,7 +14,8 @@ Contents
    readme
    installation
    usage
-   pythonapi/index
+   api/index
+   cvpack
    contributing
    authors
    changelog

@@ -2,13 +2,15 @@ Unified Free Energy Dynamics with OpenMM
 ========================================
 
 [//]: # (Badges)
-[![GitHub Actions Build Status](https://github.com/craabreu/ufedmm/workflows/Linux/badge.svg)](https://github.com/craabreu/ufedmm/actions?query=workflow%3ALinux)
-[![GitHub Actions Build Status](https://github.com/craabreu/ufedmm/workflows/MacOS/badge.svg)](https://github.com/craabreu/ufedmm/actions?query=workflow%3AMacOS)
-[![GitHub Actions Build Status](https://github.com/craabreu/ufedmm/workflows/Windows/badge.svg)](https://github.com/craabreu/ufedmm/actions?query=workflow%3AWindows)
-[![GitHub Actions Build Status](https://github.com/craabreu/ufedmm/workflows/Docs/badge.svg)](https://craabreu.github.io/ufedmm/)
-[![Coverage](https://craabreu.github.io/ufedmm/coverage/coverage.svg)](https://craabreu.github.io/ufedmm/coverage/)
+[![Linux](https://github.com/craabreu/ufedmm/workflows/Linux/badge.svg)](https://github.com/craabreu/ufedmm/actions?query=workflow%3ALinux)
+[![MacOS](https://github.com/craabreu/ufedmm/workflows/MacOS/badge.svg)](https://github.com/craabreu/ufedmm/actions?query=workflow%3AMacOS)
+[![Windows](https://github.com/craabreu/ufedmm/workflows/Windows/badge.svg)](https://github.com/craabreu/ufedmm/actions?query=workflow%3AWindows)
+[![Linter](https://github.com/craabreu/ufedmm/workflows/Linter/badge.svg)](https://github.com/craabreu/ufedmm/actions?query=workflow%3ALinter)
+[![Docs](https://github.com/craabreu/ufedmm/workflows/Docs/badge.svg)](https://craabreu.github.io/ufedmm/latest)
+[![Coverage](https://craabreu.github.io/ufedmm/latest/coverage/coverage.svg)](https://craabreu.github.io/ufedmm/latest/coverage/)
 [![License](https://img.shields.io/badge/License-MIT-yellowgreen.svg?style=flat)](https://github.com/craabreu/ufedmm/blob/main/LICENSE.md)
 
+[![PyPI version](https://img.shields.io/pypi/v/ufedmm.svg)](https://pypi.org/project/ufedmm)
 [![Conda ufedmm version](https://img.shields.io/conda/v/mdtools/ufedmm.svg)](https://anaconda.org/mdtools/ufedmm)
 [![Conda ufedmm platforms](https://img.shields.io/conda/pn/mdtools/ufedmm.svg)](https://anaconda.org/mdtools/ufedmm)
 [![Conda ufedmm downloads](https://img.shields.io/conda/dn/mdtools/ufedmm.svg)](https://anaconda.org/mdtools/ufedmm)
@@ -81,23 +83,24 @@ In OpenMM, a collective variable (CV) involved in a [CustomCVForce] is
 nothing but an instance of some `Force` subclass. The user is free to define any
 CV for a [UFED] simulation. For convenience, though, UFEDMM provides access to
 an external library of useful collective variables named
-[CVPack](https://cvpack.readthedocs.io/en/latest/). It can be accessed via
+[CVPack](https://github.com/craabreu/cvpack). It can be accessed via
 the `ufedmm.cvpack` module.
 
 ### Installation and Usage
 
-UFEDMM is available as a conda package installable from the
+UFEDMM is available on PyPI and as a conda package in the
 [mdtools](https://anaconda.org/mdtools) conda channel.
-To install it, either run:
+
+With conda:
 
 ```bash
     conda install -c conda-forge -c mdtools ufedmm
 ```
 
-Or:
+With pip:
 
 ```bash
-    mamba install -c mdtools ufedmm
+    pip install ufedmm
 ```
 
 To use UFEDMM in your own Python script or Jupyter notebook, import it as follows:
@@ -108,7 +111,30 @@ To use UFEDMM in your own Python script or Jupyter notebook, import it as follow
 
 ## Documentation
 
-https://craabreu.github.io/ufedmm/
+https://craabreu.github.io/ufedmm/latest
+
+## Citing UFEDMM
+
+If you use UFEDMM in published work, please cite:
+
+S. Bajpai, B. K. Petkov, M. Tong, C. R. A. Abreu, N. N. Nair, and M. E. Tuckerman,
+"An interoperable implementation of collective-variable based enhanced sampling
+methods in extended phase space within the OpenMM package,"
+*J. Comput. Chem.* **44**(28), 2166–2183 (2023).
+[doi:10.1002/jcc.27182](https://doi.org/10.1002/jcc.27182)
+
+```bibtex
+@article{bajpai2023,
+  author  = {Bajpai, Shitanshu and Petkov, Brian K. and Tong, Muchen and Abreu, Charlles R. A. and Nair, Nisanth N. and Tuckerman, Mark E.},
+  title   = {An interoperable implementation of collective-variable based enhanced sampling methods in extended phase space within the {OpenMM} package},
+  journal = {Journal of Computational Chemistry},
+  volume  = {44},
+  number  = {28},
+  pages   = {2166--2183},
+  year    = {2023},
+  doi     = {10.1002/jcc.27182},
+}
+```
 
 #### Copyright
 

@@ -1343,11 +1343,30 @@ Expected: all checks green. The Docs job builds but prints
 
 - [ ] **Step 2: STOP and get the user's approval for the outward-facing steps**
 
-Ask the user to confirm all of the following: PR 3 is merged, `PYPI_TOKEN` is
-set, `ANACONDA_TOKEN` is valid, and you may migrate gh-pages and run the
-seeding workflow. Don't continue without an explicit yes.
+Ask the user to confirm all of the following: PRs #38–#41 are merged (with
+merge commits, so the `.git-blame-ignore-revs` SHA stays valid), `PYPI_TOKEN` is
+set, and `ANACONDA_TOKEN` is valid. Don't continue without an explicit yes.
 
-- [ ] **Step 3: Migrate gh-pages**
+- [ ] **Step 3: The user publishes the v0.4.0 GitHub Release, and you watch the deploys**
+
+The release triggers Docs, Anaconda and PyPI. Docs deploys `docs/v0.4.0/` and
+`docs/latest/`, while the old flat pages and the old `docs/index.html` keep
+serving the root URL in the meantime. Before the user publishes, confirm that
+`ufedmm/_version.py` on main reads `0.4.0` and that `date-released` in
+`CITATION.cff` matches the release date.
+Run: `gh run list -L 5` and then `gh run watch <id>` for each of the three runs.
+Expected: all three succeed. Don't seed `latest/` from v0.3.2: that tag's
+`docs_env.yaml` has no pytest, so the Docs run would fail.
+
+- [ ] **Step 4: Check that `latest/` is live BEFORE touching the root**
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' https://craabreu.github.io/ufedmm/latest/
+```
+Expected: `200`. Pages can take a few minutes; use Monitor with an until-loop.
+If you don't get `200`, stop and report to the user. Don't migrate.
+
+- [ ] **Step 5: Migrate gh-pages (only after Step 4 returns 200)**
 
 ```bash
 cd /data3/craabreu/github_repos/ufedmm
@@ -1363,30 +1382,12 @@ git push origin gh-pages-migrate:gh-pages
 cd /data3/craabreu/github_repos/ufedmm && git worktree remove $SCRATCH/gh-pages && git branch -D gh-pages-migrate
 ```
 
-- [ ] **Step 4: Seed `latest/` from v0.3.2**
-
-`v0.3.2` predates the new workflow files, but `workflow_dispatch` runs the
-workflow from `main` and checks out the tag. The tag's tree still has the old
-`docs/conf.py`, which works.
-Run: `gh workflow run Docs.yaml -f tag=v0.3.2 && sleep 5 && gh run watch "$(gh run list --workflow Docs.yaml -L1 --json databaseId -q '.[0].databaseId')"`
-Expected: the run succeeds.
-If the run fails because the v0.3.2 tree is incompatible (for example, its
-`docs_env` lacks pytest, or the doctest fails on NumPy 2), don't patch the tag.
-Report this to the user and suggest publishing the v0.4.0 release instead, which
-seeds `latest/` with the new code.
-
-- [ ] **Step 5: Check the site (Review Focus #5)**
+- [ ] **Step 6: Check the site (Review Focus #5)**
 
 ```bash
 curl -s https://craabreu.github.io/ufedmm/ | grep -o 'url=latest/'
 curl -s -o /dev/null -w '%{http_code}\n' https://craabreu.github.io/ufedmm/latest/
 curl -s -o /dev/null -w '%{http_code}\n' https://craabreu.github.io/ufedmm/development/
 ```
-Expected: `url=latest/`, `200` and `200`. Pages can take a few minutes to update;
-use Monitor with an until-loop and don't sleep in a loop. `development/`
-appears after the first push to main following the PR 3 merge.
-
-- [ ] **Step 6: Hand the release to the user**
-
-Tell the user that v0.4.0 is ready. They publish the GitHub Release `v0.4.0`,
-and that triggers Docs, Anaconda and PyPI. Offer to watch the three runs.
+Expected: `url=latest/`, `200` and `200`. Use Monitor with an until-loop and
+don't sleep in a loop.

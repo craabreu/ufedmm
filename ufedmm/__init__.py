@@ -10,5 +10,6 @@ from .ufedmm import (
     DynamicalVariable,  # noqa: F401, F403
     ExtendedSpaceContext,  # noqa: F401, F403
     ExtendedSpaceSimulation,  # noqa: F401, F403
+    ExtendedSpaceState,  # noqa: F401, F403
     UnifiedFreeEnergyDynamics,  # noqa: F401, F403
 )

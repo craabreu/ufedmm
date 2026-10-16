@@ -1,0 +1,49 @@
+cff-version: 1.2.0
+message: "If you use UFEDMM in published work, please cite the article below."
+type: software
+title: "UFEDMM: Unified Free Energy Dynamics with OpenMM"
+abstract: >-
+  UFEDMM extends OpenMM's Python API to run extended phase-space simulations,
+  such as TAMD, d-AFED, UFED and extended-space metadynamics, and to compute
+  free-energy surfaces as functions of collective variables.
+authors:
+  - family-names: Abreu
+    given-names: Charlles
+    orcid: "https://orcid.org/0000-0002-6956-4045"
+version: 0.4.0
+date-released: 2026-10-15
+license: MIT
+repository-code: "https://github.com/craabreu/ufedmm"
+url: "https://craabreu.github.io/ufedmm/latest"
+keywords:
+  - molecular dynamics
+  - enhanced sampling
+  - extended phase space
+  - free energy
+  - OpenMM
+preferred-citation:
+  type: article
+  title: >-
+    An interoperable implementation of collective-variable based enhanced
+    sampling methods in extended phase space within the OpenMM package
+  authors:
+    - family-names: Bajpai
+      given-names: Shitanshu
+    - family-names: Petkov
+      given-names: Brian K.
+    - family-names: Tong
+      given-names: Muchen
+    - family-names: Abreu
+      given-names: Charlles R. A.
+      orcid: "https://orcid.org/0000-0002-6956-4045"
+    - family-names: Nair
+      given-names: Nisanth N.
+    - family-names: Tuckerman
+      given-names: Mark E.
+  journal: "Journal of Computational Chemistry"
+  volume: 44
+  issue: 28
+  start: 2166
+  end: 2183
+  year: 2023
+  doi: "10.1002/jcc.27182"
