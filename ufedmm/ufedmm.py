@@ -371,13 +371,6 @@ class DynamicalVariable:
         length = Lx if self.periodic else Lx / 2
         return self.mass * (self._range / length) ** 2
 
-    def _particle_position(self, value, Lx, y=0):
-        length = Lx if self.periodic else Lx / 2
-        return (
-            openmm.Vec3(length * (value - self.min_value) / self._range, y, 0)
-            * unit.nanometer
-        )
-
     def _get_energy_function(self, index=""):
         """Returns the algebraic expression that transforms the x coordinate of a
         particle into this dynamical variables.
