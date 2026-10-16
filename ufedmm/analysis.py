@@ -193,7 +193,11 @@ class FreeEnergyAnalyzer:
                 whose result is the potential of mean force at that values.
             mean_force : function
                 A Python function whose arguments are collective variable values and
-                whose result is the mean force at those values.
+                whose result is the mean force at those values. It takes one argument
+                per variable, and these can be scalars or broadcastable arrays. The
+                result has the broadcast shape of the arguments plus a last axis with
+                one mean-force component per variable, even if there is only one
+                variable.
         """
         if properties is None:
             properties = {}
