@@ -63,6 +63,10 @@ potential energy terms which couples the extra dynamical variables to their
 associated collective variables.</p></li>
 </ul>
 </dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ValueError</strong> – If the system has constraints and the integrator is a UFEDMM integrator
+    without RATTLE (<code class="docutils literal notranslate"><span class="pre">num_rattles=0</span></code>), which would ignore them.</p>
+</dd>
 </dl>
 <p class="rubric">Methods</p>
 <dl class="py method">

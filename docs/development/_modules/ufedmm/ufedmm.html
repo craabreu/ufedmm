@@ -938,9 +938,27 @@
 <span class="sd">            A list of :OpenMM:`CustomCVForce` objects responsible for evaluating the</span>
 <span class="sd">            potential energy terms which couples the extra dynamical variables to their</span>
 <span class="sd">            associated collective variables.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If the system has constraints and the integrator is a UFEDMM integrator</span>
+<span class="sd">            without RATTLE (``num_rattles=0``), which would ignore them.</span>
 <span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">variables</span><span class="p">,</span> <span class="n">system</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">integrator</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">args</span> <span class="k">else</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"integrator"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="nb">getattr</span><span class="p">(</span><span class="n">integrator</span><span class="p">,</span> <span class="s2">"_num_rattles"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span>
+            <span class="ow">and</span> <span class="n">system</span><span class="o">.</span><span class="n">getNumConstraints</span><span class="p">()</span>
+        <span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">integrator</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2"> without RATTLE cannot handle"</span>
+                <span class="sa">f</span><span class="s2">" constraints, but the system has </span><span class="si">{</span><span class="n">system</span><span class="o">.</span><span class="n">getNumConstraints</span><span class="p">()</span><span class="si">}</span><span class="s2">."</span>
+                <span class="s2">" Create the system without constraints or use an integrator with"</span>
+                <span class="s2">" num_rattles &gt; 0."</span>
+            <span class="p">)</span>
+
         <span class="k">def</span><span class="w"> </span><span class="nf">get_driving_force</span><span class="p">(</span><span class="n">variables</span><span class="p">):</span>
             <span class="n">driving_force</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">CustomCVForce</span><span class="p">(</span><span class="n">_get_energy_function</span><span class="p">(</span><span class="n">variables</span><span class="p">))</span>
             <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">_get_parameters</span><span class="p">(</span><span class="n">variables</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
