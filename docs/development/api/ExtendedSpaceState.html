@@ -106,7 +106,7 @@ positions of the extra particles separately.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="ufedmm.ExtendedSpaceState.getVelocities">
-<span class="sig-name descname"><span class="pre">getVelocities</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">asNumpy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extended</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">split</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceState.getVelocities"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ExtendedSpaceState.getVelocities" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">getVelocities</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">asNumpy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extended</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">split</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceState.getVelocities"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ExtendedSpaceState.getVelocities" title="Link to this definition">¶</a></dt>
 <dd><p>Gets the velocities of all physical particles and optionally also gets the
 velocities of the extra particles associated to the extended- space dynamical
 variables.</p>
@@ -115,16 +115,17 @@ variables.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>asNumpy</strong> (<em>bool</em><em>, </em><em>default=False</em>) – Whether to return Numpy arrays instead of lists of openmm.Vec3.</p></li>
 <li><p><strong>extended</strong> (<em>bool</em><em>, </em><em>default=False</em>) – Whether to include the velocities of the extra particles.</p></li>
-<li><p><strong>split</strong> (<em>bool</em><em>, </em><em>default=True</em>) – Whether to return the velocities of the physical particles and the
-velocities of the extra particles separately.</p></li>
+<li><p><strong>split</strong> (<em>bool</em><em>, </em><em>default=False</em>) – Whether to return the velocities of the physical particles and the
+x velocities of the extra particles separately. Only used if
+<cite>extended=True</cite>.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p><ul class="simple">
-<li><p><em>list(openmm.Vec3)</em> – If <cite>asNumpy=False</cite> and <cite>extended=False</cite>.</p></li>
-<li><p><em>numpy.ndarray</em> – If <cite>asNumpy=True</cite> and <cite>extended=False</cite>.</p></li>
-<li><p><em>list(openmm.Vec3), list(float)</em> – If <cite>asNumpy=False</cite> and <cite>extended=True</cite>.</p></li>
-<li><p><em>numpy.ndarray, numpy.ndarray</em> – If <cite>asNumpy=True</cite> and <cite>extended=True</cite>.</p></li>
+<li><p><em>list(openmm.Vec3)</em> – If <cite>asNumpy=False</cite>, and either <cite>extended=False</cite> or <cite>split=False</cite>.</p></li>
+<li><p><em>numpy.ndarray</em> – If <cite>asNumpy=True</cite>, and either <cite>extended=False</cite> or <cite>split=False</cite>.</p></li>
+<li><p><em>list(openmm.Vec3), list(float)</em> – If <cite>asNumpy=False</cite>, <cite>extended=True</cite>, and <cite>split=True</cite>.</p></li>
+<li><p><em>numpy.ndarray, numpy.ndarray</em> – If <cite>asNumpy=True</cite>, <cite>extended=True</cite>, and <cite>split=True</cite>.</p></li>
 </ul>
 </p>
 </dd>

@@ -834,7 +834,7 @@
 
 <div class="viewcode-block" id="ExtendedSpaceState.getVelocities">
 <a class="viewcode-back" href="../../api/ExtendedSpaceState.html#ufedmm.ExtendedSpaceState.getVelocities">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">getVelocities</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">asNumpy</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">extended</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getVelocities</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">asNumpy</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">extended</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">"""Gets the velocities of all physical particles and optionally also gets the</span>
 <span class="sd">        velocities of the extra particles associated to the extended- space dynamical</span>
 <span class="sd">        variables.</span>
@@ -845,20 +845,21 @@
 <span class="sd">                Whether to return Numpy arrays instead of lists of openmm.Vec3.</span>
 <span class="sd">            extended : bool, default=False</span>
 <span class="sd">                Whether to include the velocities of the extra particles.</span>
-<span class="sd">            split : bool, default=True</span>
+<span class="sd">            split : bool, default=False</span>
 <span class="sd">                Whether to return the velocities of the physical particles and the</span>
-<span class="sd">                velocities of the extra particles separately.</span>
+<span class="sd">                x velocities of the extra particles separately. Only used if</span>
+<span class="sd">                `extended=True`.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">            list(openmm.Vec3)</span>
-<span class="sd">                If `asNumpy=False` and `extended=False`.</span>
+<span class="sd">                If `asNumpy=False`, and either `extended=False` or `split=False`.</span>
 <span class="sd">            numpy.ndarray</span>
-<span class="sd">                If `asNumpy=True` and `extended=False`.</span>
+<span class="sd">                If `asNumpy=True`, and either `extended=False` or `split=False`.</span>
 <span class="sd">            list(openmm.Vec3), list(float)</span>
-<span class="sd">                If `asNumpy=False` and `extended=True`.</span>
+<span class="sd">                If `asNumpy=False`, `extended=True`, and `split=True`.</span>
 <span class="sd">            numpy.ndarray, numpy.ndarray</span>
-<span class="sd">                If `asNumpy=True` and `extended=True`.</span>
+<span class="sd">                If `asNumpy=True`, `extended=True`, and `split=True`.</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
