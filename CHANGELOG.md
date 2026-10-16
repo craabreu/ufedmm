@@ -18,6 +18,9 @@
   longer resolve.
 - Releases are deployed when a GitHub Release is published.
 - The code is formatted and linted with ruff.
+- Removed code paths for OpenMM versions older than 8.4. They compared version
+  strings, so a future OpenMM 10 would have been treated as older than 7.5.
+- The examples import `openmm` directly, not the deprecated `simtk.openmm`.
 
 ### Fixed
 - `StateDataReporter` with `multipleTemperatures=True` works again on OpenMM 8.3 and

@@ -1089,8 +1089,6 @@ class ExtendedSpaceSimulation(app.Simulation):
         self.topology = topology
         self.system = system
         self.integrator = integrator
-        if openmm.__version__ < "7.7":
-            self.currentStep = 0
         self.reporters = []
         self._usesPBC = True
         if platform is None:

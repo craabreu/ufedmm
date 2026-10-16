@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy import stats
-from simtk import unit
+from openmm import unit
 
 import ufedmm
 

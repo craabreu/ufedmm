@@ -2,8 +2,9 @@ import argparse
 import random
 from sys import stdout
 
-from simtk import openmm, unit
-from simtk.openmm import app
+import openmm
+from openmm import unit
+from openmm import app
 
 import ufedmm
 from ufedmm import cvpack
