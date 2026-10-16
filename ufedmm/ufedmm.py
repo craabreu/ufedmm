@@ -996,7 +996,7 @@ class ExtendedSpaceContext(openmm.Context):
 
         Parameters
         ----------
-            positions : list of openmm.Vec3
+            positions : list of openmm.Vec3 or numpy.ndarray or unit.Quantity
                 The positions of physical particles.
 
         Keyword Args
@@ -1006,7 +1006,7 @@ class ExtendedSpaceContext(openmm.Context):
         """
         a, b, _ = self.getState().getPeriodicBoxVectors()
         nvars = len(self.variables)
-        particle_positions = _standardized(positions)
+        particle_positions = [openmm.Vec3(*xyz) for xyz in _standardized(positions)]
         if extended_positions is None:
             extra_positions = [
                 openmm.Vec3(0, b.y * (i + 1) / (nvars + 2), 0) for i in range(nvars)

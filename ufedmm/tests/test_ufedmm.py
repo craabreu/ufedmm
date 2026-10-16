@@ -320,3 +320,24 @@ def test_rmsd_forces():
     simulation.step(10)
     state = simulation.context.getState(getPositions=True)
     assert np.all(np.isfinite(state.getPositions(asNumpy=True)._value))
+
+
+@pytest.mark.parametrize("form", ["vec3-list", "numpy", "numpy-quantity"])
+def test_set_positions_accepts_numpy_arrays(form):
+    model, ufed = ufed_model()
+    integrator = ufedmm.MiddleMassiveNHCIntegrator(TEMP, TAU, DT)
+    simulation = reference_simulation(model, ufed, integrator)
+    expected = simulation.context.getState(getPositions=True)
+    positions = {
+        "vec3-list": model.positions,
+        "numpy": np.array(model.positions.value_in_unit(unit.nanometers)),
+        "numpy-quantity": expected.getPositions(asNumpy=True),
+    }[form]
+    simulation.context.setPositions(positions)
+    state = simulation.context.getState(getPositions=True)
+    assert state.getDynamicalVariables() == pytest.approx(
+        expected.getDynamicalVariables()
+    )
+    assert state.getPositions(asNumpy=True)._value == pytest.approx(
+        expected.getPositions(asNumpy=True)._value
+    )
