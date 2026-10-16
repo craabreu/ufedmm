@@ -154,3 +154,38 @@ def test_regulated_kinetic_energy_before_first_step():
     expected = np.sum(0.5 * m * v * c * np.tanh(v / c))
     kinetic = state.getKineticEnergy().value_in_unit(unit.kilojoules_per_mole)
     assert kinetic == pytest.approx(expected, rel=1e-6)
+
+
+@pytest.mark.parametrize("Ts", [300, 1500], ids=["same-temperature", "hotter"])
+@pytest.mark.parametrize(
+    "make_integrator",
+    [
+        lambda: ufedmm.MiddleMassiveNHCIntegrator(
+            300 * unit.kelvin, 100 * unit.femtoseconds, 1 * unit.femtoseconds
+        ),
+        langevin,
+    ],
+    ids=["NHC", "GeodesicLangevin"],
+)
+def test_extra_particles_move_along_x_only(make_integrator, Ts):
+    model = ufedmm.AlanineDipeptideModel(constraints=None)
+    mass = 50 * unit.dalton * (unit.nanometer / unit.radians) ** 2
+    Ks = 1000 * unit.kilojoules_per_mole / unit.radians**2
+    s_phi = ufedmm.DynamicalVariable("s_phi", -np.pi, np.pi, mass, Ts, model.phi, Ks)
+    s_psi = ufedmm.DynamicalVariable("s_psi", -np.pi, np.pi, mass, Ts, model.psi, Ks)
+    ufed = ufedmm.UnifiedFreeEnergyDynamics([s_phi, s_psi], 300 * unit.kelvin)
+    integrator = make_integrator()
+    platform = openmm.Platform.getPlatformByName("Reference")
+    simulation = ufed.simulation(model.topology, model.system, integrator, platform)
+    natoms = model.topology.getNumAtoms()
+    kT = np.array(integrator.getPerDofVariableByName("kT"))
+    assert kT[natoms:] == pytest.approx(np.array([[KB * Ts, 0, 0]] * 2))
+    simulation.context.setPositions(model.positions)
+    simulation.context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)
+    simulation.step(100)
+    state = simulation.context.getState(getVelocities=True)
+    v = state.getVelocities(asNumpy=True, extended=True).value_in_unit(
+        unit.nanometers / unit.picosecond
+    )
+    assert np.all(v[natoms:, 0] != 0)
+    assert np.all(v[natoms:, 1:] == 0)

@@ -1,4 +1,5 @@
 import io
+import warnings
 
 import pytest
 from openmm import unit
@@ -80,6 +81,19 @@ def test_truncated_checkpoint_is_rejected(enforce_gridless):
     truncated = io.BytesIO(checkpoint.getvalue()[:12])
     with pytest.raises(ValueError, match="end of checkpoint"):
         metadynamics_simulation(enforce_gridless).loadCheckpoint(truncated)
+
+
+def test_save_state_warns_that_metadynamics_is_not_saved(tmp_path):
+    simulation = metadynamics_simulation(enforce_gridless=False)
+    simulation.step(20)
+    with pytest.warns(UserWarning, match="saveCheckpoint"):
+        simulation.saveState(str(tmp_path / "state.xml"))
+    model, ufed = ufed_model(height=None)  # no metadynamics
+    integrator = ufedmm.MiddleMassiveNHCIntegrator(TEMP, TAU, DT)
+    plain = reference_simulation(model, ufed, integrator)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        plain.saveState(str(tmp_path / "plain.xml"))
 
 
 class StepRecorder(PeriodicTask):

@@ -88,3 +88,20 @@
   `State.getPositions(asNumpy=True)`.
 - `Tee` closes only the files it opened from file names, not the streams passed to
   it.
+- A step of an `ExtendedSpaceSimulation` that is interrupted, by an exception or
+  Ctrl-C, no longer leaves its periodic tasks among the reporters. Afterwards,
+  gridded metadynamics used to deposit two hills per period and gridless
+  metadynamics crashed.
+- In an extended-space simulation, the temperature reported by `StateDataReporter`
+  is that of the physical system. It used to include the kinetic energy and degrees
+  of freedom of the extra particles.
+- `StateDataReporter` with `multipleTemperatures=True` works with
+  `RegulatedNHLIntegrator` and with any integrator whose kinetic energy expression
+  uses per-dof variables other than `kT`. It used to fail with
+  `Unknown variable in expression: kTc`.
+- In an extended-space simulation, the density reported by `StateDataReporter` is
+  that of the physical system. It used to include the masses of the extra
+  particles.
+- `ExtendedSpaceSimulation.saveState` warns that the saved state does not include
+  periodic tasks such as a metadynamics bias, which only `saveCheckpoint` saves.
+  The bias used to be lost silently.

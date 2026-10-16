@@ -64,10 +64,10 @@ def reporter_simulation(**kwargs):
     s_psi = ufedmm.DynamicalVariable(
         "s_psi", -np.pi, np.pi, mass, Ts, model.psi, Ks, sigma=sigma
     )
-    ufed = ufedmm.UnifiedFreeEnergyDynamics([s_phi, s_psi], 300 * unit.kelvin, **kwargs)
-    integrator = ufedmm.MiddleMassiveNHCIntegrator(
+    integrator = kwargs.pop("integrator", None) or ufedmm.MiddleMassiveNHCIntegrator(
         300 * unit.kelvin, 10 * unit.femtoseconds, 1 * unit.femtoseconds
     )
+    ufed = ufedmm.UnifiedFreeEnergyDynamics([s_phi, s_psi], 300 * unit.kelvin, **kwargs)
     platform = openmm.Platform.getPlatformByName("Reference")
     simulation = ufed.simulation(model.topology, model.system, integrator, platform)
     simulation.context.setPositions(model.positions)
@@ -152,10 +152,78 @@ def test_reporter_global_parameter_states():
         )
 
 
+@pytest.mark.parametrize("Ts", [300, 1500], ids=["same-temperature", "hotter"])
+@pytest.mark.parametrize("regulated", [False, True], ids=["NHC", "RegulatedNHL"])
+def test_reported_temperatures_exclude_extra_particles(regulated, Ts):
+    # The temperature of the physical system must not account for the extra
+    # particles, and each variable's temperature comes from its particle's x motion.
+    temperature, tau, dt = (
+        300 * unit.kelvin,
+        10 * unit.femtoseconds,
+        1 * unit.femtoseconds,
+    )
+    if regulated:
+        integrator = ufedmm.RegulatedNHLIntegrator(temperature, tau, 1.0, dt, 2)
+    else:
+        integrator = ufedmm.MiddleMassiveNHCIntegrator(temperature, tau, dt)
+    simulation = reporter_simulation(integrator=integrator, Ts=Ts * unit.kelvin)
+    names, values, _ = report(simulation, temperature=True, multipleTemperatures=True)
+    assert names == ["Temperature (K)", "T[atoms] (K)", "T[s_phi] (K)", "T[s_psi] (K)"]
+
+    state = simulation.context.getState(getVelocities=True)
+    v = state.getVelocities(asNumpy=True, extended=True).value_in_unit(
+        unit.nanometers / unit.picosecond
+    )
+    system = simulation.context.getSystem()
+    m = np.array([system.getParticleMass(i) / unit.dalton for i in range(len(v))])[
+        :, None
+    ]
+    if regulated:
+        c = np.sqrt(2 * np.array(integrator.getPerDofVariableByName("kTc")) / m)
+        ke = 0.5 * m * v * c * np.tanh(v / c)
+    else:
+        ke = 0.5 * m * v**2
+    natoms = len(v) - 2
+    KB = unit.MOLAR_GAS_CONSTANT_R.value_in_unit(unit.kilojoules_per_mole / unit.kelvin)
+    atoms_temperature = 2 * np.sum(ke[:natoms]) / (3 * natoms * KB)
+    assert values["Temperature (K)"] == pytest.approx(atoms_temperature, rel=1e-6)
+    assert values["T[atoms] (K)"] == pytest.approx(atoms_temperature, rel=1e-6)
+    for i, name in enumerate(["T[s_phi] (K)", "T[s_psi] (K)"]):
+        assert values[name] == pytest.approx(2 * ke[natoms + i, 0] / KB, rel=1e-6)
+
+
+def test_reported_density_excludes_extra_particles():
+    simulation = reporter_simulation()
+    names, values, _ = report(simulation, density=True)
+    assert names == ["Density (g/mL)"]
+    system = simulation.context.getSystem()
+    natoms = system.getNumParticles() - 2
+    mass = sum((system.getParticleMass(i) for i in range(natoms)), 0 * unit.dalton)
+    a, b, c = simulation.context.getState().getPeriodicBoxVectors()
+    density = mass / (a[0] * b[1] * c[2])
+    assert values["Density (g/mL)"] == pytest.approx(
+        density.value_in_unit(unit.gram / unit.item / unit.milliliter), rel=1e-6
+    )
+
+
 def test_multiple_temperatures_need_integrator_temperatures():
-    # With a single temperature, the integrator sets its per-dof temperatures only
-    # when it first steps, so reporting before that cannot split the temperatures.
-    simulation = reporter_simulation(Ts=300 * unit.kelvin)
+    # UnifiedFreeEnergyDynamics.simulation sets the integrator temperatures, but a
+    # simulation created directly does not until its integrator first steps, so
+    # reporting before that cannot split the temperatures.
+    model = ufedmm.AlanineDipeptideModel(constraints=None)
+    s_phi = ufedmm.DynamicalVariable("s_phi", -np.pi, np.pi, 50, 1500, model.phi, 1000)
+    integrator = ufedmm.MiddleMassiveNHCIntegrator(
+        300 * unit.kelvin, 10 * unit.femtoseconds, 1 * unit.femtoseconds
+    )
+    simulation = ufedmm.ExtendedSpaceSimulation(
+        [s_phi],
+        model.topology,
+        model.system,
+        integrator,
+        openmm.Platform.getPlatformByName("Reference"),
+    )
+    simulation.context.setPositions(model.positions)
+    simulation.context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)
     reporter = ufedmm.StateDataReporter(io.StringIO(), 1, multipleTemperatures=True)
     state = simulation.context.getState(getVelocities=True, getEnergy=True)
     with pytest.raises(ValueError, match="temperatures were not set"):

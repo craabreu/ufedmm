@@ -7,6 +7,7 @@
 """
 
 import functools
+import warnings
 from copy import deepcopy
 
 import numpy as np
@@ -1199,8 +1200,11 @@ class ExtendedSpaceSimulation(app.Simulation):
             for task in self._periodic_tasks:
                 task.update(self, steps)
             self.reporters = self._periodic_tasks + self.reporters
-            self._simulate(endStep=self.currentStep + steps)
-            self.reporters = self.reporters[len(self._periodic_tasks) :]
+            try:
+                self._simulate(endStep=self.currentStep + steps)
+            finally:
+                # Also when interrupted, or the tasks would run twice from then on
+                self.reporters = self.reporters[len(self._periodic_tasks) :]
         else:
             self._simulate(endStep=self.currentStep + steps)
 
@@ -1221,6 +1225,23 @@ class ExtendedSpaceSimulation(app.Simulation):
             for task in self._periodic_tasks:
                 task.loadCheckpoint(file, self.context)
             self.context.loadCheckpoint(file.read())
+
+    def saveState(self, file):
+        """Saves the current state of the simulation to a file, like
+        ``saveState`` in OpenMM's ``Simulation``.
+
+        .. warning::
+            A saved state does not include the state of periodic tasks, such as the
+            metadynamics bias. Use :meth:`saveCheckpoint` to save it too.
+        """
+        if self._periodic_tasks:
+            warnings.warn(
+                "The saved state does not include the periodic tasks of this "
+                "simulation (such as a metadynamics bias). Use saveCheckpoint to "
+                "save them too.",
+                stacklevel=2,
+            )
+        super().saveState(file)
 
 
 class UnifiedFreeEnergyDynamics:
@@ -1395,14 +1416,19 @@ class UnifiedFreeEnergyDynamics:
                 ),
             )
 
-        if any(v.temperature != self.temperature for v in self.variables):
+        # UFEDMM integrators need the variable temperatures even if they are all equal
+        # to the system temperature, so that the extra particles move along x only
+        ufedmm_integrator = isinstance(integrator, ufedmm.integrators.CustomIntegrator)
+        if ufedmm_integrator or any(
+            v.temperature != self.temperature for v in self.variables
+        ):
             ntotal = system.getNumParticles()
             nvars = len(self.variables)
             simulation.context.setPositions(
                 [openmm.Vec3(0, 0, 0)] * (ntotal - nvars), [0] * nvars
             )
             vartemps = [v.temperature for v in self.variables]
-            if isinstance(integrator, ufedmm.integrators.CustomIntegrator):
+            if ufedmm_integrator:
                 integrator.update_temperatures(self.temperature, vartemps)
             else:
                 temperatures = [self.temperature] * (ntotal - len(vartemps)) + vartemps

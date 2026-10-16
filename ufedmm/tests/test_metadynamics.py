@@ -172,6 +172,37 @@ def test_gridless_hills_buffer_grows(chunks):
     assert bias == pytest.approx(expected, rel=1e-10)
 
 
+class Interruption:
+    """A reporter that interrupts the simulation once, at a given step."""
+
+    def __init__(self, step):
+        self.step = step
+
+    def describeNextReport(self, simulation):
+        steps = self.step - simulation.currentStep
+        return (steps if steps > 0 else 10**9, False, False, False, False)
+
+    def report(self, simulation, state):
+        raise KeyboardInterrupt
+
+
+@pytest.mark.parametrize("enforce_gridless", [False, True], ids=["gridded", "gridless"])
+def test_metadynamics_survives_an_interrupted_step(enforce_gridless):
+    model, ufed = metadynamics_model(PERIODIC_2D, enforce_gridless=enforce_gridless)
+    simulation, recorder = metadynamics_simulation(model, ufed)
+    reporters = list(simulation.reporters)
+    simulation.reporters.append(Interruption(5))
+    with pytest.raises(KeyboardInterrupt):
+        simulation.step(10)
+    simulation.reporters.pop()
+    assert simulation.reporters == reporters
+    simulation.step(25)
+    point, bias = current_bias(simulation)
+    assert len(recorder.centers) == 3
+    expected = hills_bias(ufed.variables, recorder.centers, recorder.heights, point)
+    assert bias == pytest.approx(expected, rel=1e-4)
+
+
 @GRIDS
 @pytest.mark.parametrize(
     "specs", [PERIODIC_1D, PERIODIC_2D], ids=["periodic-1D", "periodic-2D"]
