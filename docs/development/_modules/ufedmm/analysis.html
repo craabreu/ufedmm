@@ -116,6 +116,14 @@
 <span class="sd">        space variables and returns the energy estimated from a Metadynamics bias</span>
 <span class="sd">        potential reconstructed from the simulation data.</span>
 
+<span class="sd">        .. warning::</span>
+<span class="sd">            Every row of the data frame is taken as a deposited hill, centered at the</span>
+<span class="sd">            reported values of the dynamical variables. The data must therefore be</span>
+<span class="sd">            reported at the frequency of hill deposition, starting at its first</span>
+<span class="sd">            deposition, as a :class:`~ufedmm.io.StateDataReporter` does when its report</span>
+<span class="sd">            interval equals the metadynamics frequency. For well-tempered</span>
+<span class="sd">            metadynamics, also report ``hillHeights=True``.</span>
+
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">            function</span>

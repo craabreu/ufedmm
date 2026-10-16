@@ -68,6 +68,7 @@
 <span class="sd">        &gt;&gt;&gt; file = tempfile.TemporaryFile(mode='w+t')</span>
 <span class="sd">        &gt;&gt;&gt; print('test', file=ufedmm.Tee(stdout, file))</span>
 <span class="sd">        test</span>
+<span class="sd">        &gt;&gt;&gt; file.close()</span>
 <span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">files</span><span class="p">):</span>

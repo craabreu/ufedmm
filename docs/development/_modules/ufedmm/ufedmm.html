@@ -1055,6 +1055,7 @@
         <span class="n">c</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="o">*</span><span class="nb">map</span><span class="p">(</span><span class="n">_standardized</span><span class="p">,</span> <span class="n">c</span><span class="p">))</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">y</span> <span class="o">==</span> <span class="n">a</span><span class="o">.</span><span class="n">z</span> <span class="o">==</span> <span class="n">b</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="n">b</span><span class="o">.</span><span class="n">z</span> <span class="o">==</span> <span class="n">c</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="n">c</span><span class="o">.</span><span class="n">y</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Only orthorhombic boxes are allowed"</span><span class="p">)</span>
+        <span class="n">scaling</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">x</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">getParameter</span><span class="p">(</span><span class="s2">"Lx"</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">setParameter</span><span class="p">(</span><span class="s2">"Lx"</span><span class="p">,</span> <span class="n">a</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">setPeriodicBoxVectors</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>
         <span class="n">system</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getSystem</span><span class="p">()</span>
@@ -1062,7 +1063,22 @@
         <span class="n">nvars</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">):</span>
             <span class="n">system</span><span class="o">.</span><span class="n">setParticleMass</span><span class="p">(</span><span class="n">ntotal</span> <span class="o">-</span> <span class="n">nvars</span> <span class="o">+</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span><span class="o">.</span><span class="n">_particle_mass</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">x</span><span class="p">))</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">reinitialize</span><span class="p">(</span><span class="n">preserveState</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reinitialize</span><span class="p">(</span><span class="n">preserveState</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">scaling</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c1"># Keep the variables, their velocities, and their kinetic energies, all of</span>
+            <span class="c1"># which depend on the x coordinates of the extra particles relative to Lx</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">state</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">Context</span><span class="o">.</span><span class="n">getState</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="p">,</span> <span class="n">getPositions</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">getVelocities</span><span class="o">=</span><span class="kc">True</span>
+                <span class="p">)</span>
+            <span class="k">except</span> <span class="n">openmm</span><span class="o">.</span><span class="n">OpenMMException</span><span class="p">:</span>  <span class="c1"># positions not set yet</span>
+                <span class="k">return</span>
+            <span class="n">positions</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">getPositions</span><span class="p">(</span><span class="n">asNumpy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">_value</span>
+            <span class="n">velocities</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">getVelocities</span><span class="p">(</span><span class="n">asNumpy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">_value</span>
+            <span class="n">positions</span><span class="p">[</span><span class="n">ntotal</span> <span class="o">-</span> <span class="n">nvars</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*=</span> <span class="n">scaling</span>
+            <span class="n">velocities</span><span class="p">[</span><span class="n">ntotal</span> <span class="o">-</span> <span class="n">nvars</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*=</span> <span class="n">scaling</span>
+            <span class="n">openmm</span><span class="o">.</span><span class="n">Context</span><span class="o">.</span><span class="n">setPositions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">positions</span><span class="p">)</span>
+            <span class="n">openmm</span><span class="o">.</span><span class="n">Context</span><span class="o">.</span><span class="n">setVelocities</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">velocities</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="ExtendedSpaceContext.setPositions">
@@ -1243,6 +1259,15 @@
         <span class="n">box_vectors</span> <span class="o">=</span> <span class="n">topology</span><span class="o">.</span><span class="n">getPeriodicBoxVectors</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">box_vectors</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">"UFED: system must be confined in a simulation box"</span><span class="p">)</span>
+
+        <span class="n">num_particles</span><span class="p">,</span> <span class="n">num_atoms</span> <span class="o">=</span> <span class="n">system</span><span class="o">.</span><span class="n">getNumParticles</span><span class="p">(),</span> <span class="n">topology</span><span class="o">.</span><span class="n">getNumAtoms</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">num_particles</span> <span class="o">!=</span> <span class="n">num_atoms</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"UFED: the system has </span><span class="si">{</span><span class="n">num_particles</span><span class="si">}</span><span class="s2"> particles, but the topology has"</span>
+                <span class="sa">f</span><span class="s2">" </span><span class="si">{</span><span class="n">num_atoms</span><span class="si">}</span><span class="s2"> atoms. An extended-space simulation adds its extra"</span>
+                <span class="s2">" particles to the system, so a system cannot be used in more than one"</span>
+                <span class="s2">" of them. Create a new system for each simulation."</span>
+            <span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">topology</span> <span class="o">=</span> <span class="n">topology</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">system</span> <span class="o">=</span> <span class="n">system</span>

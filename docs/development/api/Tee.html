@@ -55,6 +55,7 @@
 <span class="gp">&gt;&gt;&gt; </span><span class="n">file</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryFile</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s1">'w+t'</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s1">'test'</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">ufedmm</span><span class="o">.</span><span class="n">Tee</span><span class="p">(</span><span class="n">stdout</span><span class="p">,</span> <span class="n">file</span><span class="p">))</span>
 <span class="go">test</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 </pre></div>
 </div>
 <p class="rubric">Methods</p>

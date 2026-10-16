@@ -125,6 +125,15 @@ variable.</p></li>
 <dd><p>Returns a Python function which, in turn, receives the values of extended-
 space variables and returns the energy estimated from a Metadynamics bias
 potential reconstructed from the simulation data.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Every row of the data frame is taken as a deposited hill, centered at the
+reported values of the dynamical variables. The data must therefore be
+reported at the frequency of hill deposition, starting at its first
+deposition, as a <a class="reference internal" href="StateDataReporter.html#ufedmm.StateDataReporter" title="ufedmm.io.StateDataReporter"><code class="xref py py-class docutils literal notranslate"><span class="pre">StateDataReporter</span></code></a> does when its report
+interval equals the metadynamics frequency. For well-tempered
+metadynamics, also report <code class="docutils literal notranslate"><span class="pre">hillHeights=True</span></code>.</p>
+</div>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>The free energy function.</p>
