@@ -22,15 +22,21 @@ jobs:
         python-version: ["3.11"]
 
     steps:
+      - name: Validate release tag
+        shell: bash
+        run: |
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid tag '$TAG' (expected vX.Y.Z)"; exit 1; }
+        env:
+          TAG: ${{ inputs.tag || github.event.release.tag_name }}
+
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.tag || github.ref }}
           fetch-depth: 0
 
-      - name: Validate release tag
+      - name: Check version file
         shell: bash
         run: |
-          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid tag '$TAG' (expected vX.Y.Z)"; exit 1; }
           grep -qx "__version__ = \"${TAG#v}\"" ufedmm/_version.py || { echo "ufedmm/_version.py does not match $TAG"; exit 1; }
         env:
           TAG: ${{ inputs.tag || github.event.release.tag_name }}
