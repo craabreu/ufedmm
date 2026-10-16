@@ -7,7 +7,7 @@ from openmm import app, unit
 
 import ufedmm
 
-from .common import GPU_PLATFORMS
+from .common import GPU_PLATFORM_PARAMS, GPU_PLATFORMS
 
 TEMP = 300 * unit.kelvin
 DT = 1.5 * unit.femtoseconds
@@ -74,7 +74,7 @@ def test_positions_are_constrained_before_forces_are_used(make_integrator):
 
 
 @pytest.mark.skipif(not GPU_PLATFORMS, reason="requires a CUDA or OpenCL platform")
-@pytest.mark.parametrize("platform_name", GPU_PLATFORMS)
+@pytest.mark.parametrize("platform_name", GPU_PLATFORM_PARAMS)
 @INTEGRATORS
 def test_integrators_keep_virtual_sites_up_to_date(
     flexible_tip4p_box, platform_name, make_integrator

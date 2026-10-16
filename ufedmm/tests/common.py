@@ -1,6 +1,7 @@
 """Helpers shared by the test modules."""
 
 import openmm
+import pytest
 from openmm import unit
 
 import ufedmm
@@ -99,3 +100,7 @@ def _usable(platform_name):
 
 
 GPU_PLATFORMS = [name for name in ("CUDA", "OpenCL") if _usable(name)]
+# Usable GPU platforms as parameters marked "gpu", for pytest.mark.parametrize
+GPU_PLATFORM_PARAMS = [
+    pytest.param(name, marks=pytest.mark.gpu) for name in GPU_PLATFORMS
+]

@@ -8,7 +8,7 @@ from openmm import unit
 
 import ufedmm
 
-from .common import GPU_PLATFORMS, KB, end_to_end_distance
+from .common import GPU_PLATFORM_PARAMS, GPU_PLATFORMS, KB, end_to_end_distance
 
 # A bath of independent harmonic oscillators. Like the atoms of a UFED system, the
 # first NUM_ATOMS particles are thermostatted at T in all directions. Like its extra
@@ -65,6 +65,7 @@ def kinetic_energies(integrator, v, regulated):
     ],
     ids=["NHC", "GGMT", "GeodesicLangevin", "RegulatedNHL"],
 )
+@pytest.mark.slow
 def test_thermostats_sample_each_temperature(make_integrator, regulated):
     # Every thermostatted degree of freedom must sample the canonical distribution at
     # its own temperature. Mean kinetic and potential energies of kT/2 are enforced by
@@ -207,7 +208,7 @@ def platform_trajectory(platform_name):
     return energy, forces, positions.value_in_unit(unit.nanometers)
 
 
-@pytest.mark.parametrize("platform_name", ["CPU"] + GPU_PLATFORMS)
+@pytest.mark.parametrize("platform_name", ["CPU", *GPU_PLATFORM_PARAMS])
 def test_platforms_agree_with_reference(platform_name):
     # After 30 steps with three hills deposited, every platform must follow the
     # Reference trajectory.
