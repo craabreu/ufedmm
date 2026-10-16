@@ -70,7 +70,7 @@ def test_massive_thermostats_stay_finite(integrator_factory):
 def atom_velocities(model, simulation):
     state = simulation.context.getState(getVelocities=True)
     natoms = model.topology.getNumAtoms()
-    all_velocities = state.getVelocities(asNumpy=True, extended=True, split=False)
+    all_velocities = state.getVelocities(asNumpy=True, extended=True)
     v = all_velocities.value_in_unit(unit.nanometers / unit.picosecond)
     masses = np.array(
         [model.system.getParticleMass(i) / unit.dalton for i in range(natoms)]
@@ -120,6 +120,7 @@ def test_get_velocities_split():
     state = simulation.context.getState(getVelocities=True)
     natoms = model.topology.getNumAtoms()
     assert len(state.getVelocities()) == natoms
-    atoms, extra = state.getVelocities(extended=True)
+    # Backward compatible: a single list of all velocities by default
+    assert len(state.getVelocities(extended=True)) == natoms + 2
+    atoms, extra = state.getVelocities(extended=True, split=True)
     assert (len(atoms), len(extra)) == (natoms, 2)
-    assert len(state.getVelocities(extended=True, split=False)) == natoms + 2
