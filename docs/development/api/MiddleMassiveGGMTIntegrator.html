@@ -16,6 +16,7 @@
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../_static/copybutton.js?v=ccdb6887"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="MiddleMassiveNHCIntegrator" href="MiddleMassiveNHCIntegrator.html" />
@@ -47,6 +48,18 @@ solver with optional multiple time-scale integration via RESPA.</p>
 <p>To enable RESPA, the forces in OpenMM system must be split into distinct force
 groups and the keyword <code class="docutils literal notranslate"><span class="pre">respa_loop</span></code> (see below) must be a list with multiple
 entries.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The velocity update of this solver involves the square root of
+<span class="math notranslate nohighlight">\(1 + 2 \delta t\, m v^2 v_2/3\)</span>, which becomes negative when the
+thermostat variable <span class="math notranslate nohighlight">\(v_2\)</span> is negative and the kinetic energy of a degree
+of freedom is large. Velocities can then become NaN, and this gets more likely
+as the ratio between the step size and the time constant grows. For example,
+one in 250 harmonic degrees of freedom failed after a few thousand steps with
+a 5 fs step size and a 100 fs time constant. The GGMT integrators of
+<a class="reference external" href="https://github.com/craabreu/openxps">OpenXPS</a>, the successor of UFEDMM, use
+a splitting without this singularity.</p>
+</div>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">

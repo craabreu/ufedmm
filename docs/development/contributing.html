@@ -94,6 +94,9 @@ articles, and such.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pytest</span>
 </pre></div>
 </div>
+<p>Use <code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">-m</span> <span class="pre">&quot;not</span> <span class="pre">slow&quot;</span></code> to skip the long statistical tests while you work,
+and <code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">--cov=ufedmm</span></code> to measure coverage. Tests marked <code class="docutils literal notranslate"><span class="pre">gpu</span></code> run only
+where a CUDA or OpenCL platform is available.</p>
 </li>
 <li><p>Commit your changes and push your branch to GitHub:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">add</span> <span class="o">.</span>

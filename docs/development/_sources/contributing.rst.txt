@@ -60,6 +60,10 @@ To set up `ufedmm` for local development:
 
     pytest
 
+   Use ``pytest -m "not slow"`` to skip the long statistical tests while you work,
+   and ``pytest --cov=ufedmm`` to measure coverage. Tests marked ``gpu`` run only
+   where a CUDA or OpenCL platform is available.
+
 5. Commit your changes and push your branch to GitHub::
 
     git add .

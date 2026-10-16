@@ -784,6 +784,17 @@
 <span class="sd">    groups and the keyword ``respa_loop`` (see below) must be a list with multiple</span>
 <span class="sd">    entries.</span>
 
+<span class="sd">    .. warning::</span>
+<span class="sd">        The velocity update of this solver involves the square root of</span>
+<span class="sd">        :math:`1 + 2 \\delta t\\, m v^2 v_2/3`, which becomes negative when the</span>
+<span class="sd">        thermostat variable :math:`v_2` is negative and the kinetic energy of a degree</span>
+<span class="sd">        of freedom is large. Velocities can then become NaN, and this gets more likely</span>
+<span class="sd">        as the ratio between the step size and the time constant grows. For example,</span>
+<span class="sd">        one in 250 harmonic degrees of freedom failed after a few thousand steps with</span>
+<span class="sd">        a 5 fs step size and a 100 fs time constant. The GGMT integrators of</span>
+<span class="sd">        `OpenXPS &lt;https://github.com/craabreu/openxps&gt;`_, the successor of UFEDMM, use</span>
+<span class="sd">        a splitting without this singularity.</span>
+
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">        temperature : float or unit.Quantity</span>
