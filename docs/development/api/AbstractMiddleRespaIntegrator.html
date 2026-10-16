@@ -173,13 +173,15 @@ steps.</p></li>
 <span class="go">   0: allow forces to update the context state</span>
 <span class="go">   1: v &lt;- v + 0.5*dt*f/m</span>
 <span class="go">   2: x &lt;- x + 0.5*dt*v</span>
-<span class="go">   3: twoK &lt;- sum(m*v*v)</span>
-<span class="go">   4: v_eta &lt;- v_eta + 0.5*dt*(twoK - gkT)/Q</span>
-<span class="go">   5: scaling &lt;- exp(-1.0*dt*v_eta)</span>
-<span class="go">   6: v &lt;- v*scaling</span>
-<span class="go">   7: v_eta &lt;- v_eta + 0.5*dt*(scaling^2*twoK - gkT)/Q</span>
-<span class="go">   8: x &lt;- x + 0.5*dt*v</span>
-<span class="go">   9: v &lt;- v + 0.5*dt*f/m</span>
+<span class="go">   3: constrain positions</span>
+<span class="go">   4: twoK &lt;- sum(m*v*v)</span>
+<span class="go">   5: v_eta &lt;- v_eta + 0.5*dt*(twoK - gkT)/Q</span>
+<span class="go">   6: scaling &lt;- exp(-1.0*dt*v_eta)</span>
+<span class="go">   7: v &lt;- v*scaling</span>
+<span class="go">   8: v_eta &lt;- v_eta + 0.5*dt*(scaling^2*twoK - gkT)/Q</span>
+<span class="go">   9: x &lt;- x + 0.5*dt*v</span>
+<span class="go">  10: constrain positions</span>
+<span class="go">  11: v &lt;- v + 0.5*dt*f/m</span>
 </pre></div>
 </div>
 </dd></dl>

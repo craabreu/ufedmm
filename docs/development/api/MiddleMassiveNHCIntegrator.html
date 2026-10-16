@@ -82,16 +82,18 @@ entries.</p>
 <span class="go">   3: while (irespa0 &lt; 3.5):</span>
 <span class="go">   4:    v &lt;- v + 0.125*dt*f0/m</span>
 <span class="go">   5:    x &lt;- x + 0.125*dt*v</span>
-<span class="go">   6:    v2 &lt;- v2 + 0.125*dt*(Q*v1^2 - kT)/Q</span>
-<span class="go">   7:    v1 &lt;- (v1*z + 0.125*dt*(m*v^2 - kT)/Q)*z; z=exp(-0.0625*dt*v2)</span>
-<span class="go">   8:    v &lt;- v*exp(-0.25*dt*v1)</span>
-<span class="go">   9:    v1 &lt;- (v1*z + 0.125*dt*(m*v^2 - kT)/Q)*z; z=exp(-0.0625*dt*v2)</span>
-<span class="go">  10:    v2 &lt;- v2 + 0.125*dt*(Q*v1^2 - kT)/Q</span>
-<span class="go">  11:    x &lt;- x + 0.125*dt*v</span>
-<span class="go">  12:    v &lt;- v + 0.125*dt*f0/m</span>
-<span class="go">  13:    irespa0 &lt;- irespa0 + 1</span>
-<span class="go">  14: end</span>
-<span class="go">  15: v &lt;- v + 0.5*dt*f1/m</span>
+<span class="go">   6:    constrain positions</span>
+<span class="go">   7:    v2 &lt;- v2 + 0.125*dt*(Q*v1^2 - kT)/Q</span>
+<span class="go">   8:    v1 &lt;- (v1*z + 0.125*dt*(m*v^2 - kT)/Q)*z; z=exp(-0.0625*dt*v2)</span>
+<span class="go">   9:    v &lt;- v*exp(-0.25*dt*v1)</span>
+<span class="go">  10:    v1 &lt;- (v1*z + 0.125*dt*(m*v^2 - kT)/Q)*z; z=exp(-0.0625*dt*v2)</span>
+<span class="go">  11:    v2 &lt;- v2 + 0.125*dt*(Q*v1^2 - kT)/Q</span>
+<span class="go">  12:    x &lt;- x + 0.125*dt*v</span>
+<span class="go">  13:    constrain positions</span>
+<span class="go">  14:    v &lt;- v + 0.125*dt*f0/m</span>
+<span class="go">  15:    irespa0 &lt;- irespa0 + 1</span>
+<span class="go">  16: end</span>
+<span class="go">  17: v &lt;- v + 0.5*dt*f1/m</span>
 </pre></div>
 </div>
 <p class="rubric">Methods</p>

@@ -71,13 +71,15 @@ entries.</p>
 <span class="go">   0: allow forces to update the context state</span>
 <span class="go">   1: v &lt;- v + 0.5*dt*f/m</span>
 <span class="go">   2: x &lt;- x + 0.5*dt*v</span>
-<span class="go">   3: v1 &lt;- v1 + 0.5*dt*(m*v^2 - kT)/Q1</span>
-<span class="go">   4: v2 &lt;- v2 + 0.5*dt*((m*v^2)^2/3 - kT^2)/Q2</span>
-<span class="go">   5: v &lt;- v*exp(-1.0*dt*(v1 + kT*v2))/sqrt(1 + 2.0*dt*m*v^2*v2/3)</span>
-<span class="go">   6: v1 &lt;- v1 + 0.5*dt*(m*v^2 - kT)/Q1</span>
-<span class="go">   7: v2 &lt;- v2 + 0.5*dt*((m*v^2)^2/3 - kT^2)/Q2</span>
-<span class="go">   8: x &lt;- x + 0.5*dt*v</span>
-<span class="go">   9: v &lt;- v + 0.5*dt*f/m</span>
+<span class="go">   3: constrain positions</span>
+<span class="go">   4: v1 &lt;- v1 + 0.5*dt*(m*v^2 - kT)/Q1</span>
+<span class="go">   5: v2 &lt;- v2 + 0.5*dt*((m*v^2)^2/3 - kT^2)/Q2</span>
+<span class="go">   6: v &lt;- v*exp(-1.0*dt*(v1 + kT*v2))/sqrt(1 + 2.0*dt*m*v^2*v2/3)</span>
+<span class="go">   7: v1 &lt;- v1 + 0.5*dt*(m*v^2 - kT)/Q1</span>
+<span class="go">   8: v2 &lt;- v2 + 0.5*dt*((m*v^2)^2/3 - kT^2)/Q2</span>
+<span class="go">   9: x &lt;- x + 0.5*dt*v</span>
+<span class="go">  10: constrain positions</span>
+<span class="go">  11: v &lt;- v + 0.5*dt*f/m</span>
 </pre></div>
 </div>
 <p class="rubric">Methods</p>
