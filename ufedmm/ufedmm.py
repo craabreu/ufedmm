@@ -675,9 +675,11 @@ class _Metadynamics(PeriodicTask):
                 else functools.reduce(np.multiply.outer, reversed(hills))
             )
             if not self._full_periodic:
-                for axis, v in enumerate(self.bias_variables):
+                for index, v in enumerate(self.bias_variables):
                     if v.periodic:
-                        n = self._extra_points[axis] + 1
+                        # The first variable runs fastest, so it is the last axis
+                        axis = ndim - 1 - index
+                        n = self._extra_points[index] + 1
                         begin = tuple(
                             slice(1, n) if i == axis else slice(None)
                             for i in range(ndim)

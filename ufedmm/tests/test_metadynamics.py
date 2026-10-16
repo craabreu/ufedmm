@@ -133,12 +133,13 @@ def current_bias(simulation):
 PERIODIC_1D = [("phi", 0.05), ("psi", None)]
 PERIODIC_2D = [("phi", 0.05), ("psi", 0.05)]
 NONPERIODIC_1D = [("distance", 0.05)]
+MIXED_2D = [("phi", 0.05), ("distance", 0.05)]
 PERIODIC_3D = [("phi", 0.1), ("psi", 0.1), ("omega", 0.1)]
 
 VARIABLE_SETS = pytest.mark.parametrize(
     "specs",
-    [PERIODIC_1D, PERIODIC_2D, NONPERIODIC_1D, PERIODIC_3D],
-    ids=["periodic-1D", "periodic-2D", "nonperiodic-1D", "periodic-3D"],
+    [PERIODIC_1D, PERIODIC_2D, NONPERIODIC_1D, MIXED_2D, PERIODIC_3D],
+    ids=["periodic-1D", "periodic-2D", "nonperiodic-1D", "mixed-2D", "periodic-3D"],
 )
 GRIDS = pytest.mark.parametrize(
     "enforce_gridless, tolerance",
