@@ -33,6 +33,10 @@
 - The examples import `openmm` directly, not the deprecated `simtk.openmm`.
 
 ### Fixed
+- UFEDMM simulations raise a `ValueError` when the system has constraints and the
+  integrator has no RATTLE steps (`MiddleMassiveNHCIntegrator`,
+  `MiddleMassiveGGMTIntegrator`, `RegulatedNHLIntegrator`, or `num_rattles=0`).
+  Those integrators used to ignore the constraints silently.
 - `StateDataReporter` with `multipleTemperatures=True` works again on OpenMM 8.3 and
   newer. It used to fail because the reported state had no velocities or energies.
 - `FreeEnergyAnalyzer.mean_force_free_energy` works again with NumPy 2 and
