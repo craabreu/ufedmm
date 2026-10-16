@@ -42,6 +42,14 @@ def _add_fake_particles(force, num_particles):  # noqa: PLR0912
                 map(force.getParticleParameters, range(force.getNumParticles()))
             )
             force.addPerParticleParameter("isreal")
+            # Extra particles must neither contribute to pairwise computed values
+            # (such as the Born radii) nor carry any energy
+            for index in range(force.getNumComputedValues()):
+                name, expression, type = force.getComputedValueParameters(index)
+                if type != force.SingleParticle:
+                    force.setComputedValueParameters(
+                        index, name, f"isreal2*V_GB; V_GB={expression}", type
+                    )
             for index in range(force.getNumEnergyTerms()):
                 expression, type = force.getEnergyTermParameters(index)
                 energy = (
@@ -363,13 +371,6 @@ class DynamicalVariable:
         length = Lx if self.periodic else Lx / 2
         return self.mass * (self._range / length) ** 2
 
-    def _particle_position(self, value, Lx, y=0):
-        length = Lx if self.periodic else Lx / 2
-        return (
-            openmm.Vec3(length * (value - self.min_value) / self._range, y, 0)
-            * unit.nanometer
-        )
-
     def _get_energy_function(self, index=""):
         """Returns the algebraic expression that transforms the x coordinate of a
         particle into this dynamical variables.
@@ -675,9 +676,11 @@ class _Metadynamics(PeriodicTask):
                 else functools.reduce(np.multiply.outer, reversed(hills))
             )
             if not self._full_periodic:
-                for axis, v in enumerate(self.bias_variables):
+                for index, v in enumerate(self.bias_variables):
                     if v.periodic:
-                        n = self._extra_points[axis] + 1
+                        # The first variable runs fastest, so it is the last axis
+                        axis = ndim - 1 - index
+                        n = self._extra_points[index] + 1
                         begin = tuple(
                             slice(1, n) if i == axis else slice(None)
                             for i in range(ndim)
@@ -996,7 +999,7 @@ class ExtendedSpaceContext(openmm.Context):
 
         Parameters
         ----------
-            positions : list of openmm.Vec3
+            positions : list of openmm.Vec3 or numpy.ndarray or unit.Quantity
                 The positions of physical particles.
 
         Keyword Args
@@ -1006,7 +1009,7 @@ class ExtendedSpaceContext(openmm.Context):
         """
         a, b, _ = self.getState().getPeriodicBoxVectors()
         nvars = len(self.variables)
-        particle_positions = _standardized(positions)
+        particle_positions = [openmm.Vec3(*xyz) for xyz in _standardized(positions)]
         if extended_positions is None:
             extra_positions = [
                 openmm.Vec3(0, b.y * (i + 1) / (nvars + 2), 0) for i in range(nvars)
@@ -1192,12 +1195,6 @@ class ExtendedSpaceSimulation(app.Simulation):
             steps : int
                 The number of steps to be executed.
         """
-        if isinstance(self.integrator, ufedmm.AbstractMiddleRespaIntegrator):
-            if (
-                self.integrator._num_rattles == 0
-                and self.system.getNumConstraints() > 0
-            ):
-                raise RuntimeError("Integrator cannot handle constraints")
         if self._periodic_tasks:
             for task in self._periodic_tasks:
                 task.update(self, steps)

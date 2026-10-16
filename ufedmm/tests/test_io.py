@@ -1,7 +1,10 @@
+import gc
 import io
 
 import numpy as np
 import openmm
+import pandas as pd
+import pytest
 from openmm import unit
 
 import ufedmm
@@ -33,3 +36,140 @@ def test_state_data_reporter_with_multiple_temperatures():
     for row in rows:
         temperatures = [float(value) for value in row.split(",")[1:]]
         assert all(np.isfinite(t) and t > 0 for t in temperatures)
+
+
+def test_tee_writes_to_all_outputs_and_closes_only_its_own_files(tmp_path):
+    stream = io.StringIO()
+    path = tmp_path / "output.txt"
+    tee = ufedmm.Tee(stream, str(path))
+    print("first line", file=tee)
+    tee.write("second line\n")
+    tee.flush()
+    del tee
+    gc.collect()
+    assert not stream.closed
+    assert stream.getvalue() == "first line\nsecond line\n"
+    assert path.read_text() == "first line\nsecond line\n"
+
+
+def reporter_simulation(**kwargs):
+    model = ufedmm.AlanineDipeptideModel(constraints=None)
+    mass = 50 * unit.dalton * (unit.nanometer / unit.radians) ** 2
+    Ks = 1000 * unit.kilojoules_per_mole / unit.radians**2
+    Ts = kwargs.pop("Ts", 1500 * unit.kelvin)
+    sigma = 18 * unit.degrees
+    s_phi = ufedmm.DynamicalVariable(
+        "s_phi", -np.pi, np.pi, mass, Ts, model.phi, Ks, sigma=sigma
+    )
+    s_psi = ufedmm.DynamicalVariable(
+        "s_psi", -np.pi, np.pi, mass, Ts, model.psi, Ks, sigma=sigma
+    )
+    ufed = ufedmm.UnifiedFreeEnergyDynamics([s_phi, s_psi], 300 * unit.kelvin, **kwargs)
+    integrator = ufedmm.MiddleMassiveNHCIntegrator(
+        300 * unit.kelvin, 10 * unit.femtoseconds, 1 * unit.femtoseconds
+    )
+    platform = openmm.Platform.getPlatformByName("Reference")
+    simulation = ufed.simulation(model.topology, model.system, integrator, platform)
+    simulation.context.setPositions(model.positions)
+    simulation.context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)
+    return simulation
+
+
+def report(simulation, steps=10, **kwargs):
+    output = io.StringIO()
+    simulation.reporters.append(ufedmm.StateDataReporter(output, 5, **kwargs))
+    simulation.step(steps)
+    header, *rows = output.getvalue().strip().splitlines()
+    names = [name.strip('"') for name in header.lstrip("#").split(",")]
+    values = [float(value) for value in rows[-1].split(",")]
+    return names, dict(zip(names, values)), len(rows)
+
+
+def driving_values(simulation):
+    return [
+        value
+        for force in simulation.context.driving_forces
+        for value in force.getCollectiveVariableValues(simulation.context)
+    ]
+
+
+def test_reporter_variables_come_before_trailing_columns():
+    simulation = reporter_simulation()
+    names, values, num_rows = report(simulation, step=True, variables=True, speed=True)
+    assert num_rows == 2
+    assert names == ["Step", "s_phi", "phi", "s_psi", "psi", "Speed (ns/day)"]
+    expected = driving_values(simulation)
+    assert [values[name] for name in names[1:5]] == pytest.approx(expected)
+
+
+def test_reporter_collective_variables():
+    simulation = reporter_simulation()
+    names, values, _ = report(simulation, collectiveVariables=True)
+    # The driving force is the only CustomCVForce in the system
+    assert names == ["s_phi", "phi", "s_psi", "psi"]
+    assert [values[name] for name in names] == pytest.approx(driving_values(simulation))
+
+
+@pytest.mark.parametrize("bias_factor", [None, 10])
+def test_reporter_hill_heights(bias_factor):
+    height = 2.0 * unit.kilocalorie_per_mole
+    simulation = reporter_simulation(
+        height=height, frequency=5, bias_factor=bias_factor
+    )
+    names, values, _ = report(simulation, hillHeights=True)
+    assert names == ["Height (kJ/mole)"]
+    (metadynamics,) = simulation._periodic_tasks
+    scaling = 1 if bias_factor is None else bias_factor / (bias_factor - 1)
+    assert values["Height (kJ/mole)"] == pytest.approx(
+        metadynamics.height * scaling, rel=1e-6
+    )
+    if bias_factor is None:
+        assert metadynamics.height == pytest.approx(
+            height.value_in_unit(unit.kilojoules_per_mole)
+        )
+
+
+def test_reporter_hill_heights_require_metadynamics():
+    simulation = reporter_simulation()
+    with pytest.raises(Exception, match="hillHeights"):
+        report(simulation, hillHeights=True)
+
+
+def test_reporter_global_parameter_states():
+    simulation = reporter_simulation()
+    context = simulation.context
+    states = pd.DataFrame({"K_phi": [0.0, 2000.0], "K_psi": [500.0, 0.0]})
+    names, values, _ = report(simulation, globalParameterStates=states)
+    assert names == ["Energy[0] (kJ/mole)", "Energy[1] (kJ/mole)"]
+    assert context.getParameter("K_phi") == 1000
+    assert context.getParameter("K_psi") == 1000
+    for index, row in states.iterrows():
+        for name, value in row.items():
+            context.setParameter(name, value)
+        energy = context.getState(getEnergy=True).getPotentialEnergy()
+        assert values[f"Energy[{index}] (kJ/mole)"] == pytest.approx(
+            energy.value_in_unit(unit.kilojoules_per_mole), rel=1e-6
+        )
+
+
+def test_multiple_temperatures_need_integrator_temperatures():
+    # With a single temperature, the integrator sets its per-dof temperatures only
+    # when it first steps, so reporting before that cannot split the temperatures.
+    simulation = reporter_simulation(Ts=300 * unit.kelvin)
+    reporter = ufedmm.StateDataReporter(io.StringIO(), 1, multipleTemperatures=True)
+    state = simulation.context.getState(getVelocities=True, getEnergy=True)
+    with pytest.raises(ValueError, match="temperatures were not set"):
+        reporter.report(simulation, state)
+
+
+def test_serialization_to_a_file(tmp_path):
+    simulation = reporter_simulation()
+    ufed = ufedmm.UnifiedFreeEnergyDynamics(
+        simulation.context.variables, 300 * unit.kelvin
+    )
+    path = str(tmp_path / "ufed.yaml")
+    ufedmm.serialize(ufed, path)
+    new = ufedmm.deserialize(path)
+    assert new.__getstate__().keys() == ufed.__getstate__().keys()
+    assert [v.id for v in new.variables] == ["s_phi", "s_psi"]
+    assert new.temperature == ufed.temperature
