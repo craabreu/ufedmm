@@ -57,8 +57,6 @@ def add_inner_nonbonded_force(system, inner_switch, inner_cutoff, force_group_in
         ...     model.system, 5*unit.angstroms, 8*unit.angstroms, 1
         ... )
     """
-    if openmm.__version__ < "7.5":
-        raise Exception("add_inner_nonbonded_force requires OpenMM version >= 7.5")
     try:
         nonbonded_force = next(
             filter(lambda f: isinstance(f, openmm.NonbondedForce), system.getForces())
@@ -321,8 +319,7 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
             A list of indices of force groups. The presence of an index `i` is this list
             means that the contribution of force group `i` is embodied in force group
             `i+1`. Therefore, such contribution must be properly subtracted during the
-            integration at time scale `i+1`. This feature requires OpenMM 7.5 or a newer
-            version.
+            integration at time scale `i+1`.
         unroll_loops : bool, default=True
             Whether the integrator loops should be unrolled for improving efficiency.
             Using ``unroll_loops=False`` can be useful for printing the integrator
@@ -412,10 +409,6 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
                 n > 1 and self.addGlobalVariable(f"irespa{scale}", 0)
             bath_loops > 1 and self.addGlobalVariable("ibath", 0)
         if embodied_force_groups:
-            if openmm.__version__ < "7.5":
-                raise Exception(
-                    "Use of `embodied_force_groups` option requires OpenMM >= 7.5"
-                )
             self.addPerDofVariable("f_emb", 0)
             integration_groups = set(range(len(respa_loops))) - set(
                 embodied_force_groups

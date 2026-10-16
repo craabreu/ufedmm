@@ -2,7 +2,8 @@ import argparse
 import random
 from sys import stdout
 
-from simtk import openmm, unit
+import openmm
+from openmm import unit
 
 import ufedmm
 
