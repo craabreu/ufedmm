@@ -287,7 +287,7 @@ class FreeEnergyAnalyzer:
 
         n = len(self._dataframe.index)
         forces = [np.empty(n) for xv in extended_variables]
-        for j, row in self._dataframe.iterrows():
+        for j, (_, row) in enumerate(self._dataframe.iterrows()):
             for variable in all_variables:
                 context.setParameter(variable, row[variable])
             state = context.getState(getParameterDerivatives=True)

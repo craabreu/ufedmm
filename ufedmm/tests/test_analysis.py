@@ -95,3 +95,62 @@ def test_metadynamics_bias_free_energy_can_be_built_repeatedly():
         free_energy = analyzer.metadynamics_bias_free_energy()
         for point in points:
             assert free_energy(*point) == pytest.approx(expected(np.array(point)))
+
+
+def sampled_dataframe(index=None):
+    """Random samples of (phi, psi, s_phi, s_psi) with periodic wrapping."""
+    rng = np.random.default_rng(42)
+    n = 400
+    s = rng.uniform(-np.pi, np.pi, size=(n, 2))
+    cv = np.mod(s + rng.normal(scale=0.3, size=(n, 2)) + np.pi, 2 * np.pi) - np.pi
+    return pd.DataFrame(
+        {"phi": cv[:, 0], "psi": cv[:, 1], "s_phi": s[:, 0], "s_psi": s[:, 1]},
+        index=index,
+    )
+
+
+def periodic_ufed(Ks=(1000.0, 500.0)):
+    model = ufedmm.AlanineDipeptideModel()
+    s_phi = ufedmm.DynamicalVariable("s_phi", -np.pi, np.pi, 50, 300, model.phi, Ks[0])
+    s_psi = ufedmm.DynamicalVariable("s_psi", -np.pi, np.pi, 50, 300, model.psi, Ks[1])
+    return ufedmm.UnifiedFreeEnergyDynamics([s_phi, s_psi], 300)
+
+
+def expected_bin_statistics(dataframe, bins, Ks, min_count, adjust_centers):
+    edges = np.linspace(-np.pi, np.pi, bins + 1)
+    s = dataframe[["s_phi", "s_psi"]].to_numpy()
+    delta = dataframe[["phi", "psi"]].to_numpy() - s
+    delta = np.mod(delta + np.pi, 2 * np.pi) - np.pi  # minimum image
+    forces = np.array(Ks) * delta
+    cell = np.clip(np.digitize(s, edges) - 1, 0, bins - 1)
+    centers, mean_forces = [], []
+    for i, j in itertools.product(range(bins), repeat=2):
+        inside = (cell[:, 0] == i) & (cell[:, 1] == j)
+        if inside.sum() >= min_count:
+            if adjust_centers:
+                centers.append(s[inside].mean(axis=0))
+            else:
+                centers.append(0.5 * (edges[[i, j]] + edges[[i + 1, j + 1]]))
+            mean_forces.append(forces[inside].mean(axis=0))
+    return np.array(centers).T, np.array(mean_forces).T
+
+
+@pytest.mark.parametrize("adjust_centers", [False, True])
+@pytest.mark.parametrize(
+    "index",
+    [None, np.arange(400) + 1000, np.random.default_rng(0).permutation(400)],
+    ids=["default", "offset", "shuffled"],
+)
+def test_centers_and_mean_forces(index, adjust_centers):
+    Ks = (1000.0, 500.0)
+    dataframe = sampled_dataframe(index)
+    analyzer = ufedmm.FreeEnergyAnalyzer(periodic_ufed(Ks), dataframe)
+    centers, mean_forces = analyzer.centers_and_mean_forces(
+        5, min_count=12, adjust_centers=adjust_centers
+    )
+    expected_centers, expected_forces = expected_bin_statistics(
+        dataframe, 5, Ks, 12, adjust_centers
+    )
+    assert 0 < len(centers[0]) < 25
+    assert np.array(centers) == pytest.approx(expected_centers)
+    assert np.array(mean_forces) == pytest.approx(expected_forces)
