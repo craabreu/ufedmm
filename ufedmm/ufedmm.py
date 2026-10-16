@@ -431,7 +431,7 @@ class PeriodicTask:
     def __init__(self, frequency):
         self.frequency = frequency
 
-    def initialize(self, simulation, force_group):
+    def initialize(self, simulation):
         pass
 
     def update(self, simulation, steps):
@@ -447,7 +447,7 @@ class PeriodicTask:
     def saveCheckpoint(self, file):
         pass
 
-    def loadCheckpoint(self, file):
+    def loadCheckpoint(self, file, context):
         pass
 
 

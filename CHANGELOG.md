@@ -52,3 +52,7 @@
   (e.g., `h**2` in kJ/mol for a 2D bias), so results obtained with a
   multidimensional bias should be recomputed. One-dimensional and gridless
   metadynamics were not affected.
+- Tasks derived from `PeriodicTask` that do not override `initialize` and
+  `loadCheckpoint` can be added with `ExtendedSpaceSimulation.add_periodic_task`.
+  They used to fail with a `TypeError`, because those base-class methods took
+  different arguments from the ones the simulation passes.
