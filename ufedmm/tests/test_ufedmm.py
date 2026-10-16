@@ -215,18 +215,11 @@ def run_metadynamics(steps, **kwargs):
     return ufed, recorder, state.getDynamicalVariables(), bias
 
 
-# Gridded hills in two or more dimensions are deposited with height**ndim, because
-# every one-dimensional factor of the outer product carries the full height.
-GRIDDED_HEIGHT_BUG = pytest.mark.xfail(
-    reason="gridded multidimensional hills are scaled by height**ndim", strict=True
-)
-
-
 @pytest.mark.parametrize(
     "enforce_gridless, bias_psi, tolerance",
     [
         pytest.param(False, False, 1e-4, id="gridded-1D"),
-        pytest.param(False, True, 1e-4, id="gridded-2D", marks=GRIDDED_HEIGHT_BUG),
+        pytest.param(False, True, 1e-4, id="gridded-2D"),
         pytest.param(True, False, 1e-10, id="gridless-1D"),
         pytest.param(True, True, 1e-10, id="gridless-2D"),
     ],
@@ -246,7 +239,7 @@ def test_metadynamics_bias_is_a_sum_of_hills(enforce_gridless, bias_psi, toleran
     "bias_psi",
     [
         pytest.param(False, id="gridded-1D"),
-        pytest.param(True, id="gridded-2D", marks=GRIDDED_HEIGHT_BUG),
+        pytest.param(True, id="gridded-2D"),
     ],
 )
 def test_well_tempered_metadynamics_scales_hill_heights(bias_psi):

@@ -47,3 +47,8 @@
 - `FreeEnergyAnalyzer.mean_force_free_energy` works again with NumPy 2 and
   OpenMM 8, and its fit now uses each collective variable's own kernel width and
   period. Before this fix, every kernel used the last variable's values.
+- Gridded metadynamics with two or three bias variables deposits hills of the
+  requested height. Each hill used to have height `h**n` for `n` bias variables
+  (e.g., `h**2` in kJ/mol for a 2D bias), so results obtained with a
+  multidimensional bias should be recomputed. One-dimensional and gridless
+  metadynamics were not affected.
