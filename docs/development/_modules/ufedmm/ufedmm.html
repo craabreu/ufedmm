@@ -40,7 +40,7 @@
 <span class="sd">   :platform: Unix, Windows</span>
 <span class="sd">   :synopsis: Unified Free Energy Dynamics with OpenMM</span>
 
-<span class="sd">.. moduleauthor:: Charlles Abreu &lt;abreu@eq.ufrj.br&gt;</span>
+<span class="sd">.. moduleauthor:: Charlles Abreu &lt;craabreu@gmail.com&gt;</span>
 <span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">functools</span>
@@ -63,15 +63,15 @@
         <span class="k">return</span> <span class="n">quantity</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_add_fake_particles</span><span class="p">(</span><span class="n">force</span><span class="p">,</span> <span class="n">num_particles</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_add_fake_particles</span><span class="p">(</span><span class="n">force</span><span class="p">,</span> <span class="n">num_particles</span><span class="p">):</span>  <span class="c1"># noqa: PLR0912</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">force</span><span class="p">,</span> <span class="n">openmm</span><span class="o">.</span><span class="n">CustomCVForce</span><span class="p">):</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">force</span><span class="o">.</span><span class="n">getNumCollectiveVariables</span><span class="p">()):</span>
             <span class="n">_add_fake_particles</span><span class="p">(</span><span class="n">force</span><span class="o">.</span><span class="n">getCollectiveVariable</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="n">num_particles</span><span class="p">)</span>
     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">force</span><span class="p">,</span> <span class="n">openmm</span><span class="o">.</span><span class="n">NonbondedForce</span><span class="p">):</span>
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_particles</span> <span class="o">-</span> <span class="n">force</span><span class="o">.</span><span class="n">getNumParticles</span><span class="p">()):</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_particles</span> <span class="o">-</span> <span class="n">force</span><span class="o">.</span><span class="n">getNumParticles</span><span class="p">()):</span>
             <span class="n">force</span><span class="o">.</span><span class="n">addParticle</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">force</span><span class="p">,</span> <span class="n">openmm</span><span class="o">.</span><span class="n">CustomNonbondedForce</span><span class="p">):</span>
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_particles</span> <span class="o">-</span> <span class="n">force</span><span class="o">.</span><span class="n">getNumParticles</span><span class="p">()):</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_particles</span> <span class="o">-</span> <span class="n">force</span><span class="o">.</span><span class="n">getNumParticles</span><span class="p">()):</span>
             <span class="n">force</span><span class="o">.</span><span class="n">addParticle</span><span class="p">([</span><span class="mf">0.0</span><span class="p">]</span> <span class="o">*</span> <span class="n">force</span><span class="o">.</span><span class="n">getNumPerParticleParameters</span><span class="p">())</span>
     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">force</span><span class="p">,</span> <span class="n">openmm</span><span class="o">.</span><span class="n">CustomGBForce</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">force</span><span class="o">.</span><span class="n">getNumParticles</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">num_particles</span><span class="p">:</span>
@@ -91,7 +91,7 @@
                 <span class="p">)</span>
             <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">parameters</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">parameter_list</span><span class="p">):</span>
                 <span class="n">force</span><span class="o">.</span><span class="n">setParticleParameters</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">parameters</span> <span class="o">+</span> <span class="p">(</span><span class="mf">1.0</span><span class="p">,))</span>
-            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_particles</span> <span class="o">-</span> <span class="n">force</span><span class="o">.</span><span class="n">getNumParticles</span><span class="p">()):</span>
+            <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_particles</span> <span class="o">-</span> <span class="n">force</span><span class="o">.</span><span class="n">getNumParticles</span><span class="p">()):</span>
                 <span class="n">force</span><span class="o">.</span><span class="n">addParticle</span><span class="p">(</span><span class="n">parameter_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,))</span>
     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">force</span><span class="p">,</span> <span class="n">openmm</span><span class="o">.</span><span class="n">GBSAOBCForce</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">"GBSAOBCForce not supported"</span><span class="p">)</span>
@@ -105,7 +105,7 @@
 
 <div class="viewcode-block" id="CollectiveVariable">
 <a class="viewcode-back" href="../../pythonapi/ufedmm.html#ufedmm.ufedmm.CollectiveVariable">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">CollectiveVariable</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">CollectiveVariable</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""A function of the particle coordinates, evaluated by means of an :OpenMM:`Force`</span>
 <span class="sd">    object.</span>
 
@@ -259,7 +259,7 @@
 
 <div class="viewcode-block" id="DynamicalVariable">
 <a class="viewcode-back" href="../../pythonapi/ufedmm.html#ufedmm.ufedmm.DynamicalVariable">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">DynamicalVariable</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">DynamicalVariable</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""An extended phase-space variable, whose dynamics is coupled to that of one of</span>
 <span class="sd">    more collective variables of a system.</span>
 
@@ -328,7 +328,7 @@
 <span class="sd">        &lt;s_psi in [-3.141592653589793, 3.141592653589793], periodic, m=50, T=1500&gt;</span>
 <span class="sd">    """</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>  <span class="c1"># noqa: PLR0913, PLR0917</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="nb">id</span><span class="p">,</span>
         <span class="n">min_value</span><span class="p">,</span>
@@ -434,7 +434,7 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">periodic</span><span class="p">:</span>
             <span class="n">energy</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">min_value</span><span class="si">}</span><span class="s2">+</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_range</span><span class="si">}</span><span class="s2">*(x</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">/Lx-floor(x</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">/Lx))"</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">energy</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">min_value</span><span class="si">}</span><span class="s2">+</span><span class="si">{</span><span class="mi">2</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_range</span><span class="si">}</span><span class="s2">*min(pos</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">,1-pos</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">)"</span>
+            <span class="n">energy</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">min_value</span><span class="si">}</span><span class="s2">+</span><span class="si">{</span><span class="mi">2</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">_range</span><span class="si">}</span><span class="s2">*min(pos</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">,1-pos</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">)"</span>
             <span class="n">energy</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">";pos</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">=x</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">/Lx-floor(x</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">/Lx)"</span>
         <span class="k">return</span> <span class="n">energy</span>
 
@@ -467,7 +467,7 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">_get_energy_function</span><span class="p">(</span><span class="n">variables</span><span class="p">):</span>
     <span class="n">energies</span> <span class="o">=</span> <span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">potential</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">";"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">variables</span><span class="p">]</span>
     <span class="n">energy_terms</span> <span class="o">=</span> <span class="p">[</span><span class="n">energy</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">energy</span> <span class="ow">in</span> <span class="n">energies</span><span class="p">]</span>
-    <span class="n">definitions</span> <span class="o">=</span> <span class="p">[</span><span class="n">energy</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">energy</span> <span class="ow">in</span> <span class="n">energies</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">energy</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">]</span>
+    <span class="n">definitions</span> <span class="o">=</span> <span class="p">[</span><span class="n">energy</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">energy</span> <span class="ow">in</span> <span class="n">energies</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">energy</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">]</span>  <span class="c1"># noqa: PLR2004</span>
     <span class="n">expression</span> <span class="o">=</span> <span class="s2">";"</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">"+"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">energy_terms</span><span class="p">)]</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">definitions</span><span class="p">))</span>
     <span class="k">return</span> <span class="n">expression</span>
 
@@ -479,7 +479,7 @@
     <span class="k">return</span> <span class="n">parameters</span>
 
 
-<span class="k">class</span><span class="w"> </span><span class="nc">PeriodicTask</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">PeriodicTask</span><span class="p">:</span>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frequency</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">frequency</span> <span class="o">=</span> <span class="n">frequency</span>
 
@@ -537,7 +537,7 @@
 <span class="sd">            Enforce gridless metadynamics even for 1D to 3D problems.</span>
 <span class="sd">    """</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>  <span class="c1"># noqa: PLR0913, PLR0917</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">variables</span><span class="p">,</span>
         <span class="n">height</span><span class="p">,</span>
@@ -564,7 +564,7 @@
             <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">buffer_size</span> <span class="o">=</span> <span class="n">buffer_size</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">grid_expansion</span> <span class="o">=</span> <span class="n">grid_expansion</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_use_grid</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bias_variables</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">4</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">enforce_gridless</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_use_grid</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bias_variables</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">4</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">enforce_gridless</span>  <span class="c1"># noqa: PLR2004</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">force</span> <span class="o">=</span> <span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_interpolation_grid_force</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_use_grid</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hills_force</span><span class="p">()</span>
         <span class="p">)</span>
@@ -592,7 +592,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_table</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">Continuous1DFunction</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_bias</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_bounds</span><span class="p">,</span> <span class="n">full_periodic</span>
             <span class="p">)</span>
-        <span class="k">elif</span> <span class="n">num_bias_variables</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="n">num_bias_variables</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>  <span class="c1"># noqa: PLR2004</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_table</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">Continuous2DFunction</span><span class="p">(</span>
                 <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_widths</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bias</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_bounds</span><span class="p">,</span> <span class="n">full_periodic</span>
             <span class="p">)</span>
@@ -601,15 +601,15 @@
                 <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_widths</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bias</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_bounds</span><span class="p">,</span> <span class="n">full_periodic</span>
             <span class="p">)</span>
         <span class="n">expression</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="sa">f</span><span class="s1">'metad_bias_scale*bias(</span><span class="si">{</span><span class="s2">","</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">id</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">bias_variables</span><span class="p">)</span><span class="si">}</span><span class="s1">)'</span>
+            <span class="sa">f</span><span class="s2">"metad_bias_scale*bias(</span><span class="si">{</span><span class="s1">','</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">id</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">bias_variables</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span>
         <span class="p">)</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bias_variables</span><span class="p">):</span>
-            <span class="n">expression</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">";</span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">_get_energy_function</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+            <span class="n">expression</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">";</span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">_get_energy_function</span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
         <span class="n">force</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">CustomCVForce</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_bias_variables</span><span class="p">):</span>
             <span class="n">x</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">CustomExternalForce</span><span class="p">(</span><span class="s2">"x"</span><span class="p">)</span>
             <span class="n">x</span><span class="o">.</span><span class="n">addParticle</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="p">[])</span>
-            <span class="n">force</span><span class="o">.</span><span class="n">addCollectiveVariable</span><span class="p">(</span><span class="sa">f</span><span class="s2">"x</span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+            <span class="n">force</span><span class="o">.</span><span class="n">addCollectiveVariable</span><span class="p">(</span><span class="sa">f</span><span class="s2">"x</span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
         <span class="n">force</span><span class="o">.</span><span class="n">addTabulatedFunction</span><span class="p">(</span><span class="s2">"bias"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="p">)</span>
         <span class="n">force</span><span class="o">.</span><span class="n">addGlobalParameter</span><span class="p">(</span><span class="s2">"Lx"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="n">force</span><span class="o">.</span><span class="n">addGlobalParameter</span><span class="p">(</span><span class="s2">"metad_bias_scale"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
@@ -618,19 +618,20 @@
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_hills_force</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">num_bias_variables</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bias_variables</span><span class="p">)</span>
-        <span class="n">centers</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"center</span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_bias_variables</span><span class="p">)]</span>
+        <span class="n">centers</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"center</span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_bias_variables</span><span class="p">)]</span>
         <span class="n">exponents</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">v</span><span class="p">,</span> <span class="n">center</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bias_variables</span><span class="p">,</span> <span class="n">centers</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">periodic</span><span class="p">:</span>  <span class="c1"># von Mises</span>
                 <span class="n">factor</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">v</span><span class="o">.</span><span class="n">_range</span>
                 <span class="n">exponents</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="mf">1.0</span><span class="o">/</span><span class="p">(</span><span class="n">factor</span><span class="o">*</span><span class="n">v</span><span class="o">.</span><span class="n">sigma</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="si">}</span><span class="s2">*(cos(</span><span class="si">{</span><span class="n">factor</span><span class="si">}</span><span class="s2">*(</span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">center</span><span class="si">}</span><span class="s2">))-1)"</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="mf">1.0</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="p">(</span><span class="n">factor</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">v</span><span class="o">.</span><span class="n">sigma</span><span class="p">)</span><span class="w"> </span><span class="o">**</span><span class="w"> </span><span class="mi">2</span><span class="si">}</span><span class="s2">"</span>
+                    <span class="sa">f</span><span class="s2">"*(cos(</span><span class="si">{</span><span class="n">factor</span><span class="si">}</span><span class="s2">*(</span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">center</span><span class="si">}</span><span class="s2">))-1)"</span>
                 <span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>  <span class="c1"># Gauss</span>
-                <span class="n">exponents</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="o">-</span><span class="mf">0.5</span><span class="o">/</span><span class="n">v</span><span class="o">.</span><span class="n">sigma</span><span class="o">**</span><span class="mi">2</span><span class="si">}</span><span class="s2">)*(</span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">center</span><span class="si">}</span><span class="s2">)^2"</span><span class="p">)</span>
-        <span class="n">expression</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">'height*exp(</span><span class="si">{</span><span class="s2">"+"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">exponents</span><span class="p">)</span><span class="si">}</span><span class="s1">)'</span>
+                <span class="n">exponents</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="o">-</span><span class="mf">0.5</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">v</span><span class="o">.</span><span class="n">sigma</span><span class="o">**</span><span class="mi">2</span><span class="si">}</span><span class="s2">)*(</span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">center</span><span class="si">}</span><span class="s2">)^2"</span><span class="p">)</span>
+        <span class="n">expression</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"height*exp(</span><span class="si">{</span><span class="s1">'+'</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">exponents</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bias_variables</span><span class="p">):</span>
-            <span class="n">expression</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">";</span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">_get_energy_function</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+            <span class="n">expression</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">";</span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">_get_energy_function</span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
         <span class="n">force</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">CustomCompoundBondForce</span><span class="p">(</span><span class="n">num_bias_variables</span><span class="p">,</span> <span class="n">expression</span><span class="p">)</span>
         <span class="n">force</span><span class="o">.</span><span class="n">addPerBondParameter</span><span class="p">(</span><span class="s2">"height"</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">center</span> <span class="ow">in</span> <span class="n">centers</span><span class="p">:</span>
@@ -640,7 +641,7 @@
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_add_buffer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation</span><span class="p">):</span>
         <span class="n">size</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">buffer_size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_total_hills</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">force</span><span class="o">.</span><span class="n">getNumBonds</span><span class="p">())</span>
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">size</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">size</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">force</span><span class="o">.</span><span class="n">addBond</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">particles</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bias_variables</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
         <span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">reinitialize</span><span class="p">(</span><span class="n">preserveState</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
@@ -761,7 +762,7 @@
             <span class="n">parameter_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fromfile</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="n">nhills</span> <span class="o">*</span> <span class="n">npars</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
                 <span class="p">(</span><span class="n">nhills</span><span class="p">,</span> <span class="n">npars</span><span class="p">)</span>
             <span class="p">)</span>
-            <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nhills</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">force</span><span class="o">.</span><span class="n">getNumBonds</span><span class="p">()):</span>
+            <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nhills</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">force</span><span class="o">.</span><span class="n">getNumBonds</span><span class="p">()):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">force</span><span class="o">.</span><span class="n">addBond</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">particles</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">npars</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_total_hills</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">force</span><span class="o">.</span><span class="n">getNumBonds</span><span class="p">()</span>
             <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">parameters</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">parameter_array</span><span class="p">):</span>
@@ -949,7 +950,7 @@
         <span class="n">added_colvars</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">variables</span><span class="p">:</span>
             <span class="n">colvars_to_add</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">var</span><span class="o">.</span><span class="n">colvars</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
-            <span class="k">if</span> <span class="n">added_colvars</span> <span class="o">+</span> <span class="n">colvars_to_add</span> <span class="o">&gt;</span> <span class="mi">32</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">added_colvars</span> <span class="o">+</span> <span class="n">colvars_to_add</span> <span class="o">&gt;</span> <span class="mi">32</span><span class="p">:</span>  <span class="c1"># noqa: PLR2004</span>
                 <span class="n">driving_force_variables</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
                 <span class="n">added_colvars</span> <span class="o">=</span> <span class="mi">0</span>
             <span class="n">driving_force_variables</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">var</span><span class="p">))</span>
@@ -982,12 +983,10 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">getState</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">"""Returns a :class:`ExtendedSpaceState` object.</span>
 
-<span class="sd">        .. _getState: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html#openmm.openmm.Context.getState  # noqa: E501</span>
-
 <span class="sd">        Keyword Args</span>
 <span class="sd">        ------------</span>
 <span class="sd">            **kwargs</span>
-<span class="sd">                See getState_.</span>
+<span class="sd">                See ``getState`` in :OpenMM:`Context`.</span>
 <span class="sd">        """</span>
         <span class="k">return</span> <span class="n">ExtendedSpaceState</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">,</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">getState</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">))</span></div>
 
@@ -1051,7 +1050,7 @@
             <span class="n">minisystem</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">System</span><span class="p">()</span>
             <span class="n">expression</span> <span class="o">=</span> <span class="n">_get_energy_function</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">):</span>
-                <span class="n">expression</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">"; </span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">_get_energy_function</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+                <span class="n">expression</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">"; </span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">_get_energy_function</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
             <span class="n">force</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">CustomCompoundBondForce</span><span class="p">(</span><span class="n">nvars</span><span class="p">,</span> <span class="n">expression</span><span class="p">)</span>
             <span class="n">force</span><span class="o">.</span><span class="n">addBond</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">nvars</span><span class="p">),</span> <span class="p">[])</span>
             <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">_get_parameters</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
@@ -1252,7 +1251,7 @@
 
 <div class="viewcode-block" id="UnifiedFreeEnergyDynamics">
 <a class="viewcode-back" href="../../pythonapi/ufedmm.html#ufedmm.ufedmm.UnifiedFreeEnergyDynamics">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">UnifiedFreeEnergyDynamics</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">UnifiedFreeEnergyDynamics</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""A Unified Free-Energy Dynamics (UFED) setup.</span>
 
 <span class="sd">    Parameters</span>
@@ -1301,7 +1300,7 @@
 <span class="sd">        &lt;variables=[s_phi, s_psi], temperature=300, height=None, frequency=None&gt;</span>
 <span class="sd">    """</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>  <span class="c1"># noqa: PLR0913, PLR0917</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">variables</span><span class="p">,</span>
         <span class="n">temperature</span><span class="p">,</span>
@@ -1332,19 +1331,19 @@
             <span class="sa">f</span><span class="s2">"height=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">height</span><span class="si">}</span><span class="s2">, "</span>
             <span class="sa">f</span><span class="s2">"frequency=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">frequency</span><span class="si">}</span><span class="s2">"</span>
         <span class="p">)</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s1">'&lt;variables=[</span><span class="si">{</span><span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">id</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">)</span><span class="si">}</span><span class="s1">], </span><span class="si">{</span><span class="n">properties</span><span class="si">}</span><span class="s1">&gt;'</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">"&lt;variables=[</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">id</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">)</span><span class="si">}</span><span class="s2">], </span><span class="si">{</span><span class="n">properties</span><span class="si">}</span><span class="s2">&gt;"</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span>
-            <span class="n">variables</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">,</span>
-            <span class="n">temperature</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">temperature</span><span class="p">,</span>
-            <span class="n">height</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">height</span><span class="p">,</span>
-            <span class="n">frequency</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frequency</span><span class="p">,</span>
-            <span class="n">bias_factor</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bias_factor</span><span class="p">,</span>
-            <span class="n">grid_expansion</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">grid_expansion</span><span class="p">,</span>
-            <span class="n">enforce_gridless</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">enforce_gridless</span><span class="p">,</span>
-            <span class="n">buffer_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">buffer_size</span><span class="p">,</span>
-        <span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">"variables"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">,</span>
+            <span class="s2">"temperature"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">temperature</span><span class="p">,</span>
+            <span class="s2">"height"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">height</span><span class="p">,</span>
+            <span class="s2">"frequency"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">frequency</span><span class="p">,</span>
+            <span class="s2">"bias_factor"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias_factor</span><span class="p">,</span>
+            <span class="s2">"grid_expansion"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid_expansion</span><span class="p">,</span>
+            <span class="s2">"enforce_gridless"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">enforce_gridless</span><span class="p">,</span>
+            <span class="s2">"buffer_size"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer_size</span><span class="p">,</span>
+        <span class="p">}</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kw</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kw</span><span class="p">)</span>
