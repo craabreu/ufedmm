@@ -33,6 +33,11 @@
 - The examples import `openmm` directly, not the deprecated `simtk.openmm`.
 
 ### Fixed
+- `MiddleMassiveNHCIntegrator`, `MiddleMassiveGGMTIntegrator`,
+  `RegulatedNHLIntegrator`, and integrators created with `num_rattles=0` now update
+  virtual sites after moving particles in the middle of a step. On the CUDA and
+  OpenCL platforms, forces were computed with outdated virtual-site positions, which
+  made systems with TIP4P-type water heat up uncontrollably (#37).
 - `StateDataReporter` with `multipleTemperatures=True` works again on OpenMM 8.3 and
   newer. It used to fail because the reported state had no velocities or energies.
 - `FreeEnergyAnalyzer.mean_force_free_energy` works again with NumPy 2 and
