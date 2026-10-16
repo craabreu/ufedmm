@@ -72,7 +72,7 @@ jobs:
         # conda setup requires this special shell
         shell: bash -l {0}
         run: |
-          pytest
+          pytest -v --cov=ufedmm --cov-report=term --cov-report=xml
 
       - name: CodeCov
         uses: codecov/codecov-action@v4

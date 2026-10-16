@@ -5,7 +5,7 @@ from openmm import unit
 
 import ufedmm
 
-KB = unit.MOLAR_GAS_CONSTANT_R.value_in_unit(unit.kilojoules_per_mole / unit.kelvin)
+from .common import KB
 
 
 def ufed_simulation(integrator, constraints=openmm.app.HBonds, massless_atom=None):

@@ -721,6 +721,17 @@ class MiddleMassiveGGMTIntegrator(AbstractMiddleRespaIntegrator):
     groups and the keyword ``respa_loop`` (see below) must be a list with multiple
     entries.
 
+    .. warning::
+        The velocity update of this solver involves the square root of
+        :math:`1 + 2 \\delta t\\, m v^2 v_2/3`, which becomes negative when the
+        thermostat variable :math:`v_2` is negative and the kinetic energy of a degree
+        of freedom is large. Velocities can then become NaN, and this gets more likely
+        as the ratio between the step size and the time constant grows. For example,
+        one in 250 harmonic degrees of freedom failed after a few thousand steps with
+        a 5 fs step size and a 100 fs time constant. The GGMT integrators of
+        `OpenXPS <https://github.com/craabreu/openxps>`_, the successor of UFEDMM, use
+        a splitting without this singularity.
+
     Parameters
     ----------
         temperature : float or unit.Quantity

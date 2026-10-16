@@ -1,32 +1,24 @@
 import numpy as np
-import openmm
 import pytest
 from openmm import unit
 
 import ufedmm
 
-from .test_ufedmm import DT, TAU, TEMP, reference_simulation
+from .common import (
+    DT,
+    KB,
+    METAD_GROUP,
+    TAU,
+    TEMP,
+    end_to_end_distance,
+    reference_simulation,
+    torsion,
+)
 
-KB = unit.MOLAR_GAS_CONSTANT_R.value_in_unit(unit.kilojoules_per_mole / unit.kelvin)
-METAD_GROUP = 31
 HEIGHT = 2.0 * unit.kilocalorie_per_mole
 MASS = 50 * unit.dalton * (unit.nanometer / unit.radians) ** 2
 KS = 1000 * unit.kilojoules_per_mole / unit.radians**2
 TS = 1500 * unit.kelvin
-
-
-def torsion(model, name, atom_names):
-    atoms = [(a.name, a.residue.name) for a in model.topology.atoms()]
-    force = openmm.CustomTorsionForce("theta")
-    force.addTorsion(*[atoms.index(a) for a in atom_names], [])
-    return ufedmm.CollectiveVariable(name, force)
-
-
-def end_to_end_distance(model):
-    atoms = [(a.name, a.residue.name) for a in model.topology.atoms()]
-    force = openmm.CustomBondForce("r")
-    force.addBond(atoms.index(("CH3", "ACE")), atoms.index(("C", "NME")), [])
-    return ufedmm.CollectiveVariable("distance", force)
 
 
 def metadynamics_model(specs, temperatures=None, **kwargs):
