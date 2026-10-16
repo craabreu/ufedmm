@@ -932,7 +932,7 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
         self.addPerDofVariable("invQ", 0)
         self.addPerDofVariable("v_eta", 0)
         self.addPerDofVariable("c", 0)
-        self.addPerDofVariable("kTc", 0)
+        self.addPerDofVariable("kTc", unit.MOLAR_GAS_CONSTANT_R * temperature)
         self.addGlobalVariable("friction", friction_coefficient)
         self.addGlobalVariable("omega", 1.0 / self._tau)
         self.addGlobalVariable("aa", 0)
