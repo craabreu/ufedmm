@@ -427,6 +427,19 @@ def _get_parameters(variables):
     return parameters
 
 
+def _write_array(file, array):
+    file.write(array.tobytes())
+
+
+def _read_array(file, dtype, count):
+    """Reads `count` items written by :func:`_write_array` from a binary file."""
+    size = np.dtype(dtype).itemsize * count
+    data = file.read(size)
+    if len(data) != size:
+        raise ValueError("Unexpected end of checkpoint data")
+    return np.frombuffer(data, dtype=dtype).copy()
+
+
 class PeriodicTask:
     def __init__(self, frequency):
         self.frequency = frequency
@@ -684,19 +697,19 @@ class _Metadynamics(PeriodicTask):
 
     def saveCheckpoint(self, file):
         if self._use_grid:
-            self._bias.tofile(file)
+            _write_array(file, self._bias)
         else:
-            np.array([self._num_hills], dtype=int).tofile(file)
+            _write_array(file, np.array([self._num_hills], dtype=int))
             parameter_list = []
             for index in range(self._num_hills):
                 _, parameters = self.force.getBondParameters(index)
                 parameter_list.append(parameters)
-            np.array(parameter_list).tofile(file)
-        np.array([self.height]).tofile(file)
+            _write_array(file, np.array(parameter_list, dtype=float))
+        _write_array(file, np.array([self.height]))
 
     def loadCheckpoint(self, file, context):
         if self._use_grid:
-            self._bias = np.fromfile(file, count=len(self._bias))
+            self._bias = _read_array(file, float, len(self._bias))
             if len(self.bias_variables) == 1:
                 self._table.setFunctionParameters(self._bias, *self._bounds)
             else:
@@ -706,8 +719,8 @@ class _Metadynamics(PeriodicTask):
             self.force.updateParametersInContext(context)
         else:
             npars = len(self.bias_variables) + 1
-            nhills = self._num_hills = np.fromfile(file, dtype=int, count=1)[0]
-            parameter_array = np.fromfile(file, count=nhills * npars).reshape(
+            nhills = self._num_hills = int(_read_array(file, int, 1)[0])
+            parameter_array = _read_array(file, float, nhills * npars).reshape(
                 (nhills, npars)
             )
             for _ in range(nhills - self.force.getNumBonds()):
@@ -718,7 +731,7 @@ class _Metadynamics(PeriodicTask):
             for index in range(nhills, self._total_hills):
                 self.force.setBondParameters(index, self.particles, [0] * npars)
             context.reinitialize(preserveState=True)
-        self.height = np.fromfile(file, count=1)[0]
+        self.height = _read_array(file, float, 1)[0]
 
 
 class ExtendedSpaceState(openmm.State):

@@ -59,3 +59,6 @@
 - Loading a gridless metadynamics checkpoint into a simulation that has deposited
   more hills than the checkpoint holds keeps the restored hills. It used to erase
   the first hills instead of the extra ones.
+- `ExtendedSpaceSimulation.saveCheckpoint` and `loadCheckpoint` work with any
+  binary file object, such as `io.BytesIO`. With metadynamics, they used to require
+  a file on disk. The checkpoint format is unchanged.

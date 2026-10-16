@@ -34,7 +34,7 @@ def bias_energy(simulation):
 
 
 @pytest.mark.parametrize("enforce_gridless", [False, True], ids=["gridded", "gridless"])
-@pytest.mark.parametrize("target", ["path"])
+@pytest.mark.parametrize("target", ["path", "stream"])
 def test_checkpoint_restores_bias_and_continuation(enforce_gridless, target, tmp_path):
     original = metadynamics_simulation(enforce_gridless)
     original.step(50)
