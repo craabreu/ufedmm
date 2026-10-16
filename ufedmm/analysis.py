@@ -68,9 +68,7 @@ class FreeEnergyAnalyzer:
     def __init__(self, ufed, dataframe):
         self._ufed = ufed
         self._dataframe = dataframe
-        self._bias_variables = filter(
-            lambda v: v.sigma is not None, self._ufed.variables
-        )
+        self._bias_variables = [v for v in self._ufed.variables if v.sigma is not None]
 
     def metadynamics_bias_free_energy(self):
         """Returns a Python function which, in turn, receives the values of extended-

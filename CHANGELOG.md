@@ -52,3 +52,19 @@
   (e.g., `h**2` in kJ/mol for a 2D bias), so results obtained with a
   multidimensional bias should be recomputed. One-dimensional and gridless
   metadynamics were not affected.
+- Tasks derived from `PeriodicTask` that do not override `initialize` and
+  `loadCheckpoint` can be added with `ExtendedSpaceSimulation.add_periodic_task`.
+  They used to fail with a `TypeError`, because those base-class methods took
+  different arguments from the ones the simulation passes.
+- Loading a gridless metadynamics checkpoint into a simulation that has deposited
+  more hills than the checkpoint holds keeps the restored hills. It used to erase
+  the first hills instead of the extra ones.
+- `ExtendedSpaceSimulation.saveCheckpoint` and `loadCheckpoint` work with any
+  binary file object, such as `io.BytesIO`. With metadynamics, they used to require
+  a file on disk. The checkpoint format is unchanged.
+- `FreeEnergyAnalyzer.metadynamics_bias_free_energy` returns the right function
+  when called more than once. From the second call on, it used to ignore all
+  variables and return minus the sum of the hill heights everywhere.
+- Well-tempered metadynamics works without a grid, that is, with
+  `enforce_gridless=True` or with more than three bias variables. It used to fail
+  when depositing the first hill.

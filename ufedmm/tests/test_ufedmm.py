@@ -236,16 +236,23 @@ def test_metadynamics_bias_is_a_sum_of_hills(enforce_gridless, bias_psi, toleran
 
 
 @pytest.mark.parametrize(
-    "bias_psi",
+    "enforce_gridless, bias_psi, tolerance",
     [
-        pytest.param(False, id="gridded-1D"),
-        pytest.param(True, id="gridded-2D"),
+        pytest.param(False, False, 1e-4, id="gridded-1D"),
+        pytest.param(False, True, 1e-4, id="gridded-2D"),
+        pytest.param(True, False, 1e-10, id="gridless-1D"),
+        pytest.param(True, True, 1e-10, id="gridless-2D"),
     ],
 )
-def test_well_tempered_metadynamics_scales_hill_heights(bias_psi):
+def test_well_tempered_metadynamics_scales_hill_heights(
+    enforce_gridless, bias_psi, tolerance
+):
     bias_factor = 10
     ufed, recorder, point, bias = run_metadynamics(
-        100, bias_factor=bias_factor, bias_psi=bias_psi
+        100,
+        bias_factor=bias_factor,
+        enforce_gridless=enforce_gridless,
+        bias_psi=bias_psi,
     )
     variables = ufed.variables
     delta_kT = (bias_factor - 1) * KB * variables[0].temperature
@@ -258,10 +265,10 @@ def test_well_tempered_metadynamics_scales_hill_heights(bias_psi):
             recorder.centers[k],
         )
         expected_heights.append(ufed.height * np.exp(-previous / delta_kT))
-    assert recorder.heights == pytest.approx(expected_heights, rel=1e-4)
+    assert recorder.heights == pytest.approx(expected_heights, rel=tolerance)
     assert recorder.heights[-1] < 0.9 * ufed.height
     expected = von_mises_bias(variables, recorder.centers, recorder.heights, point)
-    assert bias == pytest.approx(expected, rel=1e-4)
+    assert bias == pytest.approx(expected, rel=tolerance)
 
 
 def test_rmsd_forces():
