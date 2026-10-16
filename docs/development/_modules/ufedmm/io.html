@@ -188,6 +188,10 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_backSteps</span> <span class="o">=</span> <span class="o">-</span><span class="nb">sum</span><span class="p">(</span><span class="n">items</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_multitemps</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_needsVelocities</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_needEnergy</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="c1"># OpenMM &gt;= 8.3 requests state data through the "include" list</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"velocities"</span><span class="p">,</span> <span class="s2">"energy"</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">item</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_includes</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_includes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_add_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lst</span><span class="p">,</span> <span class="n">item</span><span class="p">):</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_backSteps</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
