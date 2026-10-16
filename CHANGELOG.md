@@ -102,3 +102,6 @@
 - In an extended-space simulation, the density reported by `StateDataReporter` is
   that of the physical system. It used to include the masses of the extra
   particles.
+- `ExtendedSpaceSimulation.saveState` warns that the saved state does not include
+  periodic tasks such as a metadynamics bias, which only `saveCheckpoint` saves.
+  The bias used to be lost silently.

@@ -7,6 +7,7 @@
 """
 
 import functools
+import warnings
 from copy import deepcopy
 
 import numpy as np
@@ -1224,6 +1225,23 @@ class ExtendedSpaceSimulation(app.Simulation):
             for task in self._periodic_tasks:
                 task.loadCheckpoint(file, self.context)
             self.context.loadCheckpoint(file.read())
+
+    def saveState(self, file):
+        """Saves the current state of the simulation to a file, like
+        ``saveState`` in OpenMM's ``Simulation``.
+
+        .. warning::
+            A saved state does not include the state of periodic tasks, such as the
+            metadynamics bias. Use :meth:`saveCheckpoint` to save it too.
+        """
+        if self._periodic_tasks:
+            warnings.warn(
+                "The saved state does not include the periodic tasks of this "
+                "simulation (such as a metadynamics bias). Use saveCheckpoint to "
+                "save them too.",
+                stacklevel=2,
+            )
+        super().saveState(file)
 
 
 class UnifiedFreeEnergyDynamics:
