@@ -20,6 +20,8 @@
 - The code is formatted and linted with ruff.
 
 ### Fixed
+- `StateDataReporter` with `multipleTemperatures=True` works again on OpenMM 8.3 and
+  newer. It used to fail because the reported state had no velocities or energies.
 - `FreeEnergyAnalyzer.mean_force_free_energy` works again with NumPy 2 and
   OpenMM 8, and its fit now uses each collective variable's own kernel width and
   period. Before this fix, every kernel used the last variable's values.
