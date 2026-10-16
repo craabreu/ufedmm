@@ -834,7 +834,7 @@
 
 <div class="viewcode-block" id="ExtendedSpaceState.getVelocities">
 <a class="viewcode-back" href="../../api/ExtendedSpaceState.html#ufedmm.ExtendedSpaceState.getVelocities">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">getVelocities</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">asNumpy</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">extended</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getVelocities</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">asNumpy</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">extended</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">"""Gets the velocities of all physical particles and optionally also gets the</span>
 <span class="sd">        velocities of the extra particles associated to the extended- space dynamical</span>
 <span class="sd">        variables.</span>
@@ -845,6 +845,9 @@
 <span class="sd">                Whether to return Numpy arrays instead of lists of openmm.Vec3.</span>
 <span class="sd">            extended : bool, default=False</span>
 <span class="sd">                Whether to include the velocities of the extra particles.</span>
+<span class="sd">            split : bool, default=True</span>
+<span class="sd">                Whether to return the velocities of the physical particles and the</span>
+<span class="sd">                velocities of the extra particles separately.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -862,10 +865,11 @@
 <span class="sd">            Exception</span>
 <span class="sd">                If velocities were not requested in the ``context.getState()`` call.</span>
 <span class="sd">        """</span>
-        <span class="n">velocities</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">getVelocities</span><span class="p">(</span><span class="n">asNumpy</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">extended</span><span class="p">:</span>
-            <span class="n">velocities</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_split</span><span class="p">(</span><span class="n">velocities</span><span class="p">,</span> <span class="n">asNumpy</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">velocities</span></div>
+        <span class="n">all_velocities</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">getVelocities</span><span class="p">(</span><span class="n">asNumpy</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">extended</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">split</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">all_velocities</span>
+        <span class="n">velocities</span><span class="p">,</span> <span class="n">vvars</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_split</span><span class="p">(</span><span class="n">all_velocities</span><span class="p">,</span> <span class="n">asNumpy</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">velocities</span><span class="p">,</span> <span class="n">vvars</span><span class="p">)</span> <span class="k">if</span> <span class="n">extended</span> <span class="k">else</span> <span class="n">velocities</span></div>
 
 
 <div class="viewcode-block" id="ExtendedSpaceState.getDynamicalVariables">
@@ -1089,9 +1093,17 @@
 <span class="w">        </span><span class="sd">"""Sets the velocities of all particles in the system to random values chosen</span>
 <span class="sd">        from a Maxwell-Boltzmann distribution at a given temperature.</span>
 
+<span class="sd">        The velocities of the physical particles have no center-of-mass component,</span>
+<span class="sd">        satisfy the system constraints, and are scaled so that the instantaneous</span>
+<span class="sd">        temperature equals the given one exactly. The number of degrees of freedom</span>
+<span class="sd">        is counted as in OpenMM's ``StateDataReporter``. Massless particles get zero</span>
+<span class="sd">        velocity.</span>
+
 <span class="sd">        .. warning ::</span>
-<span class="sd">            The velocities of the extended-space variables are set to values consistent</span>
-<span class="sd">            with the distribution at its own specified temperature.</span>
+<span class="sd">            The extra particles of the extended-space variables move along the x axis</span>
+<span class="sd">            only. Their x velocities are drawn from a Maxwell-Boltzmann distribution</span>
+<span class="sd">            at each variable's own temperature, and their y and z velocities are set</span>
+<span class="sd">            to zero.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -1103,17 +1115,44 @@
 <span class="sd">            randomSeed : int, default=None</span>
 <span class="sd">                A seed for the random number generator.</span>
 <span class="sd">        """</span>
+        <span class="n">temperature</span> <span class="o">=</span> <span class="n">_standardized</span><span class="p">(</span><span class="n">temperature</span><span class="p">)</span>
+        <span class="n">kB</span> <span class="o">=</span> <span class="n">_standardized</span><span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">MOLAR_GAS_CONSTANT_R</span><span class="p">)</span>
         <span class="n">system</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getSystem</span><span class="p">()</span>
-        <span class="n">Ntotal</span> <span class="o">=</span> <span class="n">system</span><span class="o">.</span><span class="n">getNumParticles</span><span class="p">()</span>
-        <span class="n">Natoms</span> <span class="o">=</span> <span class="n">Ntotal</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">)</span>
-        <span class="n">m</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">system</span><span class="o">.</span><span class="n">getParticleMass</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">dalton</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">Ntotal</span><span class="p">)])</span>
-        <span class="n">T</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
-            <span class="p">[</span><span class="n">_standardized</span><span class="p">(</span><span class="n">temperature</span><span class="p">)]</span> <span class="o">*</span> <span class="n">Natoms</span>
-            <span class="o">+</span> <span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">temperature</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">]</span>
+        <span class="n">num_total</span> <span class="o">=</span> <span class="n">system</span><span class="o">.</span><span class="n">getNumParticles</span><span class="p">()</span>
+        <span class="n">num_atoms</span> <span class="o">=</span> <span class="n">num_total</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">)</span>
+        <span class="n">masses</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">system</span><span class="o">.</span><span class="n">getParticleMass</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">dalton</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_total</span><span class="p">)]</span>
         <span class="p">)</span>
-        <span class="n">sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">_standardized</span><span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">MOLAR_GAS_CONSTANT_R</span><span class="p">)</span> <span class="o">*</span> <span class="n">T</span> <span class="o">/</span> <span class="n">m</span><span class="p">)</span>
-        <span class="n">random_state</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">(</span><span class="n">randomSeed</span><span class="p">)</span>
-        <span class="n">velocities</span> <span class="o">=</span> <span class="n">sigma</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span> <span class="o">*</span> <span class="n">random_state</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="n">Ntotal</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+        <span class="n">temperatures</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">temperature</span><span class="p">]</span> <span class="o">*</span> <span class="n">num_atoms</span> <span class="o">+</span> <span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">temperature</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">massive</span> <span class="o">=</span> <span class="n">masses</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="n">sigmas</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">num_total</span><span class="p">)</span>
+        <span class="n">sigmas</span><span class="p">[</span><span class="n">massive</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">kB</span> <span class="o">*</span> <span class="n">temperatures</span><span class="p">[</span><span class="n">massive</span><span class="p">]</span> <span class="o">/</span> <span class="n">masses</span><span class="p">[</span><span class="n">massive</span><span class="p">])</span>
+        <span class="n">random</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">(</span><span class="n">randomSeed</span><span class="p">)</span>
+        <span class="n">velocities</span> <span class="o">=</span> <span class="n">sigmas</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="n">num_total</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+        <span class="n">velocities</span><span class="p">[</span><span class="n">num_atoms</span><span class="p">:,</span> <span class="mi">1</span><span class="p">:]</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">atoms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">num_atoms</span><span class="p">)[</span><span class="n">massive</span><span class="p">[:</span><span class="n">num_atoms</span><span class="p">]]</span>
+        <span class="n">atom_masses</span> <span class="o">=</span> <span class="n">masses</span><span class="p">[</span><span class="n">atoms</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="n">velocities</span><span class="p">[</span><span class="n">atoms</span><span class="p">]</span> <span class="o">-=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">atom_masses</span> <span class="o">*</span> <span class="n">velocities</span><span class="p">[</span><span class="n">atoms</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+            <span class="n">atom_masses</span>
+        <span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">setVelocities</span><span class="p">(</span><span class="n">velocities</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">applyVelocityConstraints</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">getIntegrator</span><span class="p">()</span><span class="o">.</span><span class="n">getConstraintTolerance</span><span class="p">())</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">Context</span><span class="o">.</span><span class="n">getState</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">getVelocities</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">velocities</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">getVelocities</span><span class="p">(</span><span class="n">asNumpy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">_value</span>
+
+        <span class="n">num_constraints</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span>
+            <span class="mi">1</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">system</span><span class="o">.</span><span class="n">getNumConstraints</span><span class="p">())</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">massive</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">system</span><span class="o">.</span><span class="n">getConstraintParameters</span><span class="p">(</span><span class="n">k</span><span class="p">)[:</span><span class="mi">2</span><span class="p">])</span>
+        <span class="p">)</span>
+        <span class="n">dof</span> <span class="o">=</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">atoms</span><span class="o">.</span><span class="n">size</span> <span class="o">-</span> <span class="n">num_constraints</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">openmm</span><span class="o">.</span><span class="n">CMMotionRemover</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">system</span><span class="o">.</span><span class="n">getForces</span><span class="p">()):</span>
+            <span class="n">dof</span> <span class="o">-=</span> <span class="mi">3</span>
+        <span class="n">two_ke</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">atom_masses</span> <span class="o">*</span> <span class="n">velocities</span><span class="p">[</span><span class="n">atoms</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">velocities</span><span class="p">[</span><span class="n">atoms</span><span class="p">]</span> <span class="o">*=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">dof</span> <span class="o">*</span> <span class="n">kB</span> <span class="o">*</span> <span class="n">temperature</span> <span class="o">/</span> <span class="n">two_ke</span><span class="p">)</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">setVelocities</span><span class="p">(</span><span class="n">velocities</span><span class="p">)</span></div>
 </div>
 
