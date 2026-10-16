@@ -34,3 +34,34 @@ def test_mean_force_fit_uses_each_variables_own_sigma():
     _, mean_force = analyzer.mean_force_free_energy(centers, mean_forces, sigmas)
     fitted = np.array([np.asarray(mean_force(*x), dtype=float) for x in grid])
     assert np.allclose(fitted, forces, atol=1e-6)
+
+
+def test_mean_force_fit_with_periodic_variables():
+    model = ufedmm.AlanineDipeptideModel()
+    sigmas = [0.5, 0.3]
+    periods = [2 * np.pi, 6.0]
+    s_phi = ufedmm.DynamicalVariable("s_phi", -np.pi, np.pi, 50, 300, model.phi, 1000)
+    s_psi = ufedmm.DynamicalVariable("s_psi", -3, 3, 50, 300, model.psi, 1000)
+    ufed = ufedmm.UnifiedFreeEnergyDynamics([s_phi, s_psi], 300)
+    analyzer = ufedmm.FreeEnergyAnalyzer(ufed, dataframe=None)
+
+    # Von Mises kernels with distinct periods and widths, on an asymmetric grid so
+    # that the fit is well determined.
+    grid = np.array(list(itertools.product([-2.0, -0.3, 1.1], [-0.6, 0.1, 0.7])))
+    weights = np.random.default_rng(1).normal(size=len(grid))
+    variances = np.square(sigmas)
+    factors = 2 * np.pi / np.array(periods)
+
+    def true_force(x):
+        d = x - grid
+        exponent = np.sum((np.cos(factors * d) - 1) / (factors**2 * variances), axis=1)
+        k = weights * np.exp(exponent)
+        return np.sum(k[:, None] * np.sin(factors * d) / (factors * variances), axis=0)
+
+    forces = np.array([true_force(x) for x in grid])
+    centers = [grid[:, 0], grid[:, 1]]
+    mean_forces = [forces[:, 0], forces[:, 1]]
+    _, mean_force = analyzer.mean_force_free_energy(centers, mean_forces, sigmas)
+    fitted = mean_force(grid[:, 0], grid[:, 1])
+    assert fitted.shape == (len(grid), 2)
+    assert np.allclose(fitted, forces, atol=1e-6)

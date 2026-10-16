@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "versioningit"]
+requires = ["setuptools>=77", "versioningit"]
 build-backend = "setuptools.build_meta"
 
 # Self-descriptive entries which should always be present
@@ -12,10 +12,10 @@ readme = "README.md"
 authors = [
     { name = "Charlles Abreu", email = "craabreu@gmail.com" }
 ]
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE.md"]
 # See https://pypi.org/classifiers/
 classifiers = [
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",

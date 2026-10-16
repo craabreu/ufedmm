@@ -48,7 +48,6 @@ jobs:
         # conda setup requires this special shell
         shell: bash -l {0}
         run: |
-          micromamba install -y -c mdtools openmm-cpp-forces
           python -m pip install . --no-deps
           micromamba list
 
