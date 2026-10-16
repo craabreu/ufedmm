@@ -64,10 +64,10 @@ def reporter_simulation(**kwargs):
     s_psi = ufedmm.DynamicalVariable(
         "s_psi", -np.pi, np.pi, mass, Ts, model.psi, Ks, sigma=sigma
     )
-    ufed = ufedmm.UnifiedFreeEnergyDynamics([s_phi, s_psi], 300 * unit.kelvin, **kwargs)
-    integrator = ufedmm.MiddleMassiveNHCIntegrator(
+    integrator = kwargs.pop("integrator", None) or ufedmm.MiddleMassiveNHCIntegrator(
         300 * unit.kelvin, 10 * unit.femtoseconds, 1 * unit.femtoseconds
     )
+    ufed = ufedmm.UnifiedFreeEnergyDynamics([s_phi, s_psi], 300 * unit.kelvin, **kwargs)
     platform = openmm.Platform.getPlatformByName("Reference")
     simulation = ufed.simulation(model.topology, model.system, integrator, platform)
     simulation.context.setPositions(model.positions)
@@ -150,6 +150,46 @@ def test_reporter_global_parameter_states():
         assert values[f"Energy[{index}] (kJ/mole)"] == pytest.approx(
             energy.value_in_unit(unit.kilojoules_per_mole), rel=1e-6
         )
+
+
+@pytest.mark.parametrize("Ts", [300, 1500], ids=["same-temperature", "hotter"])
+@pytest.mark.parametrize("regulated", [False, True], ids=["NHC", "RegulatedNHL"])
+def test_reported_temperatures_exclude_extra_particles(regulated, Ts):
+    # The temperature of the physical system must not account for the extra
+    # particles, and each variable's temperature comes from its particle's x motion.
+    temperature, tau, dt = (
+        300 * unit.kelvin,
+        10 * unit.femtoseconds,
+        1 * unit.femtoseconds,
+    )
+    if regulated:
+        integrator = ufedmm.RegulatedNHLIntegrator(temperature, tau, 1.0, dt, 2)
+    else:
+        integrator = ufedmm.MiddleMassiveNHCIntegrator(temperature, tau, dt)
+    simulation = reporter_simulation(integrator=integrator, Ts=Ts * unit.kelvin)
+    names, values, _ = report(simulation, temperature=True, multipleTemperatures=True)
+    assert names == ["Temperature (K)", "T[atoms] (K)", "T[s_phi] (K)", "T[s_psi] (K)"]
+
+    state = simulation.context.getState(getVelocities=True)
+    v = state.getVelocities(asNumpy=True, extended=True).value_in_unit(
+        unit.nanometers / unit.picosecond
+    )
+    system = simulation.context.getSystem()
+    m = np.array([system.getParticleMass(i) / unit.dalton for i in range(len(v))])[
+        :, None
+    ]
+    if regulated:
+        c = np.sqrt(2 * np.array(integrator.getPerDofVariableByName("kTc")) / m)
+        ke = 0.5 * m * v * c * np.tanh(v / c)
+    else:
+        ke = 0.5 * m * v**2
+    natoms = len(v) - 2
+    KB = unit.MOLAR_GAS_CONSTANT_R.value_in_unit(unit.kilojoules_per_mole / unit.kelvin)
+    atoms_temperature = 2 * np.sum(ke[:natoms]) / (3 * natoms * KB)
+    assert values["Temperature (K)"] == pytest.approx(atoms_temperature, rel=1e-6)
+    assert values["T[atoms] (K)"] == pytest.approx(atoms_temperature, rel=1e-6)
+    for i, name in enumerate(["T[s_phi] (K)", "T[s_psi] (K)"]):
+        assert values[name] == pytest.approx(2 * ke[natoms + i, 0] / KB, rel=1e-6)
 
 
 def test_multiple_temperatures_need_integrator_temperatures():

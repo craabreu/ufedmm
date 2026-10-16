@@ -63,7 +63,10 @@ class StateDataReporter(app.StateDataReporter):
     Besides, if it is added to an :class:`~ufedmm.ufedmm.ExtendedSpaceSimulation`
     object, e.g. one created through the
     :func:`~ufedmm.ufedmm.UnifiedFreeEnergyDynamics.simulation` method, then a
-    new set of keywords are available.
+    new set of keywords are available. In this case, the reported temperature is
+    that of the physical system, excluding the extra particles of the extended-space
+    variables. Their kinetic energies are still part of the reported kinetic and
+    total energies.
 
     Parameters
     ----------
@@ -140,7 +143,9 @@ class StateDataReporter(app.StateDataReporter):
             self._remainingTime,
         ]
         self._backSteps = -sum(items)
-        if self._multitemps:
+        # In extended space, temperatures exclude the extra particles, whose kinetic
+        # energies are computed from their velocities
+        if self._multitemps or self._temperature:
             self._needsVelocities = self._needEnergy = True
             # OpenMM >= 8.3 requests state data through the "include" list
             for item in ("velocities", "energy"):
@@ -185,31 +190,55 @@ class StateDataReporter(app.StateDataReporter):
                     1 if bias_factor is None else bias_factor / (bias_factor - 1)
                 )
 
-            if self._multitemps:
-                system = simulation.context.getSystem()
-                integrator = simulation.context.getIntegrator()
-                Nt = system.getNumParticles()
+            if self._multitemps or self._temperature:
+                self._create_ke_context(simulation)
                 Nv = len(simulation.context.variables)
-                ke_system = openmm.System()
-                for i in range(Nt - Nv, Nt):
-                    ke_system.addParticle(system.getParticleMass(i))
-                ke_integrator = openmm.CustomIntegrator(0)
-                ke_integrator.addPerDofVariable("kT", 0)
-                ke_integrator.addComputePerDof(
-                    "v", integrator.getKineticEnergyExpression()
-                )
-                self._ke_context = openmm.Context(ke_system, ke_integrator)
-                if integrator._up_to_date:
-                    kT = integrator.getPerDofVariableByName("kT")
-                    ke_integrator.setPerDofVariableByName("kT", kT[Nt - Nv : Nt])
-                else:
-                    raise ValueError("Integrator temperatures were not set")
+                self._atoms_dof = self._dof - 3 * Nv
+            if self._temperature:
+                headers = app.StateDataReporter._constructHeaders(self)
+                self._temperature_index = headers.index("Temperature (K)")
 
         if self._collective_variables:
             forces = simulation.context.getSystem().getForces()
             self._cv_forces = list(
                 filter(lambda f: isinstance(f, openmm.CustomCVForce), forces)
             )
+
+    def _create_ke_context(self, simulation):
+        """Creates a context that computes the kinetic energy of each extra particle
+        with the integrator's kinetic energy expression and per-dof variables."""
+        system = simulation.context.getSystem()
+        integrator = simulation.context.getIntegrator()
+        Nt = system.getNumParticles()
+        Nv = len(simulation.context.variables)
+        ke_system = openmm.System()
+        for i in range(Nt - Nv, Nt):
+            ke_system.addParticle(system.getParticleMass(i))
+        ke_integrator = openmm.CustomIntegrator(0)
+        if isinstance(integrator, openmm.CustomIntegrator):
+            if not getattr(integrator, "_up_to_date", True):
+                raise ValueError("Integrator temperatures were not set")
+            for i in range(integrator.getNumPerDofVariables()):
+                ke_integrator.addPerDofVariable(integrator.getPerDofVariableName(i), 0)
+            expression = integrator.getKineticEnergyExpression()
+        else:
+            expression = "0.5*m*v*v"
+        ke_integrator.addComputePerDof("v", expression)
+        self._ke_context = openmm.Context(
+            ke_system, ke_integrator, openmm.Platform.getPlatformByName("Reference")
+        )
+        for i in range(ke_integrator.getNumPerDofVariables()):
+            values = integrator.getPerDofVariable(i)
+            ke_integrator.setPerDofVariable(i, values[Nt - Nv : Nt])
+
+    def _extra_kinetic_energies(self, state):
+        """Returns the kinetic energy of each extra particle along x, y, and z."""
+        ke_context = self._ke_context
+        Nv = ke_context.getSystem().getNumParticles()
+        velocities = state.getVelocities(extended=True)
+        ke_context.setVelocities(velocities[len(velocities) - Nv :])
+        ke_context.getIntegrator().step(1)
+        return ke_context.getState(getVelocities=True).getVelocities()
 
     def _constructHeaders(self):
         headers = super()._constructHeaders()
@@ -235,21 +264,16 @@ class StateDataReporter(app.StateDataReporter):
     def _constructReportValues(self, simulation, state):  # noqa: PLR0912
         values = super()._constructReportValues(simulation, state)
         if self._extended_space:
-            if self._multitemps:
-                system = simulation.context.getSystem()
-                ke_context = self._ke_context
-                Nt = system.getNumParticles()
-                Nv = ke_context.getSystem().getNumParticles()
-                velocities = state.getVelocities(extended=True)
-                ke_context.setVelocities(velocities[Nt - Nv : Nt])
-                ke_context.getIntegrator().step(1)
-                ke_values = ke_context.getState(getVelocities=True).getVelocities()
+            if self._multitemps or self._temperature:
+                ke_values = self._extra_kinetic_energies(state)
                 xvar_ke = sum(ke.x + ke.y + ke.z for ke in ke_values)
                 total_ke = _standardized(state.getKineticEnergy())
                 kB = _standardized(unit.MOLAR_GAS_CONSTANT_R)
-                self._add_item(
-                    values, 2 * (total_ke - xvar_ke) / ((self._dof - 3 * Nv) * kB)
-                )
+                atoms_temperature = 2 * (total_ke - xvar_ke) / (self._atoms_dof * kB)
+            if self._temperature:
+                values[self._temperature_index] = atoms_temperature
+            if self._multitemps:
+                self._add_item(values, atoms_temperature)
                 for ke in ke_values:
                     self._add_item(values, 2 * ke.x / kB)
             if self._variables:
