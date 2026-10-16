@@ -68,3 +68,17 @@
 - Well-tempered metadynamics works without a grid, that is, with
   `enforce_gridless=True` or with more than three bias variables. It used to fail
   when depositing the first hill.
+- Gridded metadynamics that mixes periodic and non-periodic bias variables
+  deposits hills in the right place. The periodic padding of each hill was applied
+  along the wrong array axis, which scrambled the hills, so results obtained with
+  such a bias should be recomputed.
+- Extra particles no longer change the Born radii of a `CustomGBForce` (such as the
+  GBn2 implicit solvent), so they no longer change the solvation energy of the
+  physical system.
+- `FreeEnergyAnalyzer.centers_and_mean_forces` works with a DataFrame whose index is
+  not `0, 1, ..., n-1`, such as a slice of a longer trajectory. It used to raise an
+  `IndexError`, or with a shuffled index, pair forces with the wrong samples.
+- `ExtendedSpaceContext.setPositions` accepts positions as a NumPy array, such as
+  `State.getPositions(asNumpy=True)`.
+- `Tee` closes only the files it opened from file names, not the streams passed to
+  it.
