@@ -397,6 +397,15 @@ def test_simulation_rejects_unsupported_systems(spoil, message):
         reference_simulation(model, ufed, integrator)
 
 
+def test_system_cannot_be_reused_by_another_simulation():
+    model, ufed = ufed_model()
+    integrator = ufedmm.MiddleMassiveNHCIntegrator(TEMP, TAU, DT)
+    reference_simulation(model, ufed, integrator)
+    integrator = ufedmm.MiddleMassiveNHCIntegrator(TEMP, TAU, DT)
+    with pytest.raises(ValueError, match="cannot be used in more than one"):
+        reference_simulation(model, ufed, integrator)
+
+
 def test_simulation_passes_platform_properties():
     model, ufed = ufed_model()
     integrator = ufedmm.MiddleMassiveNHCIntegrator(TEMP, TAU, DT)

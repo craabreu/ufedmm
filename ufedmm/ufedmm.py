@@ -1178,6 +1178,15 @@ class ExtendedSpaceSimulation(app.Simulation):
         if box_vectors is None:
             raise Exception("UFED: system must be confined in a simulation box")
 
+        num_particles, num_atoms = system.getNumParticles(), topology.getNumAtoms()
+        if num_particles != num_atoms:
+            raise ValueError(
+                f"UFED: the system has {num_particles} particles, but the topology has"
+                f" {num_atoms} atoms. An extended-space simulation adds its extra"
+                " particles to the system, so a system cannot be used in more than one"
+                " of them. Create a new system for each simulation."
+            )
+
         self.topology = topology
         self.system = system
         self.integrator = integrator
