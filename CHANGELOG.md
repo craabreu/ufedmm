@@ -33,6 +33,11 @@
 - The examples import `openmm` directly, not the deprecated `simtk.openmm`.
 
 ### Fixed
+- `MiddleMassiveNHCIntegrator`, `MiddleMassiveGGMTIntegrator`,
+  `RegulatedNHLIntegrator`, and integrators created with `num_rattles=0` now update
+  virtual sites after moving particles in the middle of a step. On the CUDA and
+  OpenCL platforms, forces were computed with outdated virtual-site positions, which
+  made systems with TIP4P-type water heat up uncontrollably (#37).
 - UFEDMM simulations raise a `ValueError` when the system has constraints and the
   integrator has no RATTLE steps (`MiddleMassiveNHCIntegrator`,
   `MiddleMassiveGGMTIntegrator`, `RegulatedNHLIntegrator`, or `num_rattles=0`).

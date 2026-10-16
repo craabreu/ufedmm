@@ -378,13 +378,15 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
            0: allow forces to update the context state
            1: v <- v + 0.5*dt*f/m
            2: x <- x + 0.5*dt*v
-           3: twoK <- sum(m*v*v)
-           4: v_eta <- v_eta + 0.5*dt*(twoK - gkT)/Q
-           5: scaling <- exp(-1.0*dt*v_eta)
-           6: v <- v*scaling
-           7: v_eta <- v_eta + 0.5*dt*(scaling^2*twoK - gkT)/Q
-           8: x <- x + 0.5*dt*v
-           9: v <- v + 0.5*dt*f/m
+           3: constrain positions
+           4: twoK <- sum(m*v*v)
+           5: v_eta <- v_eta + 0.5*dt*(twoK - gkT)/Q
+           6: scaling <- exp(-1.0*dt*v_eta)
+           7: v <- v*scaling
+           8: v_eta <- v_eta + 0.5*dt*(scaling^2*twoK - gkT)/Q
+           9: x <- x + 0.5*dt*v
+          10: constrain positions
+          11: v <- v + 0.5*dt*f/m
     """
 
     def __init__(  # noqa: PLR0913, PLR0917
@@ -493,6 +495,9 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
             self.addComputeGlobal("irattle", "0")
             self.beginWhileBlock(f"irattle < {self._num_rattles - 1 / 2}")
         self.addComputePerDof("x", f"x + {fraction / max(1, self._num_rattles)}*dt*v")
+        if self._num_rattles == 0:
+            # Some platforms only update virtual sites in this kind of step
+            self.addConstrainPositions()
         if self._num_rattles > 0:
             self.addComputePerDof("x0", "x")
             self.addConstrainPositions()
@@ -647,16 +652,18 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
            3: while (irespa0 < 3.5):
            4:    v <- v + 0.125*dt*f0/m
            5:    x <- x + 0.125*dt*v
-           6:    v2 <- v2 + 0.125*dt*(Q*v1^2 - kT)/Q
-           7:    v1 <- (v1*z + 0.125*dt*(m*v^2 - kT)/Q)*z; z=exp(-0.0625*dt*v2)
-           8:    v <- v*exp(-0.25*dt*v1)
-           9:    v1 <- (v1*z + 0.125*dt*(m*v^2 - kT)/Q)*z; z=exp(-0.0625*dt*v2)
-          10:    v2 <- v2 + 0.125*dt*(Q*v1^2 - kT)/Q
-          11:    x <- x + 0.125*dt*v
-          12:    v <- v + 0.125*dt*f0/m
-          13:    irespa0 <- irespa0 + 1
-          14: end
-          15: v <- v + 0.5*dt*f1/m
+           6:    constrain positions
+           7:    v2 <- v2 + 0.125*dt*(Q*v1^2 - kT)/Q
+           8:    v1 <- (v1*z + 0.125*dt*(m*v^2 - kT)/Q)*z; z=exp(-0.0625*dt*v2)
+           9:    v <- v*exp(-0.25*dt*v1)
+          10:    v1 <- (v1*z + 0.125*dt*(m*v^2 - kT)/Q)*z; z=exp(-0.0625*dt*v2)
+          11:    v2 <- v2 + 0.125*dt*(Q*v1^2 - kT)/Q
+          12:    x <- x + 0.125*dt*v
+          13:    constrain positions
+          14:    v <- v + 0.125*dt*f0/m
+          15:    irespa0 <- irespa0 + 1
+          16: end
+          17: v <- v + 0.5*dt*f1/m
     """
 
     def __init__(
@@ -742,13 +749,15 @@ class MiddleMassiveGGMTIntegrator(AbstractMiddleRespaIntegrator):
            0: allow forces to update the context state
            1: v <- v + 0.5*dt*f/m
            2: x <- x + 0.5*dt*v
-           3: v1 <- v1 + 0.5*dt*(m*v^2 - kT)/Q1
-           4: v2 <- v2 + 0.5*dt*((m*v^2)^2/3 - kT^2)/Q2
-           5: v <- v*exp(-1.0*dt*(v1 + kT*v2))/sqrt(1 + 2.0*dt*m*v^2*v2/3)
-           6: v1 <- v1 + 0.5*dt*(m*v^2 - kT)/Q1
-           7: v2 <- v2 + 0.5*dt*((m*v^2)^2/3 - kT^2)/Q2
-           8: x <- x + 0.5*dt*v
-           9: v <- v + 0.5*dt*f/m
+           3: constrain positions
+           4: v1 <- v1 + 0.5*dt*(m*v^2 - kT)/Q1
+           5: v2 <- v2 + 0.5*dt*((m*v^2)^2/3 - kT^2)/Q2
+           6: v <- v*exp(-1.0*dt*(v1 + kT*v2))/sqrt(1 + 2.0*dt*m*v^2*v2/3)
+           7: v1 <- v1 + 0.5*dt*(m*v^2 - kT)/Q1
+           8: v2 <- v2 + 0.5*dt*((m*v^2)^2/3 - kT^2)/Q2
+           9: x <- x + 0.5*dt*v
+          10: constrain positions
+          11: v <- v + 0.5*dt*f/m
     """
 
     def __init__(self, temperature, time_constant, step_size, **kwargs):
@@ -923,7 +932,7 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
         self.addPerDofVariable("invQ", 0)
         self.addPerDofVariable("v_eta", 0)
         self.addPerDofVariable("c", 0)
-        self.addPerDofVariable("kTc", 0)
+        self.addPerDofVariable("kTc", unit.MOLAR_GAS_CONSTANT_R * temperature)
         self.addGlobalVariable("friction", friction_coefficient)
         self.addGlobalVariable("omega", 1.0 / self._tau)
         self.addGlobalVariable("aa", 0)
@@ -952,6 +961,8 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
             expression = f"{0.5 * (n + 1) / n}*m*(c*tanh(v/c))^2; c=sqrt({n}*kTc/m)"
         self.setKineticEnergyExpression(expression)
         self.addComputePerDof("x", f"x + c*tanh(v/c)*{fraction}*dt")
+        # Some platforms only update virtual sites in this kind of step
+        self.addConstrainPositions()
 
     def _bath(self, fraction):
         n = self._n

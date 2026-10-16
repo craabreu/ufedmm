@@ -124,3 +124,33 @@ def test_get_velocities_split():
     assert len(state.getVelocities(extended=True)) == natoms + 2
     atoms, extra = state.getVelocities(extended=True, split=True)
     assert (len(atoms), len(extra)) == (natoms, 2)
+
+
+def test_regulated_kinetic_energy_before_first_step():
+    model = ufedmm.AlanineDipeptideModel(constraints=None)
+    integrator = ufedmm.RegulatedNHLIntegrator(
+        300 * unit.kelvin,
+        100 * unit.femtoseconds,
+        1 / unit.picoseconds,
+        1 * unit.femtoseconds,
+        2,
+    )
+    context = openmm.Context(
+        model.system, integrator, openmm.Platform.getPlatformByName("Reference")
+    )
+    context.setPositions(model.positions)
+    context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)
+    state = context.getState(getEnergy=True, getVelocities=True)
+    m = np.array(
+        [
+            model.system.getParticleMass(i) / unit.dalton
+            for i in range(len(model.positions))
+        ]
+    )[:, None]
+    v = state.getVelocities(asNumpy=True).value_in_unit(
+        unit.nanometers / unit.picosecond
+    )
+    c = np.sqrt(2 * KB * 300 / m)
+    expected = np.sum(0.5 * m * v * c * np.tanh(v / c))
+    kinetic = state.getKineticEnergy().value_in_unit(unit.kilojoules_per_mole)
+    assert kinetic == pytest.approx(expected, rel=1e-6)
