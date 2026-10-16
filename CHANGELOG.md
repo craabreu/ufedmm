@@ -4,6 +4,8 @@
 
 ### Breaking changes
 - UFEDMM now requires Python 3.10 or newer and OpenMM 8.4 or newer.
+- `MiddleMassiveNHCIntegrator` no longer takes a `track_energy` argument. It only
+  added per-dof variables that were never updated, so it had no effect.
 
 ### Added
 - UFEDMM is published on PyPI (`pip install ufedmm`) as well as on the `mdtools`
