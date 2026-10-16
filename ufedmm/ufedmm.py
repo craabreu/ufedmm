@@ -1199,8 +1199,11 @@ class ExtendedSpaceSimulation(app.Simulation):
             for task in self._periodic_tasks:
                 task.update(self, steps)
             self.reporters = self._periodic_tasks + self.reporters
-            self._simulate(endStep=self.currentStep + steps)
-            self.reporters = self.reporters[len(self._periodic_tasks) :]
+            try:
+                self._simulate(endStep=self.currentStep + steps)
+            finally:
+                # Also when interrupted, or the tasks would run twice from then on
+                self.reporters = self.reporters[len(self._periodic_tasks) :]
         else:
             self._simulate(endStep=self.currentStep + steps)
 

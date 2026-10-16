@@ -88,3 +88,7 @@
   `State.getPositions(asNumpy=True)`.
 - `Tee` closes only the files it opened from file names, not the streams passed to
   it.
+- A step of an `ExtendedSpaceSimulation` that is interrupted, by an exception or
+  Ctrl-C, no longer leaves its periodic tasks among the reporters. Afterwards,
+  gridded metadynamics used to deposit two hills per period and gridless
+  metadynamics crashed.
