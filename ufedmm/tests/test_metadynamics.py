@@ -162,15 +162,18 @@ def test_metadynamics_bias_is_a_sum_of_hills(specs, enforce_gridless, tolerance)
     assert bias == pytest.approx(expected, rel=tolerance)
 
 
-def test_gridless_hills_buffer_grows_across_short_steps():
-    # Steps shorter than the deposition period, and a buffer smaller than the number
-    # of hills, exercise both ways the gridless force makes room for new hills.
+@pytest.mark.parametrize(
+    "chunks", [[3] * 33 + [1], [100]], ids=["short-steps", "one-long-step"]
+)
+def test_gridless_hills_buffer_grows(chunks):
+    # With a buffer smaller than the number of hills, the gridless force must make
+    # room for new hills both before a step (short steps) and while depositing them
+    # (one long step).
     model, ufed = metadynamics_model(PERIODIC_2D, enforce_gridless=True)
     ufed.buffer_size = 2
     simulation, recorder = metadynamics_simulation(model, ufed)
-    for _ in range(33):
-        simulation.step(3)
-    simulation.step(1)
+    for steps in chunks:
+        simulation.step(steps)
     point, bias = current_bias(simulation)
     assert len(recorder.centers) == 10
     expected = hills_bias(ufed.variables, recorder.centers, recorder.heights, point)

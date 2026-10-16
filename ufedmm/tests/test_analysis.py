@@ -185,11 +185,13 @@ def test_mean_force_fit_accepts_a_single_sigma():
 
 
 @pytest.mark.parametrize("sigma", [None, 0.6], ids=["default-sigma", "given-sigma"])
-def test_deprecated_analyzer_matches_free_energy_analyzer(sigma):
+@pytest.mark.parametrize("bins", [5, [5, 4]], ids=["same-bins", "bins-per-variable"])
+def test_deprecated_analyzer_matches_free_energy_analyzer(bins, sigma):
     ufed = periodic_ufed()
     dataframe = sampled_dataframe()
-    bins = [5, 4]
     analyzer = ufedmm.Analyzer(ufed, dataframe, bins, min_count=3)
+    if np.isscalar(bins):
+        bins = [bins, bins]
     potential, mean_force = analyzer.free_energy_functions(sigma=sigma, factor=2)
 
     reference = ufedmm.FreeEnergyAnalyzer(ufed, dataframe)

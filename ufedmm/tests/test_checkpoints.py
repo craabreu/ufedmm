@@ -41,8 +41,9 @@ def bias_energy(simulation):
     ids=["gridded-1D", "gridded-2D", "gridless-2D"],
 )
 @pytest.mark.parametrize("target", ["path", "stream"])
+@pytest.mark.parametrize("prior_steps", [0, 80], ids=["fresh", "ahead"])
 def test_checkpoint_restores_bias_and_continuation(
-    enforce_gridless, bias_psi, target, tmp_path
+    enforce_gridless, bias_psi, target, prior_steps, tmp_path
 ):
     original = metadynamics_simulation(enforce_gridless, bias_psi)
     original.step(50)
@@ -52,10 +53,10 @@ def test_checkpoint_restores_bias_and_continuation(
     original.saveCheckpoint(str(checkpoint) if target == "path" else checkpoint)
     original.step(30)
 
-    # The restored simulation has deposited more hills than the checkpoint holds, so
-    # loading must also discard the extra ones.
+    # A fresh simulation must make room for the restored hills, and one that has
+    # deposited more hills than the checkpoint holds must discard the extra ones.
     restored = metadynamics_simulation(enforce_gridless, bias_psi)
-    restored.step(80)
+    restored.step(prior_steps)
     if target == "stream":
         checkpoint.seek(0)
     restored.loadCheckpoint(str(checkpoint) if target == "path" else checkpoint)
