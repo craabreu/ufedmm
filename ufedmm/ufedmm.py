@@ -3,7 +3,7 @@
    :platform: Unix, Windows
    :synopsis: Unified Free Energy Dynamics with OpenMM
 
-.. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
+.. moduleauthor:: Charlles Abreu <craabreu@gmail.com>
 """
 
 import functools
@@ -26,15 +26,15 @@ def _standardized(quantity):
         return quantity
 
 
-def _add_fake_particles(force, num_particles):
+def _add_fake_particles(force, num_particles):  # noqa: PLR0912
     if isinstance(force, openmm.CustomCVForce):
         for i in range(force.getNumCollectiveVariables()):
             _add_fake_particles(force.getCollectiveVariable(i), num_particles)
     elif isinstance(force, openmm.NonbondedForce):
-        for i in range(num_particles - force.getNumParticles()):
+        for _ in range(num_particles - force.getNumParticles()):
             force.addParticle(0.0, 1.0, 0.0)
     elif isinstance(force, openmm.CustomNonbondedForce):
-        for i in range(num_particles - force.getNumParticles()):
+        for _ in range(num_particles - force.getNumParticles()):
             force.addParticle([0.0] * force.getNumPerParticleParameters())
     elif isinstance(force, openmm.CustomGBForce):
         if force.getNumParticles() < num_particles:
@@ -54,7 +54,7 @@ def _add_fake_particles(force, num_particles):
                 )
             for index, parameters in enumerate(parameter_list):
                 force.setParticleParameters(index, parameters + (1.0,))
-            for i in range(num_particles - force.getNumParticles()):
+            for _ in range(num_particles - force.getNumParticles()):
                 force.addParticle(parameter_list[0] + (0.0,))
     elif isinstance(force, openmm.GBSAOBCForce):
         raise RuntimeError("GBSAOBCForce not supported")
@@ -66,7 +66,7 @@ def _add_fake_particles(force, num_particles):
             force.setReferencePositions(refpos)
 
 
-class CollectiveVariable(object):
+class CollectiveVariable:
     """A function of the particle coordinates, evaluated by means of an :OpenMM:`Force`
     object.
 
@@ -211,7 +211,7 @@ class CollectiveVariable(object):
         return effective_mass
 
 
-class DynamicalVariable(object):
+class DynamicalVariable:
     """An extended phase-space variable, whose dynamics is coupled to that of one of
     more collective variables of a system.
 
@@ -280,7 +280,7 @@ class DynamicalVariable(object):
         <s_psi in [-3.141592653589793, 3.141592653589793], periodic, m=50, T=1500>
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         id,
         min_value,
@@ -386,7 +386,7 @@ class DynamicalVariable(object):
         if self.periodic:
             energy = f"{self.min_value}+{self._range}*(x{index}/Lx-floor(x{index}/Lx))"
         else:
-            energy = f"{self.min_value}+{2*self._range}*min(pos{index},1-pos{index})"
+            energy = f"{self.min_value}+{2 * self._range}*min(pos{index},1-pos{index})"
             energy += f";pos{index}=x{index}/Lx-floor(x{index}/Lx)"
         return energy
 
@@ -415,7 +415,7 @@ class DynamicalVariable(object):
 def _get_energy_function(variables):
     energies = [v.potential.split(";", 1) for v in variables]
     energy_terms = [energy[0] for energy in energies]
-    definitions = [energy[1] for energy in energies if len(energy) == 2]
+    definitions = [energy[1] for energy in energies if len(energy) == 2]  # noqa: PLR2004
     expression = ";".join(["+".join(energy_terms)] + list(definitions))
     return expression
 
@@ -427,7 +427,7 @@ def _get_parameters(variables):
     return parameters
 
 
-class PeriodicTask(object):
+class PeriodicTask:
     def __init__(self, frequency):
         self.frequency = frequency
 
@@ -485,7 +485,7 @@ class _Metadynamics(PeriodicTask):
             Enforce gridless metadynamics even for 1D to 3D problems.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         variables,
         height,
@@ -512,7 +512,7 @@ class _Metadynamics(PeriodicTask):
             )
         self.buffer_size = buffer_size
         self.grid_expansion = grid_expansion
-        self._use_grid = len(self.bias_variables) < 4 and not enforce_gridless
+        self._use_grid = len(self.bias_variables) < 4 and not enforce_gridless  # noqa: PLR2004
         self.force = (
             self._interpolation_grid_force() if self._use_grid else self._hills_force()
         )
@@ -540,7 +540,7 @@ class _Metadynamics(PeriodicTask):
             self._table = openmm.Continuous1DFunction(
                 self._bias, *self._bounds, full_periodic
             )
-        elif num_bias_variables == 2:
+        elif num_bias_variables == 2:  # noqa: PLR2004
             self._table = openmm.Continuous2DFunction(
                 *self._widths, self._bias, *self._bounds, full_periodic
             )
@@ -549,15 +549,15 @@ class _Metadynamics(PeriodicTask):
                 *self._widths, self._bias, *self._bounds, full_periodic
             )
         expression = (
-            f'metad_bias_scale*bias({",".join(v.id for v in self.bias_variables)})'
+            f"metad_bias_scale*bias({','.join(v.id for v in self.bias_variables)})"
         )
         for i, v in enumerate(self.bias_variables):
-            expression += f";{v.id}={v._get_energy_function(i+1)}"
+            expression += f";{v.id}={v._get_energy_function(i + 1)}"
         force = openmm.CustomCVForce(expression)
         for i in range(num_bias_variables):
             x = openmm.CustomExternalForce("x")
             x.addParticle(0, [])
-            force.addCollectiveVariable(f"x{i+1}", x)
+            force.addCollectiveVariable(f"x{i + 1}", x)
         force.addTabulatedFunction("bias", self._table)
         force.addGlobalParameter("Lx", 0)
         force.addGlobalParameter("metad_bias_scale", 1)
@@ -566,19 +566,20 @@ class _Metadynamics(PeriodicTask):
 
     def _hills_force(self):
         num_bias_variables = len(self.bias_variables)
-        centers = [f"center{i+1}" for i in range(num_bias_variables)]
+        centers = [f"center{i + 1}" for i in range(num_bias_variables)]
         exponents = []
         for v, center in zip(self.bias_variables, centers):
             if v.periodic:  # von Mises
                 factor = 2 * np.pi / v._range
                 exponents.append(
-                    f"{1.0/(factor*v.sigma)**2}*(cos({factor}*({v.id}-{center}))-1)"
+                    f"{1.0 / (factor * v.sigma) ** 2}"
+                    f"*(cos({factor}*({v.id}-{center}))-1)"
                 )
             else:  # Gauss
-                exponents.append(f"({-0.5/v.sigma**2})*({v.id}-{center})^2")
-        expression = f'height*exp({"+".join(exponents)})'
+                exponents.append(f"({-0.5 / v.sigma**2})*({v.id}-{center})^2")
+        expression = f"height*exp({'+'.join(exponents)})"
         for i, v in enumerate(self.bias_variables):
-            expression += f";{v.id}={v._get_energy_function(i+1)}"
+            expression += f";{v.id}={v._get_energy_function(i + 1)}"
         force = openmm.CustomCompoundBondForce(num_bias_variables, expression)
         force.addPerBondParameter("height")
         for center in centers:
@@ -588,7 +589,7 @@ class _Metadynamics(PeriodicTask):
 
     def _add_buffer(self, simulation):
         size = min(self.buffer_size, self._total_hills - self.force.getNumBonds())
-        for i in range(size):
+        for _ in range(size):
             self.force.addBond(self.particles, [0] * (len(self.bias_variables) + 1))
         simulation.context.reinitialize(preserveState=True)
 
@@ -709,7 +710,7 @@ class _Metadynamics(PeriodicTask):
             parameter_array = np.fromfile(file, count=nhills * npars).reshape(
                 (nhills, npars)
             )
-            for index in range(nhills - self.force.getNumBonds()):
+            for _ in range(nhills - self.force.getNumBonds()):
                 self.force.addBond(self.particles, [0] * npars)
             self._total_hills = self.force.getNumBonds()
             for index, parameters in enumerate(parameter_array):
@@ -883,7 +884,7 @@ class ExtendedSpaceContext(openmm.Context):
         added_colvars = 0
         for var in variables:
             colvars_to_add = len(var.colvars) + 1
-            if added_colvars + colvars_to_add > 32:
+            if added_colvars + colvars_to_add > 32:  # noqa: PLR2004
                 driving_force_variables.append([])
                 added_colvars = 0
             driving_force_variables[-1].append(deepcopy(var))
@@ -914,12 +915,10 @@ class ExtendedSpaceContext(openmm.Context):
     def getState(self, **kwargs):
         """Returns a :class:`ExtendedSpaceState` object.
 
-        .. _getState: http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html#openmm.openmm.Context.getState  # noqa: E501
-
         Keyword Args
         ------------
             **kwargs
-                See getState_.
+                See ``getState`` in :OpenMM:`Context`.
         """
         return ExtendedSpaceState(self.variables, super().getState(**kwargs))
 
@@ -977,7 +976,7 @@ class ExtendedSpaceContext(openmm.Context):
             minisystem = openmm.System()
             expression = _get_energy_function(self.variables)
             for i, v in enumerate(self.variables):
-                expression += f"; {v.id}={v._get_energy_function(index=i+1)}"
+                expression += f"; {v.id}={v._get_energy_function(index=i + 1)}"
             force = openmm.CustomCompoundBondForce(nvars, expression)
             force.addBond(range(nvars), [])
             for name, value in _get_parameters(self.variables).items():
@@ -1156,7 +1155,7 @@ class ExtendedSpaceSimulation(app.Simulation):
             self.context.loadCheckpoint(file.read())
 
 
-class UnifiedFreeEnergyDynamics(object):
+class UnifiedFreeEnergyDynamics:
     """A Unified Free-Energy Dynamics (UFED) setup.
 
     Parameters
@@ -1205,7 +1204,7 @@ class UnifiedFreeEnergyDynamics(object):
         <variables=[s_phi, s_psi], temperature=300, height=None, frequency=None>
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         variables,
         temperature,
@@ -1236,19 +1235,19 @@ class UnifiedFreeEnergyDynamics(object):
             f"height={self.height}, "
             f"frequency={self.frequency}"
         )
-        return f'<variables=[{", ".join(v.id for v in self.variables)}], {properties}>'
+        return f"<variables=[{', '.join(v.id for v in self.variables)}], {properties}>"
 
     def __getstate__(self):
-        return dict(
-            variables=self.variables,
-            temperature=self.temperature,
-            height=self.height,
-            frequency=self.frequency,
-            bias_factor=self.bias_factor,
-            grid_expansion=self.grid_expansion,
-            enforce_gridless=self.enforce_gridless,
-            buffer_size=self.buffer_size,
-        )
+        return {
+            "variables": self.variables,
+            "temperature": self.temperature,
+            "height": self.height,
+            "frequency": self.frequency,
+            "bias_factor": self.bias_factor,
+            "grid_expansion": self.grid_expansion,
+            "enforce_gridless": self.enforce_gridless,
+            "buffer_size": self.buffer_size,
+        }
 
     def __setstate__(self, kw):
         self.__init__(**kw)

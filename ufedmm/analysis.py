@@ -3,7 +3,7 @@
    :platform: Unix, Windows
    :synopsis: Unified Free Energy Dynamics with OpenMM
 
-.. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
+.. moduleauthor:: Charlles Abreu <craabreu@gmail.com>
 
 """
 
@@ -20,17 +20,17 @@ from ufedmm.ufedmm import _get_energy_function, _get_parameters, _standardized
 class _RBFContext(openmm.Context):
     def __init__(self, variables, variances, centers, weights, platform, properties):
         num_particles = (len(variables) + 2) // 3
-        coordinates = [f"{x}{i+1}" for i in range(num_particles) for x in "xyz"]
+        coordinates = [f"{x}{i + 1}" for i in range(num_particles) for x in "xyz"]
         exponents = []
         for v, variance, x in zip(variables, variances, coordinates):
             if v.periodic:  # von Mises
                 factor = 2 * np.pi / v._range
                 exponents.append(
-                    f"{1.0/(variance*factor**2)}*(cos({factor}*({v.id}-{x}))-1)"
+                    f"{1.0 / (variance * factor**2)}*(cos({factor}*({v.id}-{x}))-1)"
                 )
             else:  # Gauss
-                exponents.append(f"(-{0.5/variance})*({v.id}-{x})^2")
-        expression = f'weight*exp({"+".join(exponents)})'
+                exponents.append(f"(-{0.5 / variance})*({v.id}-{x})^2")
+        expression = f"weight*exp({'+'.join(exponents)})"
 
         force = openmm.CustomCompoundBondForce(num_particles, expression)
         force.addPerBondParameter("weight")
@@ -53,7 +53,7 @@ class _RBFContext(openmm.Context):
         self.setPositions(positions)
 
 
-class FreeEnergyAnalyzer(object):
+class FreeEnergyAnalyzer:
     """Calculate free energy landscapes from UFED simulation results.
 
     Parameters
@@ -163,7 +163,7 @@ class FreeEnergyAnalyzer(object):
         return centers, mean_forces
 
     def mean_force_free_energy(
-        self, centers, mean_forces, sigma, platform_name="Reference", properties={}
+        self, centers, mean_forces, sigma, platform_name="Reference", properties=None
     ):
         """Returns Python functions for evaluating the potential of mean force and their
         originating mean forces as a function of the collective variables.
@@ -195,6 +195,8 @@ class FreeEnergyAnalyzer(object):
                 A Python function whose arguments are collective variable values and
                 whose result is the mean force at those values.
         """
+        if properties is None:
+            properties = {}
         variables = self._ufed.variables
         n = len(variables)
         try:
@@ -204,16 +206,17 @@ class FreeEnergyAnalyzer(object):
 
         exponent = []
         derivative = []
+        # late-binding bug, fixed in the fix-mean-force-free-energy PR
         for v, variance in zip(variables, variances):
             if v.periodic:  # von Mises
                 factor = 2 * np.pi / v._range
                 exponent.append(
-                    lambda x: (np.cos(factor * x) - 1.0) / (factor * factor * variance)
+                    lambda x: (np.cos(factor * x) - 1.0) / (factor * factor * variance)  # noqa: B023
                 )
-                derivative.append(lambda x: -np.sin(factor * x) / (factor * variance))
+                derivative.append(lambda x: -np.sin(factor * x) / (factor * variance))  # noqa: B023
             else:  # Gauss
-                exponent.append(lambda x: -0.5 * x**2 / variance)
-                derivative.append(lambda x: -x / variance)
+                exponent.append(lambda x: -0.5 * x**2 / variance)  # noqa: B023
+                derivative.append(lambda x: -x / variance)  # noqa: B023
 
         def kernel(x):
             return np.exp(np.sum(exponent[i](x[i]) for i in range(n)))
@@ -316,7 +319,7 @@ class Analyzer(FreeEnergyAnalyzer):
     def __init__(self, ufed, dataframe, bins, min_count=1, adjust_centers=False):
         super().__init__(ufed, dataframe)
         try:
-            self._bins = [bin for bin in bins]
+            self._bins = list(bins)
         except TypeError:
             self._bins = [bins] * len(ufed.variables)
         self._min_count = min_count

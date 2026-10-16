@@ -3,7 +3,7 @@
    :platform: Unix, Windows
    :synopsis: Unified Free Energy Dynamics Integrators
 
-.. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
+.. moduleauthor:: Charlles Abreu <craabreu@gmail.com>
 """
 
 import numpy as np
@@ -64,7 +64,9 @@ def add_inner_nonbonded_force(system, inner_switch, inner_cutoff, force_group_in
             filter(lambda f: isinstance(f, openmm.NonbondedForce), system.getForces())
         )
     except StopIteration:
-        raise Exception("add_inner_nonbonded_force requires system with NonbondedForce")
+        raise Exception(
+            "add_inner_nonbonded_force requires system with NonbondedForce"
+        ) from None
     if (
         nonbonded_force.getNumParticleParameterOffsets() > 0
         or nonbonded_force.getNumExceptionParameterOffsets() > 0
@@ -82,7 +84,7 @@ def add_inner_nonbonded_force(system, inner_switch, inner_cutoff, force_group_in
         return c[m - 1] if m == n else c[m - 1] / (m - n)
 
     def func(n, m):
-        return "*log(r)" if m == n else (f"*r^{m-n}" if m > n else f"/r^{n-m}")
+        return "*log(r)" if m == n else (f"*r^{m - n}" if m > n else f"/r^{n - m}")
 
     def val(n, m):
         return f0s if m == 0 else (coeff(n, m) - coeff(0, m) if n != m else coeff(n, m))
@@ -198,10 +200,10 @@ class CustomIntegrator(openmm.CustomIntegrator):
         for step in range(self.getNumComputations()):
             line = ""
             step_type, target, expr = self.getComputationStep(step)
-            if step_type == 8:
+            if step_type == 8:  # noqa: PLR2004
                 indent_level -= 1
             command = step_type_str[step_type].format(target=target, expr=expr)
-            line += "{:4d}: ".format(step) + "   " * indent_level + command
+            line += f"{step:4d}: " + "   " * indent_level + command
             if step_type in [6, 7]:
                 indent_level += 1
             readable_lines.append(line)
@@ -378,18 +380,22 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
            9: v <- v + 0.5*dt*f/m
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         temperature,
         step_size,
         num_rattles=0,
         scheme="VV-Middle",
-        respa_loops=[1],
+        respa_loops=None,
         bath_loops=1,
         intertwine=True,
-        embodied_force_groups=[],
+        embodied_force_groups=None,
         unroll_loops=True,
     ):
+        if respa_loops is None:
+            respa_loops = [1]
+        if embodied_force_groups is None:
+            embodied_force_groups = []
         if scheme not in ["LF-Middle", "VV-Middle"]:
             raise Exception(f"Invalid value {scheme} for keyword scheme")
         super().__init__(temperature, step_size)
@@ -431,7 +437,7 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
             n = self._respa_loops[scale]
             if n > 1:
                 self.addComputeGlobal(f"irespa{scale}", "0")
-                self.beginWhileBlock(f"irespa{scale} < {n-1/2}")
+                self.beginWhileBlock(f"irespa{scale} < {n - 1 / 2}")
             self._boost(fraction / (2 * n if self._scheme == "VV-Middle" else n), scale)
             self._integrate_respa(fraction / n, scale - 1)
             self._scheme == "VV-Middle" and self._boost(fraction / (2 * n), scale)
@@ -443,7 +449,7 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
             n = self._bath_loops
             if n > 1:
                 self.addComputeGlobal("ibath", "0")
-                self.beginWhileBlock(f"ibath < {n-1/2}")
+                self.beginWhileBlock(f"ibath < {n - 1 / 2}")
             self._intertwine and self._translation(0.5 * fraction / n)
             self._bath(fraction / n)
             self._num_rattles > 0 and self.addConstrainVelocities()
@@ -482,13 +488,13 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
     def _translation(self, fraction):
         if self._num_rattles > 1:
             self.addComputeGlobal("irattle", "0")
-            self.beginWhileBlock(f"irattle < {self._num_rattles-1/2}")
-        self.addComputePerDof("x", f"x + {fraction/max(1, self._num_rattles)}*dt*v")
+            self.beginWhileBlock(f"irattle < {self._num_rattles - 1 / 2}")
+        self.addComputePerDof("x", f"x + {fraction / max(1, self._num_rattles)}*dt*v")
         if self._num_rattles > 0:
             self.addComputePerDof("x0", "x")
             self.addConstrainPositions()
             self.addComputePerDof(
-                "v", f"v + (x - x0)/({fraction/self._num_rattles}*dt)"
+                "v", f"v + (x - x0)/({fraction / self._num_rattles}*dt)"
             )
             self.addConstrainVelocities()
         if self._num_rattles > 1:
@@ -498,7 +504,7 @@ class AbstractMiddleRespaIntegrator(CustomIntegrator):
     def _boost(self, fraction, scale):
         if len(self._respa_loops) > 1:
             if scale - 1 in self._subtractive_groups:
-                self.addComputePerDof("f_emb", f"f{scale-1}")
+                self.addComputePerDof("f_emb", f"f{scale - 1}")
                 self.addComputePerDof("v", f"v + {fraction}*dt*(f{scale}-f_emb)/m")
             else:
                 self.addComputePerDof("v", f"v + {fraction}*dt*f{scale}/m")
@@ -667,9 +673,9 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
         super().__init__(temperature, step_size, **kwargs)
         self.addPerDofVariable("Q", 0)
         for i in range(nchain):
-            self.addPerDofVariable(f"v{i+1}", 0)
+            self.addPerDofVariable(f"v{i + 1}", 0)
             if track_energy:
-                self.addPerDofVariable(f"eta{i+1}", 0)
+                self.addPerDofVariable(f"eta{i + 1}", 0)
 
     def update_temperatures(self, system_temperature, extended_space_temperatures):
         super().update_temperatures(system_temperature, extended_space_temperatures)
@@ -680,22 +686,22 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
         n = self._nchain
 
         def a(i):
-            return f"(Q*v{i-1}^2 - kT)/Q" if i > 1 else "(m*v^2 - kT)/Q"
+            return f"(Q*v{i - 1}^2 - kT)/Q" if i > 1 else "(m*v^2 - kT)/Q"
 
         def z(i):
-            return f"exp(-{fraction/4}*dt*v{i+1})"
+            return f"exp(-{fraction / 4}*dt*v{i + 1})"
 
-        self.addComputePerDof(f"v{n}", f"v{n} + {fraction/2}*dt*{a(n)}")
+        self.addComputePerDof(f"v{n}", f"v{n} + {fraction / 2}*dt*{a(n)}")
         for i in reversed(range(1, n)):
             self.addComputePerDof(
-                f"v{i}", f"(v{i}*z + {fraction/2}*dt*{a(i)})*z; z={z(i)}"
+                f"v{i}", f"(v{i}*z + {fraction / 2}*dt*{a(i)})*z; z={z(i)}"
             )
         self.addComputePerDof("v", f"v*exp(-{fraction}*dt*v1)")
         for i in range(1, n):
             self.addComputePerDof(
-                f"v{i}", f"(v{i}*z + {fraction/2}*dt*{a(i)})*z; z={z(i)}"
+                f"v{i}", f"(v{i}*z + {fraction / 2}*dt*{a(i)})*z; z={z(i)}"
             )
-        self.addComputePerDof(f"v{n}", f"v{n} + {fraction/2}*dt*{a(n)}")
+        self.addComputePerDof(f"v{n}", f"v{n} + {fraction / 2}*dt*{a(n)}")
 
 
 class MiddleMassiveGGMTIntegrator(AbstractMiddleRespaIntegrator):
@@ -771,14 +777,15 @@ class MiddleMassiveGGMTIntegrator(AbstractMiddleRespaIntegrator):
         self.setPerDofVariableByName("Q2", Q2)
 
     def _bath(self, fraction):
-        self.addComputePerDof("v1", f"v1 + {fraction/2}*dt*(m*v^2 - kT)/Q1")
-        self.addComputePerDof("v2", f"v2 + {fraction/2}*dt*((m*v^2)^2/3 - kT^2)/Q2")
+        self.addComputePerDof("v1", f"v1 + {fraction / 2}*dt*(m*v^2 - kT)/Q1")
+        self.addComputePerDof("v2", f"v2 + {fraction / 2}*dt*((m*v^2)^2/3 - kT^2)/Q2")
         self.addComputePerDof(
             "v",
-            f"v*exp(-{fraction}*dt*(v1 + kT*v2))/sqrt(1 + {2*fraction}*dt*m*v^2*v2/3)",
+            f"v*exp(-{fraction}*dt*(v1 + kT*v2))"
+            f"/sqrt(1 + {2 * fraction}*dt*m*v^2*v2/3)",
         )
-        self.addComputePerDof("v1", f"v1 + {fraction/2}*dt*(m*v^2 - kT)/Q1")
-        self.addComputePerDof("v2", f"v2 + {fraction/2}*dt*((m*v^2)^2/3 - kT^2)/Q2")
+        self.addComputePerDof("v1", f"v1 + {fraction / 2}*dt*(m*v^2 - kT)/Q1")
+        self.addComputePerDof("v2", f"v2 + {fraction / 2}*dt*((m*v^2)^2/3 - kT^2)/Q2")
 
 
 class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
@@ -892,7 +899,7 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
             ``num_rattles``.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         temperature,
         time_constant,
@@ -923,7 +930,7 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
         kT_vectors = self.getPerDofVariableByName("kT")
         tauSq = _standardized(self._tau) ** 2
         Q = [tauSq * kT for kT in kT_vectors]
-        invQ = [openmm.Vec3(*map(lambda x: 1 / x if x > 0.0 else 0.0, q)) for q in Q]
+        invQ = [openmm.Vec3(*(1 / x if x > 0.0 else 0.0 for x in q)) for q in Q]
         self.setPerDofVariableByName("invQ", invQ)
 
     def _step_initialization(self):
@@ -937,7 +944,7 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
         if self._semi_regulated:
             expression = f"0.5*m*v*c*tanh(v/c); c=sqrt({n}*kT/m)"
         else:
-            expression = f"{0.5*(n+1)/n}*m*(c*tanh(v/c))^2; c=sqrt({n}*kT/m)"
+            expression = f"{0.5 * (n + 1) / n}*m*(c*tanh(v/c))^2; c=sqrt({n}*kT/m)"
         self.setKineticEnergyExpression(expression)
         self.addComputePerDof("x", f"x + c*tanh(v/c)*{fraction}*dt")
 
@@ -947,19 +954,19 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
         if self._semi_regulated:
             G = "; G=(m*v*c*tanh(v/c) - kT)*invQ"
         else:
-            G = f"; G=({(n+1)/n}*m*(c*tanh(v/c))^2 - kT)*invQ"
+            G = f"; G=({(n + 1) / n}*m*(c*tanh(v/c))^2 - kT)*invQ"
 
         if self._split:
-            boost = f"v_eta + G*{0.5*fraction}*dt" + G
+            boost = f"v_eta + G*{0.5 * fraction}*dt" + G
 
         if self._semi_regulated:
-            scaling = f"v*exp(-v_eta*{0.5*fraction}*dt)"
+            scaling = f"v*exp(-v_eta*{0.5 * fraction}*dt)"
         else:
             scaling = (
                 "c*asinh_z"
                 "; asinh_z=(2*step(z)-1)*log(select(step(za-1E8),2*za,za+sqrt(1+z*z)))"
                 "; za=abs(z)"
-                f"; z=sinh(v/c)*exp(-v_eta*{0.5*fraction}*dt)"
+                f"; z=sinh(v/c)*exp(-v_eta*{0.5 * fraction}*dt)"
             )
 
         if self._split:

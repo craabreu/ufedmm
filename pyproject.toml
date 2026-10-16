@@ -96,7 +96,7 @@ file = "ufedmm/_version.py"
 [tool.ruff]
 line-length = 88
 target-version = "py310"
-extend-exclude = ["_version.py"]
+extend-exclude = ["_version.py", "*.ipynb"]
 
 [tool.ruff.lint]
 select = [
@@ -109,13 +109,7 @@ select = [
     "B",    # flake8-bugbear
     "C4",   # flake8-comprehensions
 ]
-ignore = [
-    "B905",
-    # TODO(PR2): remove the rules below after the ruff restyle
-    "B006", "B007", "B023", "B904", "C408", "C416", "C417", "E501",
-    "I001", "PLR0912", "PLR0913", "PLR0917", "PLR1714", "PLR2004",
-    "UP004", "UP015", "UP032",
-]
+ignore = ["B905"]
 
 [tool.ruff.lint.pylint]
 max-locals = 15
