@@ -25,7 +25,8 @@ GAMMA = 10 / unit.picoseconds
 REGULATION = 2
 
 
-def oscillator_bath(integrator):
+def oscillator_bath(integrator, seed=1):
+    integrator.setRandomNumberSeed(seed)
     system = openmm.System()
     force = openmm.CustomExternalForce(f"{0.5 * STIFFNESS}*(x^2 + y^2 + z^2)")
     for i in range(NUM_ATOMS + NUM_EXTRA):
@@ -37,7 +38,7 @@ def oscillator_bath(integrator):
     integrator.update_temperatures(T * unit.kelvin, [TS * unit.kelvin] * NUM_EXTRA)
     # Start from canonical positions and velocities. Starting at rest would leave a
     # slowly relaxing transient common to all oscillators.
-    rng = np.random.default_rng(1)
+    rng = np.random.default_rng(seed)
     positions = np.zeros((NUM_ATOMS + NUM_EXTRA, 3))
     velocities = np.zeros((NUM_ATOMS + NUM_EXTRA, 3))
     for dofs, temperature in ((np.s_[:NUM_ATOMS, :], T), (np.s_[NUM_ATOMS:, 0], TS)):
