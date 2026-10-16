@@ -278,3 +278,167 @@ def test_set_positions_accepts_numpy_arrays(form):
     assert state.getPositions(asNumpy=True)._value == pytest.approx(
         expected.getPositions(asNumpy=True)._value
     )
+
+
+def test_collective_variable_id_must_be_an_identifier():
+    with pytest.raises(ValueError, match="identifier"):
+        ufedmm.CollectiveVariable("not valid", openmm.CustomTorsionForce("theta"))
+
+
+def test_collective_variable_units():
+    model = ufedmm.AlanineDipeptideModel(constraints=None)
+    phi = model.phi.evaluate(model.system, model.positions)
+    phi_degrees = model.phi.evaluate(model.system, model.positions, unit.degrees)
+    assert phi_degrees.value_in_unit(unit.radians) == pytest.approx(phi)
+    mass = model.phi.effective_mass(model.system, model.positions)
+    mass_degrees = model.phi.effective_mass(model.system, model.positions, unit.degrees)
+    mass_unit = unit.dalton * (unit.nanometers / unit.radians) ** 2
+    assert mass_degrees.value_in_unit(mass_unit) == pytest.approx(mass)
+
+
+@pytest.mark.parametrize("periodic", [True, False], ids=["periodic", "nonperiodic"])
+def test_dynamical_variable_values_match_driving_force(periodic):
+    # getDynamicalVariables evaluates each variable in Python, whereas the driving
+    # forces evaluate the same mapping as an OpenMM expression.
+    model = ufedmm.AlanineDipeptideModel(constraints=None)
+    s_phi = ufedmm.DynamicalVariable(
+        "s_phi", -1.0, 2.0, 50, 300, model.phi, 1000, periodic=periodic
+    )
+    ufed = ufedmm.UnifiedFreeEnergyDynamics([s_phi], TEMP)
+    integrator = ufedmm.MiddleMassiveNHCIntegrator(TEMP, TAU, DT)
+    simulation = reference_simulation(model, ufed, integrator)
+    Lx = simulation.context.getParameter("Lx")
+    for x in np.linspace(-1.3 * Lx, 2.1 * Lx, 17):
+        simulation.context.setPositions(model.positions, [x])
+        state = simulation.context.getState(getPositions=True)
+        (value,) = state.getDynamicalVariables()
+        (force,) = simulation.context.driving_forces
+        driving_value = force.getCollectiveVariableValues(simulation.context)[0]
+        assert value == pytest.approx(driving_value)
+        assert -1.0 <= value <= 2.0
+        fraction = x / Lx - np.floor(x / Lx)
+        if periodic:
+            assert value == pytest.approx(-1.0 + 3.0 * fraction)
+        else:
+            assert value == pytest.approx(-1.0 + 6.0 * min(fraction, 1 - fraction))
+
+
+def test_many_variables_are_split_among_driving_forces():
+    # A CustomCVForce takes at most 32 collective variables, and each variable here
+    # needs two (itself and its colvar), so 17 variables need two driving forces.
+    model = ufedmm.AlanineDipeptideModel(constraints=None)
+    phi = model.phi.evaluate(model.system, model.positions)
+    num_variables = 17
+    Ks = np.linspace(100, 900, num_variables)
+    variables = []
+    for k, K in enumerate(Ks):
+        colvar = ufedmm.CollectiveVariable(f"phi{k}", deepcopy(model.phi.force))
+        variables.append(
+            ufedmm.DynamicalVariable(f"s{k}", -np.pi, np.pi, 50, 300, colvar, K)
+        )
+    ufed = ufedmm.UnifiedFreeEnergyDynamics(variables, TEMP)
+    integrator = ufedmm.MiddleMassiveNHCIntegrator(TEMP, TAU, DT)
+    simulation = reference_simulation(model, ufed, integrator)
+    context = simulation.context
+    assert len(context.driving_forces) == 2
+    for force in context.driving_forces:
+        force.setForceGroup(30)
+    context.reinitialize(preserveState=True)
+
+    Lx = context.getParameter("Lx")
+    s_values = np.linspace(-3.0, 3.0, num_variables)
+    context.setPositions(model.positions, list(Lx * (s_values + np.pi) / (2 * np.pi)))
+    delta = np.abs(phi - s_values)
+    delta = np.minimum(delta, 2 * np.pi - delta)
+    state = context.getState(getEnergy=True, groups={30})
+    energy = state.getPotentialEnergy().value_in_unit(unit.kilojoules_per_mole)
+    assert energy == pytest.approx(np.sum(0.5 * Ks * delta**2))
+
+
+def test_set_periodic_box_vectors_rescales_extra_particle_masses():
+    model, ufed = ufed_model()
+    integrator = ufedmm.MiddleMassiveNHCIntegrator(TEMP, TAU, DT)
+    simulation = reference_simulation(model, ufed, integrator)
+    context = simulation.context
+    Lx = 3.0
+    context.setPeriodicBoxVectors(
+        openmm.Vec3(Lx, 0, 0), openmm.Vec3(0, 2.5, 0), openmm.Vec3(0, 0, 2.5)
+    )
+    assert context.getParameter("Lx") == pytest.approx(Lx)
+    system = context.getSystem()
+    natoms = model.system.getNumParticles() - 2
+    for i, v in enumerate(ufed.variables):
+        mass = system.getParticleMass(natoms + i).value_in_unit(unit.dalton)
+        assert mass == pytest.approx(v.mass * (v._range / Lx) ** 2)
+    with pytest.raises(ValueError, match="orthorhombic"):
+        context.setPeriodicBoxVectors(
+            openmm.Vec3(Lx, 0, 0), openmm.Vec3(0.5, 2.5, 0), openmm.Vec3(0, 0, 2.5)
+        )
+
+
+def test_velocities_to_temperature_with_center_of_mass_motion_remover():
+    model, ufed = ufed_model()
+    model.system.addForce(openmm.CMMotionRemover())
+    integrator = ufedmm.MiddleMassiveNHCIntegrator(TEMP, TAU, DT)
+    context = ufedmm.ExtendedSpaceContext(
+        ufed.variables,
+        model.system,
+        integrator,
+        openmm.Platform.getPlatformByName("Reference"),
+    )
+    context.setPositions(model.positions)
+    context.setVelocitiesToTemperature(TEMP, 1234)
+    natoms = len(model.positions)
+    state = context.getState(getVelocities=True)
+    v = state.getVelocities(asNumpy=True).value_in_unit(
+        unit.nanometers / unit.picosecond
+    )
+    m = np.array([model.system.getParticleMass(i) / unit.dalton for i in range(natoms)])
+    KB = unit.MOLAR_GAS_CONSTANT_R.value_in_unit(unit.kilojoules_per_mole / unit.kelvin)
+    temperature = np.sum(m[:, None] * v**2) / ((3 * natoms - 3) * KB)
+    assert temperature == pytest.approx(TEMP.value_in_unit(unit.kelvin), rel=1e-6)
+
+
+@pytest.mark.parametrize(
+    "spoil, message",
+    [
+        (lambda m: m.system.addForce(openmm.CMMotionRemover()), "CMMotionRemover"),
+        (
+            lambda m: m.system.addForce(openmm.MonteCarloBarostat(1, 300)),
+            "Barostat",
+        ),
+        (lambda m: m.topology.setPeriodicBoxVectors(None), "simulation box"),
+    ],
+    ids=["CMMotionRemover", "barostat", "no-box"],
+)
+def test_simulation_rejects_unsupported_systems(spoil, message):
+    model, ufed = ufed_model()
+    spoil(model)
+    integrator = ufedmm.MiddleMassiveNHCIntegrator(TEMP, TAU, DT)
+    with pytest.raises(Exception, match=message):
+        reference_simulation(model, ufed, integrator)
+
+
+def test_simulation_passes_platform_properties():
+    model, ufed = ufed_model()
+    integrator = ufedmm.MiddleMassiveNHCIntegrator(TEMP, TAU, DT)
+    platform = openmm.Platform.getPlatformByName("CPU")
+    simulation = ufed.simulation(
+        model.topology, model.system, integrator, platform, {"Threads": "1"}
+    )
+    assert platform.getPropertyValue(simulation.context, "Threads") == "1"
+
+
+def test_simulation_sets_kT_of_a_plain_custom_integrator():
+    model, ufed = ufed_model()
+    integrator = openmm.CustomIntegrator(DT)
+    integrator.addPerDofVariable("kT", 0)
+    integrator.addComputePerDof("v", "v + dt*f/m")
+    integrator.addComputePerDof("x", "x + dt*v")
+    simulation = reference_simulation(model, ufed, integrator)
+    kT = np.array(integrator.getPerDofVariableByName("kT"))
+    R = unit.MOLAR_GAS_CONSTANT_R.value_in_unit(unit.kilojoules_per_mole / unit.kelvin)
+    natoms = len(model.positions)
+    assert kT[:natoms] == pytest.approx(np.full((natoms, 3), R * 300))
+    assert kT[natoms:] == pytest.approx(np.full((2, 3), R * 1500))
+    simulation.step(5)
