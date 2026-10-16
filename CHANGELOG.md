@@ -18,6 +18,10 @@
   Chem. 2023).
 
 ### Changed
+- `MiddleMassiveNHCIntegrator` uses chains of four thermostats by default, instead
+  of two. Two-thermostat chains sample nearly harmonic degrees of freedom poorly:
+  on a bath of harmonic oscillators, their kinetic energy came out about 2.5% low.
+  Pass `nchain=2` to get the previous behavior.
 - `ExtendedSpaceContext.setVelocitiesToTemperature` removes the center-of-mass
   velocity of the physical particles, applies the constraints, and scales the
   velocities to the exact target temperature. Massless particles get zero velocity.

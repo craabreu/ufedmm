@@ -625,8 +625,9 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
 
     Keyword Args
     ------------
-        nchain : int, default=2
-            The number of thermostats in each Nose-Hoover chain.
+        nchain : int, default=4
+            The number of thermostats in each Nose-Hoover chain. Short chains can
+            sample stiff, nearly harmonic degrees of freedom poorly.
         **kwargs
             All keyword arguments in :class:`AbstractMiddleRespaIntegrator`, except
             ``num_rattles``.
@@ -640,7 +641,7 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
         ... )
         >>> print(integrator)
         Per-dof variables:
-          kT, Q, v1, v2
+          kT, Q, v1, v2, v3, v4
         Global variables:
           irespa0 = 0.0
         Computation steps:
@@ -651,17 +652,21 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
            4:    v <- v + 0.125*dt*f0/m
            5:    x <- x + 0.125*dt*v
            6:    constrain positions
-           7:    v2 <- v2 + 0.125*dt*(Q*v1^2 - kT)/Q
-           8:    v1 <- (v1*z + 0.125*dt*(m*v^2 - kT)/Q)*z; z=exp(-0.0625*dt*v2)
-           9:    v <- v*exp(-0.25*dt*v1)
+           7:    v4 <- v4 + 0.125*dt*(Q*v3^2 - kT)/Q
+           8:    v3 <- (v3*z + 0.125*dt*(Q*v2^2 - kT)/Q)*z; z=exp(-0.0625*dt*v4)
+           9:    v2 <- (v2*z + 0.125*dt*(Q*v1^2 - kT)/Q)*z; z=exp(-0.0625*dt*v3)
           10:    v1 <- (v1*z + 0.125*dt*(m*v^2 - kT)/Q)*z; z=exp(-0.0625*dt*v2)
-          11:    v2 <- v2 + 0.125*dt*(Q*v1^2 - kT)/Q
-          12:    x <- x + 0.125*dt*v
-          13:    constrain positions
-          14:    v <- v + 0.125*dt*f0/m
-          15:    irespa0 <- irespa0 + 1
-          16: end
-          17: v <- v + 0.5*dt*f1/m
+          11:    v <- v*exp(-0.25*dt*v1)
+          12:    v1 <- (v1*z + 0.125*dt*(m*v^2 - kT)/Q)*z; z=exp(-0.0625*dt*v2)
+          13:    v2 <- (v2*z + 0.125*dt*(Q*v1^2 - kT)/Q)*z; z=exp(-0.0625*dt*v3)
+          14:    v3 <- (v3*z + 0.125*dt*(Q*v2^2 - kT)/Q)*z; z=exp(-0.0625*dt*v4)
+          15:    v4 <- v4 + 0.125*dt*(Q*v3^2 - kT)/Q
+          16:    x <- x + 0.125*dt*v
+          17:    constrain positions
+          18:    v <- v + 0.125*dt*f0/m
+          19:    irespa0 <- irespa0 + 1
+          20: end
+          21: v <- v + 0.5*dt*f1/m
     """
 
     def __init__(
@@ -669,7 +674,7 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
         temperature,
         time_constant,
         step_size,
-        nchain=2,
+        nchain=4,
         **kwargs,
     ):
         if "num_rattles" in kwargs.keys() and kwargs["num_rattles"] != 0:
