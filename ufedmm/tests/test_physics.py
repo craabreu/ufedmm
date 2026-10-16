@@ -61,9 +61,7 @@ def kinetic_energies(integrator, v, regulated):
 @pytest.mark.parametrize(
     "make_integrator, regulated",
     [
-        # Two-thermostat chains sample harmonic oscillators poorly (their kinetic
-        # energy comes out about 2.5% low), so this uses a longer chain.
-        (lambda: ufedmm.MiddleMassiveNHCIntegrator(T, TAU, DT, nchain=4), False),
+        (lambda: ufedmm.MiddleMassiveNHCIntegrator(T, TAU, DT), False),
         (lambda: ufedmm.MiddleMassiveGGMTIntegrator(T, TAU, DT), False),
         (lambda: ufedmm.GeodesicLangevinIntegrator(T, GAMMA, DT), False),
         (lambda: ufedmm.RegulatedNHLIntegrator(T, TAU, GAMMA, DT, REGULATION), True),
