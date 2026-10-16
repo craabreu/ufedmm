@@ -10,7 +10,7 @@ import ufedmm
 from ufedmm import cvpack
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--seed", dest="seed", help="the RNG seed", default=None)
+parser.add_argument("--seed", dest="seed", help="the RNG seed", type=int, default=None)
 parser.add_argument(
     "--platform", dest="platform", help="the computation platform", default="Reference"
 )
@@ -38,12 +38,15 @@ system = force_field.createSystem(
     removeCMMotion=False,
 )
 
+residues = list(pdb.topology.residues())[0:15]
 hc_hb = ufedmm.CollectiveVariable(
-    "hc_hb", cvpack.HelixHydrogenBondContent(pdb.topology, 0, 14)
+    "hc_hb", cvpack.HelixHBondContent(residues, normalize=True)
 )
-hc_a = ufedmm.CollectiveVariable("hc_a", cvpack.HelixAngleContent(pdb.topology, 0, 14))
+hc_a = ufedmm.CollectiveVariable(
+    "hc_a", cvpack.HelixAngleContent(residues, normalize=True)
+)
 hc_d = ufedmm.CollectiveVariable(
-    "hc_d", cvpack.HelixRamachandranContent(pdb.topology, 0, 14)
+    "hc_d", cvpack.HelixTorsionContent(residues, normalize=True)
 )
 
 s_hc = ufedmm.DynamicalVariable(
@@ -66,7 +69,7 @@ integrator.setRandomNumberSeed(seed)
 platform = openmm.Platform.getPlatformByName(args.platform)
 simulation = ufed.simulation(pdb.topology, system, integrator, platform)
 simulation.context.setPositions(pdb.positions)
-simulation.minimizeEnergy(tolerance=0.1 * unit.kilojoules_per_mole)
+simulation.minimizeEnergy(tolerance=0.1 * unit.kilojoules_per_mole / unit.nanometer)
 positions = simulation.context.getState(getPositions=True).getPositions()
 app.PDBFile.writeFile(pdb.topology, positions, open("minimized.pdb", "w"))
 simulation.context.setVelocitiesToTemperature(temp, seed)

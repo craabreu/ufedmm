@@ -15,7 +15,7 @@ parser.add_argument(
 parser.add_argument(
     "--ff", dest="ff", help="the pepdide force field", default="amber03"
 )
-parser.add_argument("--seed", dest="seed", help="the RNG seed", default=None)
+parser.add_argument("--seed", dest="seed", help="the RNG seed", type=int, default=None)
 parser.add_argument(
     "--platform", dest="platform", help="the computation platform", default="Reference"
 )
@@ -27,15 +27,17 @@ model = ufedmm.AlanineDipeptideModel(
 )
 temp = 300 * unit.kelvin
 gamma = 10 / unit.picoseconds
-dt = 2 * unit.femtoseconds
-nsteps = 1000000
+# Flexible water and bonds to hydrogen need a short step: at 2 fs, the reported
+# temperature of the solvated system falls about 40 K below the target
+dt = 0.5 * unit.femtoseconds
+nsteps = 4000000
 mass = 30 * unit.dalton * (unit.nanometer / unit.radians) ** 2
 Ks = 1000 * unit.kilojoules_per_mole / unit.radians**2
 Ts = 1500 * unit.kelvin
 limit = 180 * unit.degrees
 sigma = 18 * unit.degrees
 height = 2.0 * unit.kilojoules_per_mole
-deposition_period = 200
+deposition_period = 800
 s_phi = ufedmm.DynamicalVariable(
     "s_phi", -limit, limit, mass, Ts, model.phi, Ks, sigma=sigma
 )
@@ -56,7 +58,7 @@ simulation.context.setPositions(model.positions)
 simulation.context.setVelocitiesToTemperature(temp, seed)
 output = ufedmm.Tee(stdout, "output.csv")
 reporter = ufedmm.StateDataReporter(
-    output, 100, step=True, multipleTemperatures=True, variables=True, speed=True
+    output, 400, step=True, multipleTemperatures=True, variables=True, speed=True
 )
 simulation.reporters.append(reporter)
 simulation.step(nsteps)
