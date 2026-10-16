@@ -17,9 +17,11 @@ from .test_ufedmm import (
 )
 
 
-def metadynamics_simulation(enforce_gridless):
+def metadynamics_simulation(enforce_gridless, bias_psi=True):
     model, ufed = ufed_model(
-        height=2.0 * unit.kilocalorie_per_mole, enforce_gridless=enforce_gridless
+        height=2.0 * unit.kilocalorie_per_mole,
+        enforce_gridless=enforce_gridless,
+        bias_psi=bias_psi,
     )
     integrator = ufedmm.MiddleMassiveNHCIntegrator(TEMP, TAU, DT)
     simulation = reference_simulation(model, ufed, integrator)
@@ -33,10 +35,16 @@ def bias_energy(simulation):
     return state.getPotentialEnergy().value_in_unit(unit.kilojoules_per_mole)
 
 
-@pytest.mark.parametrize("enforce_gridless", [False, True], ids=["gridded", "gridless"])
+@pytest.mark.parametrize(
+    "enforce_gridless, bias_psi",
+    [(False, False), (False, True), (True, True)],
+    ids=["gridded-1D", "gridded-2D", "gridless-2D"],
+)
 @pytest.mark.parametrize("target", ["path", "stream"])
-def test_checkpoint_restores_bias_and_continuation(enforce_gridless, target, tmp_path):
-    original = metadynamics_simulation(enforce_gridless)
+def test_checkpoint_restores_bias_and_continuation(
+    enforce_gridless, bias_psi, target, tmp_path
+):
+    original = metadynamics_simulation(enforce_gridless, bias_psi)
     original.step(50)
     expected_bias = bias_energy(original)
     expected_point = phase_space_point(original)
@@ -46,7 +54,7 @@ def test_checkpoint_restores_bias_and_continuation(enforce_gridless, target, tmp
 
     # The restored simulation has deposited more hills than the checkpoint holds, so
     # loading must also discard the extra ones.
-    restored = metadynamics_simulation(enforce_gridless)
+    restored = metadynamics_simulation(enforce_gridless, bias_psi)
     restored.step(80)
     if target == "stream":
         checkpoint.seek(0)
@@ -60,6 +68,17 @@ def test_checkpoint_restores_bias_and_continuation(enforce_gridless, target, tmp
     assert bias_energy(restored) == pytest.approx(bias_energy(original), rel=1e-12)
     for x, y in zip(phase_space_point(restored), phase_space_point(original)):
         assert x == pytest.approx(y, rel=1e-12, abs=1e-14)
+
+
+@pytest.mark.parametrize("enforce_gridless", [False, True], ids=["gridded", "gridless"])
+def test_truncated_checkpoint_is_rejected(enforce_gridless):
+    simulation = metadynamics_simulation(enforce_gridless)
+    simulation.step(20)
+    checkpoint = io.BytesIO()
+    simulation.saveCheckpoint(checkpoint)
+    truncated = io.BytesIO(checkpoint.getvalue()[:12])
+    with pytest.raises(ValueError, match="end of checkpoint"):
+        metadynamics_simulation(enforce_gridless).loadCheckpoint(truncated)
 
 
 class StepRecorder(PeriodicTask):
