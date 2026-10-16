@@ -140,6 +140,10 @@ class StateDataReporter(app.StateDataReporter):
         self._backSteps = -sum(items)
         if self._multitemps:
             self._needsVelocities = self._needEnergy = True
+            # OpenMM >= 8.3 requests state data through the "include" list
+            for item in ("velocities", "energy"):
+                if item not in self._includes:
+                    self._includes.append(item)
 
     def _add_item(self, lst, item):
         if self._backSteps == 0:
