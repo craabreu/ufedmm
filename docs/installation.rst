@@ -16,6 +16,12 @@ Or:
 
     mamba install -c mdtools ufedmm
 
+Or, with pip:
+
+.. code-block:: bash
+
+    pip install ufedmm
+
 To use UFEDMM in your own Python script or Jupyter notebook, import it as follows:
 
 .. code-block:: python

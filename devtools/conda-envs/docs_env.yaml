@@ -13,7 +13,11 @@ dependencies:
   - scipy
   - cvpack
 
-    # Docs depends
+    # Testing
+  - pytest
+  - pytest-cov
+
+    # Docs building
   - sphinx
   - sphinxcontrib-bibtex
   - sphinx-copybutton

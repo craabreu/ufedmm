@@ -1,5 +1,0 @@
-conda:
-    file: devtools/conda-envs/docs_env.yaml
-
-python:
-   setup_py_install: true

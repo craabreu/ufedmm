@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "versioningit"]
+requires = ["setuptools>=77", "versioningit"]
 build-backend = "setuptools.build_meta"
 
 # Self-descriptive entries which should always be present
@@ -10,33 +10,38 @@ description = "Unified Free Energy Dynamics with OpenMM"
 dynamic = ["version"]
 readme = "README.md"
 authors = [
-    { name = "Charlles Abreu", email = "abreu@eq.ufrj.br" }
+    { name = "Charlles Abreu", email = "craabreu@gmail.com" }
 ]
+license = "MIT"
+license-files = ["LICENSE.md"]
 # See https://pypi.org/classifiers/
 classifiers = [
-    "License :: Other/Proprietary License",
-    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 # Declare any run-time dependencies that should be installed with the package.
 dependencies = [
-#    "importlib-resources;python_version<'3.10'",
+    "cvpack",
     "numpy",
-    "scipy",
+    "openmm>=8.4",
     "pandas",
-#    "openmm",  #  This pypi package is not actually OpenMM
     "pyyaml",
-#    "cvpack",  # There is no cvpack package on pypi
+    "scipy",
 ]
 
 [project.urls]
-"Source" = "https://github.com/craabreu/ufedmm/"
-"Documentation" = "https://craabreu.github.io/ufedmm/"
+"Source" = "https://github.com/craabreu/ufedmm"
+"Documentation" = "https://craabreu.github.io/ufedmm/latest"
+"Changelog" = "https://github.com/craabreu/ufedmm/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 test = [
-  "pytest>=6.1.2",
-  "pytest-runner"
+  "pytest>=7.0",
+  "pytest-cov",
 ]
 
 [tool.setuptools]
@@ -67,8 +72,7 @@ where = ["."]
 # Ref https://setuptools.pypa.io/en/latest/userguide/datafiles.html#package-data
 [tool.setuptools.package-data]
 ufedmm = [
-#    "py.typed",
-    "data/alanine-dipeptide.pdb",
+    "data/alanine-dipeptide.pdb"
 ]
 
 [tool.versioningit]
@@ -89,14 +93,38 @@ default-tag = "0.0.0"
 [tool.versioningit.write]
 file = "ufedmm/_version.py"
 
-[tool.isort]
-profile = "black"
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+extend-exclude = ["_version.py", "*.ipynb"]
 
-[tool.flake8]
-max-line-length = 88
-ignore = "E203,W503"
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "PL",   # pylint
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+]
+ignore = ["B905"]
+
+[tool.ruff.lint.pylint]
+max-locals = 15
+max-args = 6  # Allow up to 6 arguments in function definitions
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # Allow unused imports in __init__.py
+"**/tests/**/*.py" = ["PLR2004"]  # Allow magic values in tests
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
 
 [tool.pytest.ini_options]
 minversion = "7.0"
-addopts = "-v -ra --doctest-modules --cov=ufedmm --cov-report=term --cov-report=html"
+addopts = "-v -ra --doctest-modules --cov=ufedmm --cov-report=term --cov-report=html --cov-report=xml"
 testpaths = ["ufedmm"]

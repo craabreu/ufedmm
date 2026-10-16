@@ -3,7 +3,7 @@
    :platform: Unix, Windows
    :synopsis: Unified Free Energy Dynamics Test Model Systems
 
-.. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
+.. moduleauthor:: Charlles Abreu <craabreu@gmail.com>
 
 .. _System:
     http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html
@@ -20,7 +20,7 @@ from openmm import app, unit
 import ufedmm
 
 
-class AlanineDipeptideModel(object):
+class AlanineDipeptideModel:
     """A system consisting of a single alanine-dipeptide molecule in a vacuum or
     solvated in explicit water.
 

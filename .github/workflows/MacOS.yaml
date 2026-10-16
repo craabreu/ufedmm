@@ -21,12 +21,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macOS-latest]
-        python-version: [3.9, "3.11"]
-        openmm-version: ["8.1"]
+        include:
+          - os: macos-latest
+            python-version: "3.13"
+            openmm-version: "8.6"
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Additional info about the build
         shell: bash
@@ -35,13 +36,11 @@ jobs:
           df -h
           ulimit -a
 
-      # More info on options: https://github.com/marketplace/actions/provision-with-micromamba
-      - uses: mamba-org/provision-with-micromamba@main
+      - uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: devtools/conda-envs/test_env.yaml
           environment-name: test
-          channels: conda-forge
-          extra-specs: |
+          create-args: >-
             python=${{ matrix.python-version }}
             openmm=${{ matrix.openmm-version }}
 
@@ -56,4 +55,4 @@ jobs:
         # conda setup requires this special shell
         shell: bash -l {0}
         run: |
-          pytest -v --cov=ufedmm --cov-report=xml --color=yes --doctest-modules ufedmm/
+          pytest
