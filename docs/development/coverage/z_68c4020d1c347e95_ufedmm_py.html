@@ -65,7 +65,7 @@
             <a id="nextFileLink" class="nav" href="index.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.16.2">coverage.py v7.16.2</a>,
-            created at 2026-10-16 18:33 +0000
+            created at 2026-10-16 18:37 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -734,9 +734,9 @@
     <p class="run"><span class="n"><a id="t652" href="#t652">652</a></span><span class="t">                    <span class="nam">exponents</span><span class="op">[</span><span class="num">0</span><span class="op">]</span> <span class="op">=</span> <span class="nam">exponents</span><span class="op">[</span><span class="op">-</span><span class="num">1</span><span class="op">]</span> <span class="op">=</span> <span class="num">0.5</span> <span class="op">*</span> <span class="op">(</span><span class="nam">exponents</span><span class="op">[</span><span class="num">0</span><span class="op">]</span> <span class="op">+</span> <span class="nam">exponents</span><span class="op">[</span><span class="op">-</span><span class="num">1</span><span class="op">]</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t653" href="#t653">653</a></span><span class="t">                <span class="key">else</span><span class="op">:</span>  <span class="com"># Gauss</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t654" href="#t654">654</a></span><span class="t">                    <span class="nam">exponents</span> <span class="op">=</span> <span class="op">-</span><span class="num">0.5</span> <span class="op">*</span> <span class="nam">dist</span> <span class="op">*</span> <span class="nam">dist</span> <span class="op">/</span> <span class="nam">v</span><span class="op">.</span><span class="nam">_scaled_variance</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t655" href="#t655">655</a></span><span class="t">                <span class="nam">hills</span><span class="op">.</span><span class="nam">append</span><span class="op">(</span><span class="nam">self</span><span class="op">.</span><span class="nam">height</span> <span class="op">*</span> <span class="nam">np</span><span class="op">.</span><span class="nam">exp</span><span class="op">(</span><span class="nam">exponents</span><span class="op">)</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t655" href="#t655">655</a></span><span class="t">                <span class="nam">hills</span><span class="op">.</span><span class="nam">append</span><span class="op">(</span><span class="nam">np</span><span class="op">.</span><span class="nam">exp</span><span class="op">(</span><span class="nam">exponents</span><span class="op">)</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t656" href="#t656">656</a></span><span class="t">            <span class="nam">ndim</span> <span class="op">=</span> <span class="nam">len</span><span class="op">(</span><span class="nam">self</span><span class="op">.</span><span class="nam">bias_variables</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t657" href="#t657">657</a></span><span class="t">            <span class="nam">bias</span> <span class="op">=</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t657" href="#t657">657</a></span><span class="t">            <span class="nam">bias</span> <span class="op">=</span> <span class="nam">self</span><span class="op">.</span><span class="nam">height</span> <span class="op">*</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t658" href="#t658">658</a></span><span class="t">                <span class="nam">hills</span><span class="op">[</span><span class="num">0</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t659" href="#t659">659</a></span><span class="t">                <span class="key">if</span> <span class="nam">ndim</span> <span class="op">==</span> <span class="num">1</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t660" href="#t660">660</a></span><span class="t">                <span class="key">else</span> <span class="nam">functools</span><span class="op">.</span><span class="nam">reduce</span><span class="op">(</span><span class="nam">np</span><span class="op">.</span><span class="nam">multiply</span><span class="op">.</span><span class="nam">outer</span><span class="op">,</span> <span class="nam">reversed</span><span class="op">(</span><span class="nam">hills</span><span class="op">)</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -1492,7 +1492,7 @@
             <a class="nav" href="index.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.16.2">coverage.py v7.16.2</a>,
-            created at 2026-10-16 18:33 +0000
+            created at 2026-10-16 18:37 +0000
         </p>
     </div>
 </footer>
