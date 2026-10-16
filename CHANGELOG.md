@@ -65,3 +65,6 @@
 - `FreeEnergyAnalyzer.metadynamics_bias_free_energy` returns the right function
   when called more than once. From the second call on, it used to ignore all
   variables and return minus the sum of the hill heights everywhere.
+- Well-tempered metadynamics works without a grid, that is, with
+  `enforce_gridless=True` or with more than three bias variables. It used to fail
+  when depositing the first hill.

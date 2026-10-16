@@ -590,7 +590,7 @@ class _Metadynamics(PeriodicTask):
                 )
             else:  # Gauss
                 exponents.append(f"({-0.5 / v.sigma**2})*({v.id}-{center})^2")
-        expression = f"height*exp({'+'.join(exponents)})"
+        expression = f"metad_bias_scale*height*exp({'+'.join(exponents)})"
         for i, v in enumerate(self.bias_variables):
             expression += f";{v.id}={v._get_energy_function(i + 1)}"
         force = openmm.CustomCompoundBondForce(num_bias_variables, expression)
@@ -598,6 +598,8 @@ class _Metadynamics(PeriodicTask):
         for center in centers:
             force.addPerBondParameter(center)
         force.addGlobalParameter("Lx", 0)
+        force.addGlobalParameter("metad_bias_scale", 1)
+        force.addEnergyParameterDerivative("metad_bias_scale")
         return force
 
     def _add_buffer(self, simulation):
