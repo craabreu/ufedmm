@@ -29,6 +29,7 @@ class Tee:
         >>> file = tempfile.TemporaryFile(mode='w+t')
         >>> print('test', file=ufedmm.Tee(stdout, file))
         test
+        >>> file.close()
     """
 
     def __init__(self, *files):

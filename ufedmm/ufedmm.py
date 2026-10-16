@@ -984,6 +984,7 @@ class ExtendedSpaceContext(openmm.Context):
         c = openmm.Vec3(*map(_standardized, c))
         if not (a.y == a.z == b.x == b.z == c.x == c.y == 0.0):
             raise ValueError("Only orthorhombic boxes are allowed")
+        scaling = a.x / self.getParameter("Lx")
         self.setParameter("Lx", a.x)
         super().setPeriodicBoxVectors(a, b, c)
         system = self.getSystem()
@@ -992,6 +993,21 @@ class ExtendedSpaceContext(openmm.Context):
         for i, v in enumerate(self.variables):
             system.setParticleMass(ntotal - nvars + i, v._particle_mass(a.x))
         self.reinitialize(preserveState=True)
+        if scaling != 1:
+            # Keep the variables, their velocities, and their kinetic energies, all of
+            # which depend on the x coordinates of the extra particles relative to Lx
+            try:
+                state = openmm.Context.getState(
+                    self, getPositions=True, getVelocities=True
+                )
+            except openmm.OpenMMException:  # positions not set yet
+                return
+            positions = state.getPositions(asNumpy=True)._value
+            velocities = state.getVelocities(asNumpy=True)._value
+            positions[ntotal - nvars :, 0] *= scaling
+            velocities[ntotal - nvars :, 0] *= scaling
+            openmm.Context.setPositions(self, positions)
+            openmm.Context.setVelocities(self, velocities)
 
     def setPositions(self, positions, extended_positions=None):
         """Sets the positions of all particles and extended-space variables in this
@@ -1162,6 +1178,15 @@ class ExtendedSpaceSimulation(app.Simulation):
         box_vectors = topology.getPeriodicBoxVectors()
         if box_vectors is None:
             raise Exception("UFED: system must be confined in a simulation box")
+
+        num_particles, num_atoms = system.getNumParticles(), topology.getNumAtoms()
+        if num_particles != num_atoms:
+            raise ValueError(
+                f"UFED: the system has {num_particles} particles, but the topology has"
+                f" {num_atoms} atoms. An extended-space simulation adds its extra"
+                " particles to the system, so a system cannot be used in more than one"
+                " of them. Create a new system for each simulation."
+            )
 
         self.topology = topology
         self.system = system

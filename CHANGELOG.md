@@ -86,6 +86,13 @@
   `IndexError`, or with a shuffled index, pair forces with the wrong samples.
 - `ExtendedSpaceContext.setPositions` accepts positions as a NumPy array, such as
   `State.getPositions(asNumpy=True)`.
+- `ExtendedSpaceSimulation` explains that a system cannot be used for more than
+  one extended-space simulation, which adds its extra particles to the system,
+  instead of failing later with OpenMM's "wrong number of positions" error.
+- `ExtendedSpaceContext.setPeriodicBoxVectors` keeps the values and rates of
+  change of the dynamical variables. It rescaled the masses of the extra particles
+  but not their x coordinates and velocities, so changing the box changed every
+  variable.
 - `Tee` closes only the files it opened from file names, not the streams passed to
   it.
 - A step of an `ExtendedSpaceSimulation` that is interrupted, by an exception or

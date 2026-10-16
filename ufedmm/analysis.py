@@ -75,6 +75,14 @@ class FreeEnergyAnalyzer:
         space variables and returns the energy estimated from a Metadynamics bias
         potential reconstructed from the simulation data.
 
+        .. warning::
+            Every row of the data frame is taken as a deposited hill, centered at the
+            reported values of the dynamical variables. The data must therefore be
+            reported at the frequency of hill deposition, starting at its first
+            deposition, as a :class:`~ufedmm.io.StateDataReporter` does when its report
+            interval equals the metadynamics frequency. For well-tempered
+            metadynamics, also report ``hillHeights=True``.
+
         Returns
         -------
             function
