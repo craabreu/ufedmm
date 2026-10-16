@@ -124,8 +124,7 @@ splitting solution.</p></li>
 <li><p><strong>embodied_force_groups</strong> (<em>list</em><em>(</em><em>int</em><em>)</em><em>, </em><em>default=</em><em>[</em><em>]</em>) – A list of indices of force groups. The presence of an index <cite>i</cite> is this list
 means that the contribution of force group <cite>i</cite> is embodied in force group
 <cite>i+1</cite>. Therefore, such contribution must be properly subtracted during the
-integration at time scale <cite>i+1</cite>. This feature requires OpenMM 7.5 or a newer
-version.</p></li>
+integration at time scale <cite>i+1</cite>.</p></li>
 <li><p><strong>unroll_loops</strong> (<em>bool</em><em>, </em><em>default=True</em>) – Whether the integrator loops should be unrolled for improving efficiency.
 Using <code class="docutils literal notranslate"><span class="pre">unroll_loops=False</span></code> can be useful for printing the integrator
 steps.</p></li>

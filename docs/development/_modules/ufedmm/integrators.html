@@ -96,8 +96,6 @@
 <span class="sd">        ...     model.system, 5*unit.angstroms, 8*unit.angstroms, 1</span>
 <span class="sd">        ... )</span>
 <span class="sd">    """</span>
-    <span class="k">if</span> <span class="n">openmm</span><span class="o">.</span><span class="n">__version__</span> <span class="o">&lt;</span> <span class="s2">"7.5"</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">"add_inner_nonbonded_force requires OpenMM version &gt;= 7.5"</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">nonbonded_force</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span>
             <span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">f</span><span class="p">:</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">openmm</span><span class="o">.</span><span class="n">NonbondedForce</span><span class="p">),</span> <span class="n">system</span><span class="o">.</span><span class="n">getForces</span><span class="p">())</span>
@@ -372,8 +370,7 @@
 <span class="sd">            A list of indices of force groups. The presence of an index `i` is this list</span>
 <span class="sd">            means that the contribution of force group `i` is embodied in force group</span>
 <span class="sd">            `i+1`. Therefore, such contribution must be properly subtracted during the</span>
-<span class="sd">            integration at time scale `i+1`. This feature requires OpenMM 7.5 or a newer</span>
-<span class="sd">            version.</span>
+<span class="sd">            integration at time scale `i+1`.</span>
 <span class="sd">        unroll_loops : bool, default=True</span>
 <span class="sd">            Whether the integrator loops should be unrolled for improving efficiency.</span>
 <span class="sd">            Using ``unroll_loops=False`` can be useful for printing the integrator</span>
@@ -463,10 +460,6 @@
                 <span class="n">n</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="sa">f</span><span class="s2">"irespa</span><span class="si">{</span><span class="n">scale</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
             <span class="n">bath_loops</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">"ibath"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">embodied_force_groups</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">openmm</span><span class="o">.</span><span class="n">__version__</span> <span class="o">&lt;</span> <span class="s2">"7.5"</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
-                    <span class="s2">"Use of `embodied_force_groups` option requires OpenMM &gt;= 7.5"</span>
-                <span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">addPerDofVariable</span><span class="p">(</span><span class="s2">"f_emb"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
             <span class="n">integration_groups</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">respa_loops</span><span class="p">)))</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span>
                 <span class="n">embodied_force_groups</span>
