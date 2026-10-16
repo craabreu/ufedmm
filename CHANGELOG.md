@@ -62,3 +62,6 @@
 - `ExtendedSpaceSimulation.saveCheckpoint` and `loadCheckpoint` work with any
   binary file object, such as `io.BytesIO`. With metadynamics, they used to require
   a file on disk. The checkpoint format is unchanged.
+- `FreeEnergyAnalyzer.metadynamics_bias_free_energy` returns the right function
+  when called more than once. From the second call on, it used to ignore all
+  variables and return minus the sum of the hill heights everywhere.
