@@ -1016,9 +1016,17 @@ class ExtendedSpaceContext(openmm.Context):
         """Sets the velocities of all particles in the system to random values chosen
         from a Maxwell-Boltzmann distribution at a given temperature.
 
+        The velocities of the physical particles have no center-of-mass component,
+        satisfy the system constraints, and are scaled so that the instantaneous
+        temperature equals the given one exactly. The number of degrees of freedom
+        is counted as in OpenMM's ``StateDataReporter``. Massless particles get zero
+        velocity.
+
         .. warning ::
-            The velocities of the extended-space variables are set to values consistent
-            with the distribution at its own specified temperature.
+            The extra particles of the extended-space variables move along the x axis
+            only. Their x velocities are drawn from a Maxwell-Boltzmann distribution
+            at each variable's own temperature, and their y and z velocities are set
+            to zero.
 
         Parameters
         ----------
@@ -1031,34 +1039,43 @@ class ExtendedSpaceContext(openmm.Context):
                 A seed for the random number generator.
         """
         temperature = _standardized(temperature)
+        kB = _standardized(unit.MOLAR_GAS_CONSTANT_R)
         system = self.getSystem()
-        Ntotal = system.getNumParticles()
-        Natoms = Ntotal - len(self.variables)
+        num_total = system.getNumParticles()
+        num_atoms = num_total - len(self.variables)
         masses = np.array(
-            [system.getParticleMass(i) / unit.dalton for i in range(Ntotal)]
+            [system.getParticleMass(i) / unit.dalton for i in range(num_total)]
         )
         temperatures = np.array(
-            [temperature] * Natoms + [v.temperature for v in self.variables]
+            [temperature] * num_atoms + [v.temperature for v in self.variables]
         )
-        kboltz = _standardized(unit.MOLAR_GAS_CONSTANT_R)
-        sigmas = np.sqrt(kboltz * temperatures / masses)[:, None]
+        massive = masses > 0
+        sigmas = np.zeros(num_total)
+        sigmas[massive] = np.sqrt(kB * temperatures[massive] / masses[massive])
         random = np.random.RandomState(randomSeed)
-        velocities = sigmas * random.normal(0, 1, (Ntotal, 3))
+        velocities = sigmas[:, None] * random.normal(0, 1, (num_total, 3))
+        velocities[num_atoms:, 1:] = 0
 
-        total_mass = masses.sum()
-        vcm = np.sum(masses[:Natoms, None] * velocities[:Natoms], axis=0) / total_mass
-        velocities[:Natoms] -= vcm
-        num_constraints = system.getNumConstraints()
-        two_ke = np.sum(masses[:Natoms] * np.sum(velocities[:Natoms] ** 2, axis=1))
-        target_two_ke = (3 * Natoms - num_constraints) * kboltz * temperature
-        velocities[:Natoms] *= np.sqrt(target_two_ke / two_ke)
+        atoms = np.arange(num_atoms)[massive[:num_atoms]]
+        atom_masses = masses[atoms, None]
+        velocities[atoms] -= np.sum(atom_masses * velocities[atoms], axis=0) / np.sum(
+            atom_masses
+        )
+        super().setVelocities(velocities)
+        self.applyVelocityConstraints(self.getIntegrator().getConstraintTolerance())
+        state = openmm.Context.getState(self, getVelocities=True)
+        velocities = state.getVelocities(asNumpy=True)._value
 
-        for i, v in enumerate(self.variables, start=Natoms):
-            two_ke = masses[i] * velocities[i][0] ** 2
-            target_two_ke = kboltz * v.temperature
-            velocities[i][0] *= np.sqrt(target_two_ke / two_ke)
-            velocities[i][1:] = 0
-
+        num_constraints = sum(
+            1
+            for k in range(system.getNumConstraints())
+            if any(massive[i] for i in system.getConstraintParameters(k)[:2])
+        )
+        dof = 3 * atoms.size - num_constraints
+        if any(isinstance(f, openmm.CMMotionRemover) for f in system.getForces()):
+            dof -= 3
+        two_ke = np.sum(atom_masses * velocities[atoms] ** 2)
+        velocities[atoms] *= np.sqrt(dof * kB * temperature / two_ke)
         super().setVelocities(velocities)
 
 
