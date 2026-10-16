@@ -211,12 +211,22 @@ class CustomIntegrator(openmm.CustomIntegrator):
         nparticles = len(self.getPerDofVariableByName("kT")) - len(
             extended_space_temperatures
         )
-        temperatures = [system_temperature] * nparticles + extended_space_temperatures
+        # Extra particles only move along x, so their y and z are not thermostatted
         kT = [
-            unit.MOLAR_GAS_CONSTANT_R * T * openmm.Vec3(1, 1, 1) for T in temperatures
+            unit.MOLAR_GAS_CONSTANT_R * system_temperature * openmm.Vec3(1, 1, 1)
+        ] * nparticles + [
+            unit.MOLAR_GAS_CONSTANT_R * T * openmm.Vec3(1, 0, 0)
+            for T in extended_space_temperatures
         ]
         self.setPerDofVariableByName("kT", kT)
         self._up_to_date = True
+
+    def _isotropic_kT(self):
+        """Per-particle kT replicated over x, y and z, for quantities that must not
+        vanish when kT does (such as thermostat masses)."""
+        return [
+            openmm.Vec3(kT.x, kT.x, kT.x) for kT in self.getPerDofVariableByName("kT")
+        ]
 
     def step(self, steps):
         if not self._up_to_date:
@@ -672,7 +682,7 @@ class MiddleMassiveNHCIntegrator(AbstractMiddleRespaIntegrator):
 
     def update_temperatures(self, system_temperature, extended_space_temperatures):
         super().update_temperatures(system_temperature, extended_space_temperatures)
-        Q = [self._tau**2 * kT for kT in self.getPerDofVariableByName("kT")]
+        Q = [self._tau**2 * kT for kT in self._isotropic_kT()]
         self.setPerDofVariableByName("Q", Q)
 
     def _bath(self, fraction):
@@ -756,7 +766,7 @@ class MiddleMassiveGGMTIntegrator(AbstractMiddleRespaIntegrator):
 
     def update_temperatures(self, system_temperature, extended_space_temperatures):
         super().update_temperatures(system_temperature, extended_space_temperatures)
-        kT_vectors = self.getPerDofVariableByName("kT")
+        kT_vectors = self._isotropic_kT()
         kT3_vectors = [openmm.Vec3(kT.x**3, kT.y**3, kT.z**3) for kT in kT_vectors]
         if hasattr(self, "_xs_taus"):
             num_particles = len(kT_vectors) - len(extended_space_temperatures)
@@ -913,6 +923,7 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
         self.addPerDofVariable("invQ", 0)
         self.addPerDofVariable("v_eta", 0)
         self.addPerDofVariable("c", 0)
+        self.addPerDofVariable("kTc", 0)
         self.addGlobalVariable("friction", friction_coefficient)
         self.addGlobalVariable("omega", 1.0 / self._tau)
         self.addGlobalVariable("aa", 0)
@@ -920,14 +931,15 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
 
     def update_temperatures(self, system_temperature, extended_space_temperatures):
         super().update_temperatures(system_temperature, extended_space_temperatures)
-        kT_vectors = self.getPerDofVariableByName("kT")
+        kT_vectors = self._isotropic_kT()
+        self.setPerDofVariableByName("kTc", kT_vectors)
         tauSq = _standardized(self._tau) ** 2
         Q = [tauSq * kT for kT in kT_vectors]
         invQ = [openmm.Vec3(*(1 / x if x > 0.0 else 0.0 for x in q)) for q in Q]
         self.setPerDofVariableByName("invQ", invQ)
 
     def _step_initialization(self):
-        self.addComputePerDof("c", f"sqrt({self._n}*kT/m)")
+        self.addComputePerDof("c", f"sqrt({self._n}*kTc/m)")
         n = np.prod(self._respa_loops) * self._bath_loops
         self.addComputeGlobal("aa", f"exp(-friction*dt/{n})")
         self.addComputeGlobal("bb", "omega*sqrt(1-aa^2)")
@@ -935,9 +947,9 @@ class RegulatedNHLIntegrator(AbstractMiddleRespaIntegrator):
     def _translation(self, fraction):
         n = self._n
         if self._semi_regulated:
-            expression = f"0.5*m*v*c*tanh(v/c); c=sqrt({n}*kT/m)"
+            expression = f"0.5*m*v*c*tanh(v/c); c=sqrt({n}*kTc/m)"
         else:
-            expression = f"{0.5 * (n + 1) / n}*m*(c*tanh(v/c))^2; c=sqrt({n}*kT/m)"
+            expression = f"{0.5 * (n + 1) / n}*m*(c*tanh(v/c))^2; c=sqrt({n}*kTc/m)"
         self.setKineticEnergyExpression(expression)
         self.addComputePerDof("x", f"x + c*tanh(v/c)*{fraction}*dt")
 

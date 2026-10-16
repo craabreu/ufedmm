@@ -775,7 +775,7 @@ class ExtendedSpaceState(openmm.State):
         positions, xvars = self._split(all_positions, asNumpy)
         return (positions, xvars) if extended else positions
 
-    def getVelocities(self, asNumpy=False, extended=False):
+    def getVelocities(self, asNumpy=False, extended=False, split=True):
         """Gets the velocities of all physical particles and optionally also gets the
         velocities of the extra particles associated to the extended- space dynamical
         variables.
@@ -786,6 +786,9 @@ class ExtendedSpaceState(openmm.State):
                 Whether to return Numpy arrays instead of lists of openmm.Vec3.
             extended : bool, default=False
                 Whether to include the velocities of the extra particles.
+            split : bool, default=True
+                Whether to return the velocities of the physical particles and the
+                velocities of the extra particles separately.
 
         Returns
         -------
@@ -803,10 +806,11 @@ class ExtendedSpaceState(openmm.State):
             Exception
                 If velocities were not requested in the ``context.getState()`` call.
         """
-        velocities = super().getVelocities(asNumpy)
-        if not extended:
-            velocities, _ = self._split(velocities, asNumpy)
-        return velocities
+        all_velocities = super().getVelocities(asNumpy)
+        if extended and not split:
+            return all_velocities
+        velocities, vvars = self._split(all_velocities, asNumpy)
+        return (velocities, vvars) if extended else velocities
 
     def getDynamicalVariables(self):
         """Gets the values of the extended-space dynamical variables.
@@ -1012,9 +1016,17 @@ class ExtendedSpaceContext(openmm.Context):
         """Sets the velocities of all particles in the system to random values chosen
         from a Maxwell-Boltzmann distribution at a given temperature.
 
+        The velocities of the physical particles have no center-of-mass component,
+        satisfy the system constraints, and are scaled so that the instantaneous
+        temperature equals the given one exactly. The number of degrees of freedom
+        is counted as in OpenMM's ``StateDataReporter``. Massless particles get zero
+        velocity.
+
         .. warning ::
-            The velocities of the extended-space variables are set to values consistent
-            with the distribution at its own specified temperature.
+            The extra particles of the extended-space variables move along the x axis
+            only. Their x velocities are drawn from a Maxwell-Boltzmann distribution
+            at each variable's own temperature, and their y and z velocities are set
+            to zero.
 
         Parameters
         ----------
@@ -1026,17 +1038,44 @@ class ExtendedSpaceContext(openmm.Context):
             randomSeed : int, default=None
                 A seed for the random number generator.
         """
+        temperature = _standardized(temperature)
+        kB = _standardized(unit.MOLAR_GAS_CONSTANT_R)
         system = self.getSystem()
-        Ntotal = system.getNumParticles()
-        Natoms = Ntotal - len(self.variables)
-        m = np.array([system.getParticleMass(i) / unit.dalton for i in range(Ntotal)])
-        T = np.array(
-            [_standardized(temperature)] * Natoms
-            + [v.temperature for v in self.variables]
+        num_total = system.getNumParticles()
+        num_atoms = num_total - len(self.variables)
+        masses = np.array(
+            [system.getParticleMass(i) / unit.dalton for i in range(num_total)]
         )
-        sigma = np.sqrt(_standardized(unit.MOLAR_GAS_CONSTANT_R) * T / m)
-        random_state = np.random.RandomState(randomSeed)
-        velocities = sigma[:, np.newaxis] * random_state.normal(0, 1, (Ntotal, 3))
+        temperatures = np.array(
+            [temperature] * num_atoms + [v.temperature for v in self.variables]
+        )
+        massive = masses > 0
+        sigmas = np.zeros(num_total)
+        sigmas[massive] = np.sqrt(kB * temperatures[massive] / masses[massive])
+        random = np.random.RandomState(randomSeed)
+        velocities = sigmas[:, None] * random.normal(0, 1, (num_total, 3))
+        velocities[num_atoms:, 1:] = 0
+
+        atoms = np.arange(num_atoms)[massive[:num_atoms]]
+        atom_masses = masses[atoms, None]
+        velocities[atoms] -= np.sum(atom_masses * velocities[atoms], axis=0) / np.sum(
+            atom_masses
+        )
+        super().setVelocities(velocities)
+        self.applyVelocityConstraints(self.getIntegrator().getConstraintTolerance())
+        state = openmm.Context.getState(self, getVelocities=True)
+        velocities = state.getVelocities(asNumpy=True)._value
+
+        num_constraints = sum(
+            1
+            for k in range(system.getNumConstraints())
+            if any(massive[i] for i in system.getConstraintParameters(k)[:2])
+        )
+        dof = 3 * atoms.size - num_constraints
+        if any(isinstance(f, openmm.CMMotionRemover) for f in system.getForces()):
+            dof -= 3
+        two_ke = np.sum(atom_masses * velocities[atoms] ** 2)
+        velocities[atoms] *= np.sqrt(dof * kB * temperature / two_ke)
         super().setVelocities(velocities)
 
 

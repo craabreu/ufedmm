@@ -4,6 +4,9 @@
 
 ### Breaking changes
 - UFEDMM now requires Python 3.10 or newer and OpenMM 8.4 or newer.
+- `ExtendedSpaceState.getVelocities(extended=True)` now returns a tuple with the
+  velocities of the physical particles and those of the dynamical variables, like
+  `getPositions(extended=True)`. Pass `split=False` to get a single list as before.
 
 ### Added
 - UFEDMM is published on PyPI (`pip install ufedmm`) as well as on the `mdtools`
@@ -13,6 +16,13 @@
   Chem. 2023).
 
 ### Changed
+- `ExtendedSpaceContext.setVelocitiesToTemperature` removes the center-of-mass
+  velocity of the physical particles, applies the constraints, and scales the
+  velocities to the exact target temperature. Massless particles get zero velocity.
+  The extra particles only get velocities along x, drawn at each variable's own
+  temperature.
+- The UFEDMM integrators no longer thermostat the y and z directions of the extra
+  particles, which only move along x.
 - The documentation moved to https://craabreu.github.io/ufedmm/latest, with a
   separate copy for each release. Old deep links into the documentation no
   longer resolve.
