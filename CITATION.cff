@@ -11,7 +11,7 @@ authors:
     given-names: Charlles
     orcid: "https://orcid.org/0000-0002-6956-4045"
 version: 0.4.0
-date-released: 2026-10-16
+date-released: 2026-10-17
 license: MIT
 repository-code: "https://github.com/craabreu/ufedmm"
 url: "https://craabreu.github.io/ufedmm/latest"
