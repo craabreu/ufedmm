@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>ExtendedSpaceSimulation &#8212; UFEDMM v0.4.0  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=572d9513" />
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=ccdb6887"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="ExtendedSpaceState" href="ExtendedSpaceState.html" />
+    <link rel="prev" title="ExtendedSpaceContext" href="ExtendedSpaceContext.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="extendedspacesimulation">
+<h1>ExtendedSpaceSimulation<a class="headerlink" href="#extendedspacesimulation" title="Link to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="ufedmm.ExtendedSpaceSimulation">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">ufedmm.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceSimulation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">topology</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">system</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">integrator</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">platform</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">platformProperties</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceSimulation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ExtendedSpaceSimulation" title="Link to this definition">¶</a></dt>
+<dd><p>A simulation involving extended phase-space variables.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>variables</strong> (<em>list</em><em> of </em><a class="reference internal" href="DynamicalVariable.html#ufedmm.DynamicalVariable" title="ufedmm.DynamicalVariable"><em>DynamicalVariable</em></a>) – The dynamical variables to be added to the system’s phase space.</p></li>
+<li><p><strong>topology</strong> (<em>openmm.app.Topology</em>) – A Topology describing the system to be simulated.</p></li>
+<li><p><strong>system</strong> (<em>openmm.System</em>) – The <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html">openmm.System</a> object to be simulated.</p></li>
+<li><p><strong>integrator</strong> (<em>openmm.Integrator</em>) – The OpenMM Integrator to use for simulating the system dynamics.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>platform</strong> (<em>openmm.Platform</em><em>, </em><em>default=None</em>) – If not None, the <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Platform.html">openmm.Platform</a> to use.</p></li>
+<li><p><strong>platformProperties</strong> (<em>dict</em><em>, </em><em>default=None</em>) – If not None, a set of platform-specific properties to pass to the Context’s
+constructor.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Methods</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.ExtendedSpaceSimulation.add_periodic_task">
+<span class="sig-name descname"><span class="pre">add_periodic_task</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">task</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_group</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceSimulation.add_periodic_task"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ExtendedSpaceSimulation.add_periodic_task" title="Link to this definition">¶</a></dt>
+<dd><p>Adds a task to be executed periodically along this simulation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>task</strong> (<em>PeriodicTask</em>) – A <code class="xref py py-class docutils literal notranslate"><span class="pre">PeriodicTask</span></code> object.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.ExtendedSpaceSimulation.loadCheckpoint">
+<span class="sig-name descname"><span class="pre">loadCheckpoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceSimulation.loadCheckpoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ExtendedSpaceSimulation.loadCheckpoint" title="Link to this definition">¶</a></dt>
+<dd><p>Load a checkpoint file that was created with saveCheckpoint().</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>file</strong> (<em>string</em><em> or </em><em>file</em>) – a File-like object to load the checkpoint from, or alternatively a
+filename</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.ExtendedSpaceSimulation.saveCheckpoint">
+<span class="sig-name descname"><span class="pre">saveCheckpoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceSimulation.saveCheckpoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ExtendedSpaceSimulation.saveCheckpoint" title="Link to this definition">¶</a></dt>
+<dd><p>Save a checkpoint of the simulation to a file.</p>
+<p>The output is a binary file that contains a complete representation of the current state of the Simulation.
+It includes both publicly visible data such as the particle positions and velocities, and also internal data
+such as the states of random number generators.  Reloading the checkpoint will put the Simulation back into
+precisely the same state it had before, so it can be exactly continued.</p>
+<p>A checkpoint file is highly specific to the Simulation it was created from.  It can only be loaded into
+another Simulation that has an identical System, uses the same Platform and OpenMM version, and is running on
+identical hardware.  If you need a more portable way to resume simulations, consider using saveState() instead.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>file</strong> (<em>string</em><em> or </em><em>file</em>) – a File-like object to write the checkpoint to, or alternatively a
+filename</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.ExtendedSpaceSimulation.saveState">
+<span class="sig-name descname"><span class="pre">saveState</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceSimulation.saveState"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ExtendedSpaceSimulation.saveState" title="Link to this definition">¶</a></dt>
+<dd><p>Saves the current state of the simulation to a file, like
+<code class="docutils literal notranslate"><span class="pre">saveState</span></code> in OpenMM’s <code class="docutils literal notranslate"><span class="pre">Simulation</span></code>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>A saved state does not include the state of periodic tasks, such as the
+metadynamics bias. Use <a class="reference internal" href="#ufedmm.ExtendedSpaceSimulation.saveCheckpoint" title="ufedmm.ExtendedSpaceSimulation.saveCheckpoint"><code class="xref py py-meth docutils literal notranslate"><span class="pre">saveCheckpoint()</span></code></a> to save it too.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.ExtendedSpaceSimulation.step">
+<span class="sig-name descname"><span class="pre">step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">steps</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceSimulation.step"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ExtendedSpaceSimulation.step" title="Link to this definition">¶</a></dt>
+<dd><p>Executed a given number of simulation steps.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>steps</strong> (<em>int</em>) – The number of steps to be executed.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">UFEDMM v0.4.0</a></h1>
+
+
+
+
+
+
+
+
+
+
+
+<h3><a href="../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../readme.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../readme.html#installation">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../readme.html#contributing">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html">Usage</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="core.html">Core</a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrators.html">Integrators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="io.html">IO</a></li>
+<li class="toctree-l2"><a class="reference internal" href="analysis.html">Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="testmodels.html">Testmodels</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../cvpack.html">collective variable package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../authors.html">Authors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../glossary.html">Glossary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">Bibliography</a></li>
+</ul>
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2020-2026 C. Abreu.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/api/ExtendedSpaceSimulation.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>ExtendedSpaceContext &#8212; UFEDMM v0.4.0  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=572d9513" />
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=ccdb6887"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="ExtendedSpaceSimulation" href="ExtendedSpaceSimulation.html" />
+    <link rel="prev" title="DynamicalVariable" href="DynamicalVariable.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="extendedspacecontext">
+<h1>ExtendedSpaceContext<a class="headerlink" href="#extendedspacecontext" title="Link to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="ufedmm.ExtendedSpaceContext">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">ufedmm.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">system</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ExtendedSpaceContext" title="Link to this definition">¶</a></dt>
+<dd><p>An extension of the <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html">openmm.Context</a> class.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>variables</strong> (<em>list</em><em>(</em><a class="reference internal" href="DynamicalVariable.html#ufedmm.DynamicalVariable" title="ufedmm.DynamicalVariable"><em>DynamicalVariable</em></a><em>)</em>) – The dynamical variables to be added to the system’s phase space.</p></li>
+<li><p><strong>system</strong> (<em>openmm.System</em>) – The <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html">openmm.System</a> which will be simulated</p></li>
+<li><p><strong>integrator</strong> (<em>openmm.Integrator</em>) – The <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Integrator.html">openmm.Integrator</a> which will be used to simulate the
+<a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html">openmm.System</a>.</p></li>
+<li><p><strong>platform</strong> (<em>openmm.Platform</em>) – The <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Platform.html">openmm.Platform</a> to use for calculations.</p></li>
+<li><p><strong>properties</strong> (<em>dict</em><em>(</em><em>str: str</em><em>)</em>) – A set of values for platform-specific properties. Keys are the property
+names.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Variables<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>variables</strong> (<em>list</em><em>(</em><a class="reference internal" href="DynamicalVariable.html#ufedmm.DynamicalVariable" title="ufedmm.DynamicalVariable"><em>DynamicalVariable</em></a><em>)</em>) – The dynamical variables added to the system’s phase space.</p></li>
+<li><p><strong>driving_forces</strong> (<em>list</em><em>[</em><em>openmm.CustomCVForce</em><em>]</em>) – A list of <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.CustomCVForce.html">openmm.CustomCVForce</a> objects responsible for evaluating the
+potential energy terms which couples the extra dynamical variables to their
+associated collective variables.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ValueError</strong> – If the system has constraints and the integrator is a UFEDMM integrator
+    without RATTLE (<code class="docutils literal notranslate"><span class="pre">num_rattles=0</span></code>), which would ignore them.</p>
+</dd>
+</dl>
+<p class="rubric">Methods</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.ExtendedSpaceContext.getState">
+<span class="sig-name descname"><span class="pre">getState</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceContext.getState"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ExtendedSpaceContext.getState" title="Link to this definition">¶</a></dt>
+<dd><p>Returns a <a class="reference internal" href="ExtendedSpaceState.html#ufedmm.ExtendedSpaceState" title="ufedmm.ExtendedSpaceState"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtendedSpaceState</span></code></a> object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>**kwargs</strong> – See <code class="docutils literal notranslate"><span class="pre">getState</span></code> in <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html">openmm.Context</a>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.ExtendedSpaceContext.setPeriodicBoxVectors">
+<span class="sig-name descname"><span class="pre">setPeriodicBoxVectors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceContext.setPeriodicBoxVectors"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ExtendedSpaceContext.setPeriodicBoxVectors" title="Link to this definition">¶</a></dt>
+<dd><p>Set the vectors defining the axes of the periodic box.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Only orthorhombic boxes are allowed.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>a</strong> (<em>openmm.Vec3</em>) – The vector defining the first edge of the periodic box.</p></li>
+<li><p><strong>b</strong> (<em>openmm.Vec3</em>) – The vector defining the second edge of the periodic box.</p></li>
+<li><p><strong>c</strong> (<em>openmm.Vec3</em>) – The vector defining the third edge of the periodic box.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.ExtendedSpaceContext.setPositions">
+<span class="sig-name descname"><span class="pre">setPositions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">positions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extended_positions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceContext.setPositions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ExtendedSpaceContext.setPositions" title="Link to this definition">¶</a></dt>
+<dd><p>Sets the positions of all particles and extended-space variables in this
+context. If the latter are not provided, then suitable values are automatically
+determined from the particle positions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>positions</strong> (<em>list</em><em> of </em><em>openmm.Vec3</em><em> or </em><em>numpy.ndarray</em><em> or </em><em>unit.Quantity</em>) – The positions of physical particles.</p>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>extended_positions</strong> (<em>list</em><em> of </em><em>float</em><em> or </em><em>unit.Quantity</em>) – The positions of extended-space particles.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.ExtendedSpaceContext.setVelocitiesToTemperature">
+<span class="sig-name descname"><span class="pre">setVelocitiesToTemperature</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">randomSeed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/ufedmm.html#ExtendedSpaceContext.setVelocitiesToTemperature"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.ExtendedSpaceContext.setVelocitiesToTemperature" title="Link to this definition">¶</a></dt>
+<dd><p>Sets the velocities of all particles in the system to random values chosen
+from a Maxwell-Boltzmann distribution at a given temperature.</p>
+<p>The velocities of the physical particles have no center-of-mass component,
+satisfy the system constraints, and are scaled so that the instantaneous
+temperature equals the given one exactly. The number of degrees of freedom
+is counted as in OpenMM’s <code class="docutils literal notranslate"><span class="pre">StateDataReporter</span></code>. Massless particles get zero
+velocity.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The extra particles of the extended-space variables move along the x axis
+only. Their x velocities are drawn from a Maxwell-Boltzmann distribution
+at each variable’s own temperature, and their y and z velocities are set
+to zero.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>temperature</strong> (<em>float</em><em> or </em><em>unit.Quantity</em>) – The temperature of the system.</p>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>randomSeed</strong> (<em>int</em><em>, </em><em>default=None</em>) – A seed for the random number generator.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">UFEDMM v0.4.0</a></h1>
+
+
+
+
+
+
+
+
+
+
+
+<h3><a href="../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../readme.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../readme.html#installation">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../readme.html#contributing">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html">Usage</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="core.html">Core</a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrators.html">Integrators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="io.html">IO</a></li>
+<li class="toctree-l2"><a class="reference internal" href="analysis.html">Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="testmodels.html">Testmodels</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../cvpack.html">collective variable package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../authors.html">Authors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../glossary.html">Glossary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">Bibliography</a></li>
+</ul>
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2020-2026 C. Abreu.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/api/ExtendedSpaceContext.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

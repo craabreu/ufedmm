@@ -1,0 +1,5 @@
+serialize
+=========
+
+.. currentmodule:: ufedmm
+.. autofunction:: serialize

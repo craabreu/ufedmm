@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>MiddleMassiveGGMTIntegrator &#8212; UFEDMM v0.4.0  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=572d9513" />
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=ccdb6887"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="MiddleMassiveNHCIntegrator" href="MiddleMassiveNHCIntegrator.html" />
+    <link rel="prev" title="GeodesicLangevinIntegrator" href="GeodesicLangevinIntegrator.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="middlemassiveggmtintegrator">
+<h1>MiddleMassiveGGMTIntegrator<a class="headerlink" href="#middlemassiveggmtintegrator" title="Link to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="ufedmm.MiddleMassiveGGMTIntegrator">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">ufedmm.</span></span><span class="sig-name descname"><span class="pre">MiddleMassiveGGMTIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_constant</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">step_size</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/integrators.html#MiddleMassiveGGMTIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.MiddleMassiveGGMTIntegrator" title="Link to this definition">¶</a></dt>
+<dd><p>A massive, middle-type Generalized Gaussian Moment Thermostat <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../references.html#id19" title="Yi Liu and Mark E. Tuckerman. Generalized Gaussian moment thermostatting: A new continuous dynamical approach to the canonical ensemble. The Journal of Chemical Physics, 112(4):1685–1700, January 2000. URL: http://aip.scitation.org/doi/10.1063/1.480769 (visited on 2019-06-13), doi:10.1063/1.480769.">5</a>]</span>
+solver with optional multiple time-scale integration via RESPA.</p>
+<p>To enable RESPA, the forces in OpenMM system must be split into distinct force
+groups and the keyword <code class="docutils literal notranslate"><span class="pre">respa_loop</span></code> (see below) must be a list with multiple
+entries.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The velocity update of this solver involves the square root of
+<span class="math notranslate nohighlight">\(1 + 2 \delta t\, m v^2 v_2/3\)</span>, which becomes negative when the
+thermostat variable <span class="math notranslate nohighlight">\(v_2\)</span> is negative and the kinetic energy of a degree
+of freedom is large. Velocities can then become NaN, and this gets more likely
+as the ratio between the step size and the time constant grows. For example,
+one in 250 harmonic degrees of freedom failed after a few thousand steps with
+a 5 fs step size and a 100 fs time constant. The GGMT integrators of
+<a class="reference external" href="https://github.com/craabreu/openxps">OpenXPS</a>, the successor of UFEDMM, use
+a splitting without this singularity.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>temperature</strong> (<em>float</em><em> or </em><em>unit.Quantity</em>) – The temperature.</p></li>
+<li><p><strong>time_constant</strong> (<em>float</em><em> or </em><em>unit.Quantity</em>) – The characteristic time constant.</p></li>
+<li><p><strong>step_size</strong> (<em>float</em><em> or </em><em>unit.Quantity</em>) – The time-step size.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>**kwargs</strong> – All keyword arguments in <a class="reference internal" href="AbstractMiddleRespaIntegrator.html#ufedmm.AbstractMiddleRespaIntegrator" title="ufedmm.AbstractMiddleRespaIntegrator"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractMiddleRespaIntegrator</span></code></a>, except
+<code class="docutils literal notranslate"><span class="pre">num_rattles</span></code>.</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">ufedmm</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">temp</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="n">dt</span> <span class="o">=</span> <span class="mi">300</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">,</span> <span class="mi">10</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">femtoseconds</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">femtoseconds</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span> <span class="o">=</span> <span class="n">ufedmm</span><span class="o">.</span><span class="n">MiddleMassiveGGMTIntegrator</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="n">dt</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">integrator</span><span class="p">)</span>
+<span class="go">Per-dof variables:</span>
+<span class="go">  kT, Q1, Q2, v1, v2</span>
+<span class="go">Computation steps:</span>
+<span class="go">   0: allow forces to update the context state</span>
+<span class="go">   1: v &lt;- v + 0.5*dt*f/m</span>
+<span class="go">   2: x &lt;- x + 0.5*dt*v</span>
+<span class="go">   3: constrain positions</span>
+<span class="go">   4: v1 &lt;- v1 + 0.5*dt*(m*v^2 - kT)/Q1</span>
+<span class="go">   5: v2 &lt;- v2 + 0.5*dt*((m*v^2)^2/3 - kT^2)/Q2</span>
+<span class="go">   6: v &lt;- v*exp(-1.0*dt*(v1 + kT*v2))/sqrt(1 + 2.0*dt*m*v^2*v2/3)</span>
+<span class="go">   7: v1 &lt;- v1 + 0.5*dt*(m*v^2 - kT)/Q1</span>
+<span class="go">   8: v2 &lt;- v2 + 0.5*dt*((m*v^2)^2/3 - kT^2)/Q2</span>
+<span class="go">   9: x &lt;- x + 0.5*dt*v</span>
+<span class="go">  10: constrain positions</span>
+<span class="go">  11: v &lt;- v + 0.5*dt*f/m</span>
+</pre></div>
+</div>
+<p class="rubric">Methods</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.MiddleMassiveGGMTIntegrator.set_extended_space_time_constants">
+<span class="sig-name descname"><span class="pre">set_extended_space_time_constants</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">time_constants</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/integrators.html#MiddleMassiveGGMTIntegrator.set_extended_space_time_constants"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.MiddleMassiveGGMTIntegrator.set_extended_space_time_constants" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.MiddleMassiveGGMTIntegrator.update_temperatures">
+<span class="sig-name descname"><span class="pre">update_temperatures</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">system_temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extended_space_temperatures</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/integrators.html#MiddleMassiveGGMTIntegrator.update_temperatures"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.MiddleMassiveGGMTIntegrator.update_temperatures" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">UFEDMM v0.4.0</a></h1>
+
+
+
+
+
+
+
+
+
+
+
+<h3><a href="../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../readme.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../readme.html#installation">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../readme.html#contributing">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html">Usage</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="core.html">Core</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="integrators.html">Integrators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="io.html">IO</a></li>
+<li class="toctree-l2"><a class="reference internal" href="analysis.html">Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="testmodels.html">Testmodels</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../cvpack.html">collective variable package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../authors.html">Authors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../glossary.html">Glossary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">Bibliography</a></li>
+</ul>
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2020-2026 C. Abreu.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/api/MiddleMassiveGGMTIntegrator.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

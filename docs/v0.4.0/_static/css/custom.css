@@ -1,0 +1,25 @@
+/* Fix navbar to top */
+@media screen and (min-width: 875px) {
+    .sphinxsidebar {
+        position: fixed;
+        height: 100vh;
+        overflow-y: hidden;
+        top: 0;
+        float: unset !important;
+        margin-left: 0 !important;
+    }
+
+    .sphinxsidebarwrapper {
+        height: calc(100% - 60px);
+        overflow-y: auto;
+        padding-top: 30px !important;
+        padding-bottom: 30px !important;
+        /* Hide scrollbar */
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+    }
+    /* Hide scrollbar */
+    .sphinxsidebarwrapper::-webkit-scrollbar {
+        display: none
+    }
+}

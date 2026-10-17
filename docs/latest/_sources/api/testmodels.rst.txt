@@ -1,0 +1,11 @@
+Testmodels
+==========
+
+.. toctree::
+    :titlesonly:
+
+    AlanineDipeptideModel
+
+.. testsetup::
+
+    from ufedmm import *

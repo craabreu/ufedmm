@@ -1,0 +1,12 @@
+Analysis
+========
+
+.. toctree::
+    :titlesonly:
+
+    Analyzer
+    FreeEnergyAnalyzer
+
+.. testsetup::
+
+    from ufedmm import *

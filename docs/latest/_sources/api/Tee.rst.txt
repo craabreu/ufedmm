@@ -1,0 +1,11 @@
+Tee
+===
+
+.. currentmodule:: ufedmm
+.. autoclass:: Tee
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: flush
+    .. automethod:: write

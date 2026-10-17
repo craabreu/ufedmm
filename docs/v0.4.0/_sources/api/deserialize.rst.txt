@@ -1,0 +1,5 @@
+deserialize
+===========
+
+.. currentmodule:: ufedmm
+.. autofunction:: deserialize

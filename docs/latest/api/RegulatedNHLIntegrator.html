@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>RegulatedNHLIntegrator &#8212; UFEDMM v0.4.0  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=572d9513" />
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=ccdb6887"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="add_inner_nonbonded_force" href="add_inner_nonbonded_force.html" />
+    <link rel="prev" title="MiddleMassiveNHCIntegrator" href="MiddleMassiveNHCIntegrator.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="regulatednhlintegrator">
+<h1>RegulatedNHLIntegrator<a class="headerlink" href="#regulatednhlintegrator" title="Link to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="ufedmm.RegulatedNHLIntegrator">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">ufedmm.</span></span><span class="sig-name descname"><span class="pre">RegulatedNHLIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_constant</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">friction_coefficient</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">step_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">regulation_parameter</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">semi_regulated</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">split_ornstein_uhlenbeck</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/integrators.html#RegulatedNHLIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.RegulatedNHLIntegrator" title="Link to this definition">¶</a></dt>
+<dd><p>A regulated version of the massive Nose-Hoover-Langevin
+<span class="bibtex-citation" id="id1">[<a class="reference internal" href="../references.html#id23" title="Alex A. Samoletov, Carl P. Dettmann, and Mark A. J. Chaplain. Thermostats for \textquotedblleft slow\textquotedblright  configurational modes. Journal of Statistical Physics, 128(6):1321–1336, jul 2007. doi:10.1007/s10955-007-9365-2.">7</a>, <a class="reference internal" href="../references.html#id24" title="Ben Leimkuhler, Emad Noorizadeh, and Florian Theil. A gentle stochastic thermostat for molecular dynamics. Journal of Statistical Physics, 135(2):261–277, apr 2009. doi:10.1007/s10955-009-9734-0.">8</a>]</span> method. Regulation means that the system
+Hamiltonian is modified so that velocities remain below a temperature-dependent
+limit. This is closely related to the SIN(R) method <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../references.html#id8" title="Benedict Leimkuhler and Charles Matthews. Robust and efficient configurational molecular sampling via Langevin dynamics. The Journal of Chemical Physics, 138(17):174102, May 2013. URL: http://aip.scitation.org/doi/10.1063/1.4802990 (visited on 2018-11-16), doi:10.1063/1.4802990.">9</a>]</span> and
+allows multiple time-scale integration with very large outer time steps, without
+resonance.</p>
+<p>The following <a class="reference internal" href="../glossary.html#term-SDE"><span class="xref std std-term">SDE</span></a> system is solved for every degree of freedom in the
+system:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}&amp; dr_i = v_i dt \\
+&amp; dp_i = F_i dt - v_{\eta_i} m_i v_i dt \\
+&amp; dv_{\eta_i} = \frac{1}{Q}\left(\frac{n+1}{n} m_i v_i^2 - k_B T\right) dt
+        - \gamma v_{\eta_i} dt + \sqrt{\frac{2\gamma k_B T}{Q}} dW_i,\end{split}\]</div>
+<p>where:</p>
+<div class="math notranslate nohighlight">
+\[v_i = c_i \tanh\left(\frac{p_i}{m_i c_i}\right).\]</div>
+<p>Here, <span class="math notranslate nohighlight">\(n\)</span> is the regulation parameter and <span class="math notranslate nohighlight">\(c_i\)</span> is the maximum speed for
+degree of freedom <cite>i</cite>, given by <span class="math notranslate nohighlight">\(c_i = \sqrt{\frac{n k T}{m_i}}\)</span>. The
+inertial parameter <span class="math notranslate nohighlight">\(Q\)</span> is defined as <span class="math notranslate nohighlight">\(Q = n k_B T \tau^2\)</span>, with
+<span class="math notranslate nohighlight">\(\tau\)</span> being a relaxation time <span class="bibtex-citation" id="id3">[<a class="reference internal" href="../references.html#id7" title="M. Tuckerman, B. J. Berne, and G. J. Martyna. Reversible multiple time scale molecular dynamics. The Journal of Chemical Physics, 97(3):1990–2001, August 1992. URL: http://aip.scitation.org/doi/10.1063/1.463137 (visited on 2018-11-14), doi:10.1063/1.463137.">10</a>]</span>. An approximate
+solution is obtained by applying the Trotter-Suzuki splitting formula:</p>
+<div class="math notranslate nohighlight">
+\[e^{\Delta t\mathcal{L}} =
+e^{\frac{\Delta t}{2}\mathcal{L}^1_p}
+\left[e^{\frac{\delta t}{2}\mathcal{L}^0_p}
+e^{\frac{\delta t}{2}\mathcal{L}_r}
+e^{\delta t \mathcal{L}_\mathrm{bath}}
+e^{\frac{\delta t}{2}\mathcal{L}_r}
+e^{\frac{\delta t}{2}\mathcal{L}^0_p}\right]^m
+e^{\frac{\Delta t}{2}\mathcal{L}^1_p}\]</div>
+<p>where <span class="math notranslate nohighlight">\(\delta t = \frac{\Delta t}{m}\)</span>. Each exponential operator above is
+the solution of a differential equation.</p>
+<p>The exact solution for the physical-system part is:</p>
+<div class="math notranslate nohighlight">
+\[r_i(t) = r_i^0 + c_i \mathrm{tanh}\left(\frac{p_i}{m c_i}\right) t\]</div>
+<div class="math notranslate nohighlight">
+\[p_i(t) = p_i^0 + F_i t\]</div>
+<p>The bath propagator is further split as:</p>
+<div class="math notranslate nohighlight">
+\[e^{\delta t \mathcal{L}_\mathrm{bath}} =
+e^{\frac{\delta t}{2m}\mathcal{L}_B}
+e^{\frac{\delta t}{2m}\mathcal{L}_S}
+e^{\frac{\delta t}{m}\mathcal{L}_O}
+e^{\frac{\delta t}{2m}\mathcal{L}_S}
+e^{\frac{\delta t}{2m}\mathcal{L}_B}\]</div>
+<p>Part ‘B’ is a boost, whose solution is:</p>
+<div class="math notranslate nohighlight">
+\[v_{\eta_i}(t) = v_{\eta_i}^0 +
+                 \frac{1}{Q}\left(\frac{n+1}{n} m_i v_i^2 - k_B T\right) t\]</div>
+<p>Part ‘S’ is a scaling, whose solution is:</p>
+<div class="math notranslate nohighlight">
+\[p_i(t) = m_i c_i \mathrm{arcsinh}\left[
+            \sinh\left(\frac{p_i^0}{m_i c_i}\right) e^{- v_{\eta_i} t}
+         \right]\]</div>
+<p>Part ‘O’ is an Ornstein–Uhlenbeck process, whose solution is:</p>
+<div class="math notranslate nohighlight">
+\[v_{\eta_i}(t) = v_{\eta_i}^0 e^{-\gamma t}
+           + \sqrt{\frac{k_B T}{Q}(1-e^{-2\gamma t})} R_N\]</div>
+<p>where <span class="math notranslate nohighlight">\(R_N\)</span> is a normally distributed random number.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>step_size</strong> (<em>float</em><em> or </em><em>unit.Quantity</em>) – The outer step size with which to integrate the equations of motion.</p></li>
+<li><p><strong>loops</strong> (<em>int</em>) – The number of internal substeps at each time step.</p></li>
+<li><p><strong>temperature</strong> (<em>unit.Quantity</em>) – The temperature of the heat bath.</p></li>
+<li><p><strong>time_scale</strong> (<em>unit.Quantity</em><em> (</em><em>time</em><em>)</em>) – The relaxation time (<span class="math notranslate nohighlight">\(\tau\)</span>) of the Nose-Hoover thermostat.</p></li>
+<li><p><strong>friction_coefficient</strong> (<em>unit.Quantity</em><em> (</em><em>1/time</em><em>)</em>) – The friction coefficient (<span class="math notranslate nohighlight">\(\gamma\)</span>) of the Langevin thermostat.</p></li>
+<li><p><strong>regulation_parameter</strong> (<em>int</em><em> or </em><em>float</em>) – The regulation parameter n.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>semi_regulated</strong> (<em>bool</em><em>, </em><em>default=True</em>) – Whether to use the semi-regulated NHL version of the method instead of its
+fully-regulated version.</p></li>
+<li><p><strong>split_ornstein_uhlenbeck</strong> (<em>bool</em><em>, </em><em>default=True</em>) – Whether to split the drifted Ornstein-Uhlenbeck operator.</p></li>
+<li><p><strong>**kwargs</strong> – All keyword arguments in <a class="reference internal" href="AbstractMiddleRespaIntegrator.html#ufedmm.AbstractMiddleRespaIntegrator" title="ufedmm.AbstractMiddleRespaIntegrator"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractMiddleRespaIntegrator</span></code></a>, except
+<code class="docutils literal notranslate"><span class="pre">num_rattles</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Methods</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="ufedmm.RegulatedNHLIntegrator.update_temperatures">
+<span class="sig-name descname"><span class="pre">update_temperatures</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">system_temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extended_space_temperatures</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/integrators.html#RegulatedNHLIntegrator.update_temperatures"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.RegulatedNHLIntegrator.update_temperatures" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">UFEDMM v0.4.0</a></h1>
+
+
+
+
+
+
+
+
+
+
+
+<h3><a href="../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../readme.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../readme.html#installation">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../readme.html#contributing">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html">Usage</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="core.html">Core</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="integrators.html">Integrators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="io.html">IO</a></li>
+<li class="toctree-l2"><a class="reference internal" href="analysis.html">Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="testmodels.html">Testmodels</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../cvpack.html">collective variable package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../authors.html">Authors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../glossary.html">Glossary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">Bibliography</a></li>
+</ul>
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2020-2026 C. Abreu.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/api/RegulatedNHLIntegrator.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

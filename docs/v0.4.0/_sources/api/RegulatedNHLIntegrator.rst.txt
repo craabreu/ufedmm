@@ -1,0 +1,10 @@
+RegulatedNHLIntegrator
+======================
+
+.. currentmodule:: ufedmm
+.. autoclass:: RegulatedNHLIntegrator
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: update_temperatures

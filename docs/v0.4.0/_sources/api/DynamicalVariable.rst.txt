@@ -1,0 +1,10 @@
+DynamicalVariable
+=================
+
+.. currentmodule:: ufedmm
+.. autoclass:: DynamicalVariable
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: evaluate

@@ -1,0 +1,12 @@
+API Reference
+=============
+
+.. toctree::
+    :maxdepth: 2
+    :titlesonly:
+
+    core.rst
+    integrators.rst
+    io.rst
+    analysis.rst
+    testmodels.rst

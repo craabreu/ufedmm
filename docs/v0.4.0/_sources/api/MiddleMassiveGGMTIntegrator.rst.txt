@@ -1,0 +1,11 @@
+MiddleMassiveGGMTIntegrator
+===========================
+
+.. currentmodule:: ufedmm
+.. autoclass:: MiddleMassiveGGMTIntegrator
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: set_extended_space_time_constants
+    .. automethod:: update_temperatures

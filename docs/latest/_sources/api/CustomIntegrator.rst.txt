@@ -1,0 +1,11 @@
+CustomIntegrator
+================
+
+.. currentmodule:: ufedmm
+.. autoclass:: CustomIntegrator
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: step
+    .. automethod:: update_temperatures

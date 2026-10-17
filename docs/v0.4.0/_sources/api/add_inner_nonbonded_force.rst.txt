@@ -1,0 +1,5 @@
+add_inner_nonbonded_force
+=========================
+
+.. currentmodule:: ufedmm
+.. autofunction:: add_inner_nonbonded_force

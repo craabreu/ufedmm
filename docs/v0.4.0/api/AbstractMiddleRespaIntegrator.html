@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>AbstractMiddleRespaIntegrator &#8212; UFEDMM v0.4.0  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=572d9513" />
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=ccdb6887"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="CustomIntegrator" href="CustomIntegrator.html" />
+    <link rel="prev" title="Integrators" href="integrators.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="abstractmiddlerespaintegrator">
+<h1>AbstractMiddleRespaIntegrator<a class="headerlink" href="#abstractmiddlerespaintegrator" title="Link to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="ufedmm.AbstractMiddleRespaIntegrator">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">ufedmm.</span></span><span class="sig-name descname"><span class="pre">AbstractMiddleRespaIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">step_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_rattles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scheme</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'VV-Middle'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">respa_loops</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bath_loops</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">intertwine</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">embodied_force_groups</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unroll_loops</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ufedmm/integrators.html#AbstractMiddleRespaIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ufedmm.AbstractMiddleRespaIntegrator" title="Link to this definition">¶</a></dt>
+<dd><p>An abstract class for middle-type, multiple time-scale integrators.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This class is meant for inheritance only and does not actually include
+thermostatting. Concrete subclasses are available, such as
+<a class="reference internal" href="MiddleMassiveNHCIntegrator.html#ufedmm.MiddleMassiveNHCIntegrator" title="ufedmm.MiddleMassiveNHCIntegrator"><code class="xref py py-class docutils literal notranslate"><span class="pre">MiddleMassiveNHCIntegrator</span></code></a> and <a class="reference internal" href="GeodesicLangevinIntegrator.html#ufedmm.GeodesicLangevinIntegrator" title="ufedmm.GeodesicLangevinIntegrator"><code class="xref py py-class docutils literal notranslate"><span class="pre">GeodesicLangevinIntegrator</span></code></a>,
+for instance.</p>
+</div>
+<p>Child classes will differ by the thermostat algorithm, which must be implemented
+by overriding the <cite>_bath</cite> method (see the example below).
+Temperature is treated as a per-dof parameter so as to allow adiabatic simulations.</p>
+<p>The following <a class="reference internal" href="../glossary.html#term-ODE"><span class="xref std std-term">ODE</span></a> system is solved for every degree of freedom in the
+system, with possibly <span class="math notranslate nohighlight">\(n_c\)</span> holonomic constraints and with forces possibly
+split into <span class="math notranslate nohighlight">\(m\)</span> parts according to their characteristic time scales:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}&amp; \dot{r}_i = v_i \\
+&amp; \dot{v}_i = \frac{\sum_{k=1}^m F_i^{[k]}}{m_i}
+             + \sum_{k=1}^{n_c} \lambda_k \nabla_{r_i} \sigma_k
+             + \mathrm{bath}(T_i, v_i) \\
+&amp; \sigma_k(\mathbf{r}) = 0\end{split}\]</div>
+<p>An approximate solution is obtained by applying the Trotter-Suzuki splitting
+formula. In the particular case of two time scales, the default splitting scheme
+goes as follows:</p>
+<div class="math notranslate nohighlight">
+\[e^{\Delta t\mathcal{L}} =
+    e^{\frac{\Delta t}{2}\mathcal{L}^{[1]}_v}
+    \left[
+        e^{\frac{\Delta t}{2 n_0}\mathcal{L}^{[0]}_v}
+        \left(
+            e^{\frac{\Delta t}{2 n_0 n_b}\mathcal{L}_r}
+            e^{\frac{\Delta t}{n_0 n_b}\mathcal{L}_\mathrm{bath}}
+            e^{\frac{\Delta t}{2 n_0 n_b}\mathcal{L}_r}
+        \right)^{n_b}
+        e^{\frac{\Delta t}{2 n_0}\mathcal{L}^{[0]}_v}
+    \right]^{n_0}
+    e^{\frac{\Delta t}{2}\mathcal{L}^{[1]}_v}\]</div>
+<p>Each exponential operator is the solution of a particular subsystem of equations.
+If <span class="math notranslate nohighlight">\(\mathrm{bath}(T_i, v_i) = 0\)</span>, the scheme above is time-reversible,
+measure-preserving, and symplectic. It is referred to as the <code class="docutils literal notranslate"><span class="pre">VV-Middle</span></code> scheme
+<span class="bibtex-citation" id="id1">[<a class="reference internal" href="../references.html#id28" title="Zhijun Zhang, Xinzijian Liu, Kangyu Yan, Mark E. Tuckerman, and Jian Liu. Unified efficient thermostat scheme for the canonical ensemble with holonomic or isokinetic constraints via molecular dynamics. The Journal of Physical Chemistry A, 123(28):6056–6079, may 2019. doi:10.1021/acs.jpca.9b02771.">3</a>]</span>, where VV stands for Velocity Verlet. An alternative approach
+is also available, which is:</p>
+<div class="math notranslate nohighlight">
+\[e^{\Delta t\mathcal{L}} =
+    \left[
+        \left(
+            e^{\frac{\Delta t}{2 n_0 n_b}\mathcal{L}_r}
+            e^{\frac{\Delta t}{n_0 n_b}\mathcal{L}_\mathrm{bath}}
+            e^{\frac{\Delta t}{2 n_0 n_b}\mathcal{L}_r}
+        \right)^{n_b}
+        e^{\frac{\Delta t}{n_0}\mathcal{L}^{[0]}_v}
+    \right]^{n_0}
+    e^{\Delta t \mathcal{L}^{[1]}_v}\]</div>
+<p>This is referred to as the <code class="docutils literal notranslate"><span class="pre">LF-Middle</span></code> scheme <span class="bibtex-citation" id="id2">[<a class="reference internal" href="../references.html#id28" title="Zhijun Zhang, Xinzijian Liu, Kangyu Yan, Mark E. Tuckerman, and Jian Liu. Unified efficient thermostat scheme for the canonical ensemble with holonomic or isokinetic constraints via molecular dynamics. The Journal of Physical Chemistry A, 123(28):6056–6079, may 2019. doi:10.1021/acs.jpca.9b02771.">3</a>]</span>, where LF stands
+for Leap-Frog. In contrast to the previous scheme, it is not time-reversible.
+However, in single time-scale simulations, the two approaches result in equivalent
+coordinate trajectories, while the latter provides a velocity trajectory more
+consistent with the Maxwell-Boltzmann  distribution at the specified temperature
+<span class="bibtex-citation" id="id3">[<a class="reference internal" href="../references.html#id28" title="Zhijun Zhang, Xinzijian Liu, Kangyu Yan, Mark E. Tuckerman, and Jian Liu. Unified efficient thermostat scheme for the canonical ensemble with holonomic or isokinetic constraints via molecular dynamics. The Journal of Physical Chemistry A, 123(28):6056–6079, may 2019. doi:10.1021/acs.jpca.9b02771.">3</a>]</span>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>temperature</strong> (<em>unit.Quantity</em>) – The temperature of the heat bath.</p></li>
+<li><p><strong>step_size</strong> (<em>float</em><em> or </em><em>unit.Quantity</em>) – The outer step size with which to integrate the equations of motion.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>num_rattles</strong> (<em>int</em><em>, </em><em>default=0</em>) – The number of RATTLE computations for geodesic integration
+<span class="bibtex-citation" id="id4">[<a class="reference internal" href="../references.html#id10" title="Benedict Leimkuhler and Charles Matthews. Efficient molecular dynamics using geodesic integration and solvent–solute splitting. Proceedings of the Royal Society A: Mathematical, Physical and Engineering Science, 472(2189):20160138, May 2016. URL: http://rspa.royalsocietypublishing.org/lookup/doi/10.1098/rspa.2016.0138 (visited on 2018-12-31), doi:10.1098/rspa.2016.0138.">4</a>]</span>. If <code class="docutils literal notranslate"><span class="pre">num_rattles=0</span></code>, then no constraints are
+considered at all.</p></li>
+<li><p><strong>scheme</strong> (<em>str</em><em>, </em><em>default='VV-Middle'</em>) – Which splitting scheme will be used. Valid options are ‘VV-Middle’ and
+‘LF-Middle’.</p></li>
+<li><p><strong>respa_loops</strong> (<em>list</em><em>(</em><em>int</em><em>)</em><em>, </em><em>default=</em><em>[</em><em>1</em><em>]</em>) – A list of <cite>m</cite> integers, where <cite>respa_loops[k]</cite> determines how many substeps
+with force group <cite>k</cite> are internally executed for every step with force group
+<cite>k+1</cite>.</p></li>
+<li><p><strong>bath_loops</strong> (<em>int</em><em>, </em><em>default=1</em>) – The number of iterations of the bath operator per each step at time scale
+<cite>0</cite>. This is useful when the bath operator is not exact, but derived from a
+splitting solution.</p></li>
+<li><p><strong>embodied_force_groups</strong> (<em>list</em><em>(</em><em>int</em><em>)</em><em>, </em><em>default=</em><em>[</em><em>]</em>) – A list of indices of force groups. The presence of an index <cite>i</cite> is this list
+means that the contribution of force group <cite>i</cite> is embodied in force group
+<cite>i+1</cite>. Therefore, such contribution must be properly subtracted during the
+integration at time scale <cite>i+1</cite>.</p></li>
+<li><p><strong>unroll_loops</strong> (<em>bool</em><em>, </em><em>default=True</em>) – Whether the integrator loops should be unrolled for improving efficiency.
+Using <code class="docutils literal notranslate"><span class="pre">unroll_loops=False</span></code> can be useful for printing the integrator
+steps.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">ufedmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">integrators</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">MiddleNoseHooverIntegrator</span><span class="p">(</span><span class="n">integrators</span><span class="o">.</span><span class="n">AbstractMiddleRespaIntegrator</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ndof</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="n">temperature</span><span class="p">,</span> <span class="n">step_size</span><span class="p">,</span> <span class="n">num_rattles</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<span class="gp">... </span>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+<span class="gp">... </span>            <span class="n">temperature</span><span class="p">,</span> <span class="n">step_size</span><span class="p">,</span> <span class="n">num_rattles</span><span class="p">,</span> <span class="s1">'VV-Middle'</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span>
+<span class="gp">... </span>        <span class="p">)</span>
+<span class="gp">... </span>        <span class="n">kB</span> <span class="o">=</span> <span class="mf">8.3144626E-3</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">kilojoules_per_mole</span><span class="o">/</span><span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span>
+<span class="gp">... </span>        <span class="n">gkT</span> <span class="o">=</span> <span class="n">ndof</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">MOLAR_GAS_CONSTANT_R</span><span class="o">*</span><span class="n">temperature</span>
+<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s1">'gkT'</span><span class="p">,</span> <span class="n">gkT</span><span class="p">)</span>
+<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s1">'Q'</span><span class="p">,</span> <span class="n">gkT</span><span class="o">*</span><span class="n">tau</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s1">'v_eta'</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s1">'twoK'</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s1">'scaling'</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">_bath</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">):</span>
+<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">addComputeSum</span><span class="p">(</span><span class="s1">'twoK'</span><span class="p">,</span> <span class="s1">'m*v*v'</span><span class="p">)</span>
+<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">addComputeGlobal</span><span class="p">(</span>
+<span class="gp">... </span>            <span class="s1">'v_eta'</span><span class="p">,</span> <span class="sa">f</span><span class="s1">'v_eta + </span><span class="si">{</span><span class="mf">0.5</span><span class="o">*</span><span class="n">fraction</span><span class="si">}</span><span class="s1">*dt*(twoK - gkT)/Q'</span>
+<span class="gp">... </span>        <span class="p">)</span>
+<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">addComputeGlobal</span><span class="p">(</span><span class="s1">'scaling'</span><span class="p">,</span> <span class="sa">f</span><span class="s1">'exp(-</span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s1">*dt*v_eta)'</span><span class="p">)</span>
+<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s1">'v'</span><span class="p">,</span> <span class="sa">f</span><span class="s1">'v*scaling'</span><span class="p">)</span>
+<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">addComputeGlobal</span><span class="p">(</span>
+<span class="gp">... </span>            <span class="s1">'v_eta'</span><span class="p">,</span> <span class="sa">f</span><span class="s1">'v_eta + </span><span class="si">{</span><span class="mf">0.5</span><span class="o">*</span><span class="n">fraction</span><span class="si">}</span><span class="s1">*dt*(scaling^2*twoK - gkT)/Q'</span>
+<span class="gp">... </span>        <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span> <span class="o">=</span> <span class="n">MiddleNoseHooverIntegrator</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="mi">500</span><span class="p">,</span> <span class="mi">10</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">femtoseconds</span><span class="p">,</span> <span class="mi">300</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="mi">1</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">femtoseconds</span><span class="p">,</span> <span class="n">num_rattles</span><span class="o">=</span><span class="mi">0</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">integrator</span><span class="p">)</span>
+<span class="go">Per-dof variables:</span>
+<span class="go">  kT</span>
+<span class="go">Global variables:</span>
+<span class="go">  gkT = 1247.169392722986</span>
+<span class="go">  Q = 0.1247169392722986</span>
+<span class="go">  v_eta = 0.0</span>
+<span class="go">  twoK = 0.0</span>
+<span class="go">  scaling = 1.0</span>
+<span class="go">Computation steps:</span>
+<span class="go">   0: allow forces to update the context state</span>
+<span class="go">   1: v &lt;- v + 0.5*dt*f/m</span>
+<span class="go">   2: x &lt;- x + 0.5*dt*v</span>
+<span class="go">   3: constrain positions</span>
+<span class="go">   4: twoK &lt;- sum(m*v*v)</span>
+<span class="go">   5: v_eta &lt;- v_eta + 0.5*dt*(twoK - gkT)/Q</span>
+<span class="go">   6: scaling &lt;- exp(-1.0*dt*v_eta)</span>
+<span class="go">   7: v &lt;- v*scaling</span>
+<span class="go">   8: v_eta &lt;- v_eta + 0.5*dt*(scaling^2*twoK - gkT)/Q</span>
+<span class="go">   9: x &lt;- x + 0.5*dt*v</span>
+<span class="go">  10: constrain positions</span>
+<span class="go">  11: v &lt;- v + 0.5*dt*f/m</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">UFEDMM v0.4.0</a></h1>
+
+
+
+
+
+
+
+
+
+
+
+<h3><a href="../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../readme.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../readme.html#installation">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../readme.html#contributing">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html">Usage</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="core.html">Core</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="integrators.html">Integrators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="io.html">IO</a></li>
+<li class="toctree-l2"><a class="reference internal" href="analysis.html">Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="testmodels.html">Testmodels</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../cvpack.html">collective variable package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../authors.html">Authors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../glossary.html">Glossary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">Bibliography</a></li>
+</ul>
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2020-2026 C. Abreu.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/api/AbstractMiddleRespaIntegrator.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

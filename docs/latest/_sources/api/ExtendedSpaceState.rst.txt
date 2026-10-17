@@ -1,0 +1,12 @@
+ExtendedSpaceState
+==================
+
+.. currentmodule:: ufedmm
+.. autoclass:: ExtendedSpaceState
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: getDynamicalVariables
+    .. automethod:: getPositions
+    .. automethod:: getVelocities

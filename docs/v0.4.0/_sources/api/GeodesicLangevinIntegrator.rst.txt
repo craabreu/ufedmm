@@ -1,0 +1,7 @@
+GeodesicLangevinIntegrator
+==========================
+
+.. currentmodule:: ufedmm
+.. autoclass:: GeodesicLangevinIntegrator
+    :member-order: alphabetical
+

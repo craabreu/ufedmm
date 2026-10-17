@@ -1,0 +1,13 @@
+ExtendedSpaceContext
+====================
+
+.. currentmodule:: ufedmm
+.. autoclass:: ExtendedSpaceContext
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: getState
+    .. automethod:: setPeriodicBoxVectors
+    .. automethod:: setPositions
+    .. automethod:: setVelocitiesToTemperature

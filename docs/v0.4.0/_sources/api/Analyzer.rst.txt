@@ -1,0 +1,10 @@
+Analyzer
+========
+
+.. currentmodule:: ufedmm
+.. autoclass:: Analyzer
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: free_energy_functions
