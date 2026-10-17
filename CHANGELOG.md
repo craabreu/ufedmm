@@ -2,6 +2,51 @@
 
 ## 0.4.0
 
+This release fixes several bugs that changed simulation and analysis results,
+makes some defaults safer, and requires Python 3.10 and OpenMM 8.4 or newer. UFEDMM
+is now also published on PyPI, and its documentation has a separate copy for each
+release.
+
+### Upgrading from 0.3.2
+- Recompute results obtained with 0.3.2 in any of these cases:
+  - Gridded metadynamics with two or three bias variables, which is the default for
+    those dimensions. Each hill had height `h**n` instead of `h` for `n` bias
+    variables.
+  - Gridded metadynamics that mixes periodic and non-periodic bias variables. The
+    hills were scrambled.
+  - Systems with a `CustomGBForce`, such as the GBn2 implicit solvent. The extra
+    particles changed the Born radii, and with them the solvation energy.
+  - TIP4P-type water or other virtual sites on the CUDA or OpenCL platforms. Forces
+    were computed with outdated virtual-site positions (#37).
+  - `FreeEnergyAnalyzer.mean_force_free_energy` with variables that have different
+    kernel widths or periods. Every kernel used the last variable's values.
+- `MiddleMassiveNHCIntegrator` uses chains of four thermostats by default, instead
+  of two, and no longer takes a `track_energy` argument. Pass `nchain=2` for the
+  previous chains.
+- Simulations with constraints raise a `ValueError` when the integrator has no RATTLE
+  steps, instead of silently ignoring the constraints.
+- The extra particles of the dynamical variables move along x only. Their y and z
+  directions are no longer thermostatted, and `setVelocitiesToTemperature` gives
+  them no y or z velocity. It also sets the physical particles to the exact target
+  temperature, without center-of-mass motion and consistent with the constraints.
+- The temperature and density reported by `StateDataReporter` are those of the
+  physical system, without the extra particles.
+- A `System` can no longer be used for more than one extended-space simulation,
+  since the first one adds its extra particles to it.
+- The documentation is at https://craabreu.github.io/ufedmm/latest. Old links into
+  it no longer resolve.
+
+### New in 0.4.0
+- `pip install ufedmm`, alongside the `mdtools` conda channel.
+- `ufedmm.__version__`.
+- `ExtendedSpaceState.getVelocities(extended=True, split=True)` returns the
+  velocities of the physical particles and the x velocities of the extra particles
+  separately.
+- Checkpoints can be saved to and loaded from in-memory streams.
+- A `CITATION.cff` file for the UFEDMM paper.
+
+The entries below describe the changes in detail.
+
 ### Breaking changes
 - UFEDMM now requires Python 3.10 or newer and OpenMM 8.4 or newer.
 - `MiddleMassiveNHCIntegrator` no longer takes a `track_energy` argument. It only
@@ -44,20 +89,27 @@
   virtual sites after moving particles in the middle of a step. On the CUDA and
   OpenCL platforms, forces were computed with outdated virtual-site positions, which
   made systems with TIP4P-type water heat up uncontrollably (#37).
+- Gridded metadynamics with two or three bias variables deposits hills of the
+  requested height. Each hill used to have height `h**n` for `n` bias variables
+  (e.g., `h**2` in kJ/mol for a 2D bias), so results obtained with a
+  multidimensional bias should be recomputed. One-dimensional and gridless
+  metadynamics were not affected.
+- Gridded metadynamics that mixes periodic and non-periodic bias variables
+  deposits hills in the right place. The periodic padding of each hill was applied
+  along the wrong array axis, which scrambled the hills, so results obtained with
+  such a bias should be recomputed.
+- Extra particles no longer change the Born radii of a `CustomGBForce` (such as the
+  GBn2 implicit solvent), so they no longer change the solvation energy of the
+  physical system.
+- `FreeEnergyAnalyzer.mean_force_free_energy` works again with NumPy 2 and
+  OpenMM 8, and its fit now uses each collective variable's own kernel width and
+  period. Before this fix, every kernel used the last variable's values.
 - UFEDMM simulations raise a `ValueError` when the system has constraints and the
   integrator has no RATTLE steps (`MiddleMassiveNHCIntegrator`,
   `MiddleMassiveGGMTIntegrator`, `RegulatedNHLIntegrator`, or `num_rattles=0`).
   Those integrators used to ignore the constraints silently.
 - `StateDataReporter` with `multipleTemperatures=True` works again on OpenMM 8.3 and
   newer. It used to fail because the reported state had no velocities or energies.
-- `FreeEnergyAnalyzer.mean_force_free_energy` works again with NumPy 2 and
-  OpenMM 8, and its fit now uses each collective variable's own kernel width and
-  period. Before this fix, every kernel used the last variable's values.
-- Gridded metadynamics with two or three bias variables deposits hills of the
-  requested height. Each hill used to have height `h**n` for `n` bias variables
-  (e.g., `h**2` in kJ/mol for a 2D bias), so results obtained with a
-  multidimensional bias should be recomputed. One-dimensional and gridless
-  metadynamics were not affected.
 - Tasks derived from `PeriodicTask` that do not override `initialize` and
   `loadCheckpoint` can be added with `ExtendedSpaceSimulation.add_periodic_task`.
   They used to fail with a `TypeError`, because those base-class methods took
@@ -74,13 +126,6 @@
 - Well-tempered metadynamics works without a grid, that is, with
   `enforce_gridless=True` or with more than three bias variables. It used to fail
   when depositing the first hill.
-- Gridded metadynamics that mixes periodic and non-periodic bias variables
-  deposits hills in the right place. The periodic padding of each hill was applied
-  along the wrong array axis, which scrambled the hills, so results obtained with
-  such a bias should be recomputed.
-- Extra particles no longer change the Born radii of a `CustomGBForce` (such as the
-  GBn2 implicit solvent), so they no longer change the solvation energy of the
-  physical system.
 - `FreeEnergyAnalyzer.centers_and_mean_forces` works with a DataFrame whose index is
   not `0, 1, ..., n-1`, such as a slice of a longer trajectory. It used to raise an
   `IndexError`, or with a shuffled index, pair forces with the wrong samples.
