@@ -129,7 +129,3 @@ minversion = "7.0"
 # Coverage is opt-in (CI passes --cov); select tests with -m "not slow" or -m "not gpu"
 addopts = "-ra --strict-markers --doctest-modules"
 testpaths = ["ufedmm"]
-markers = [
-    "slow: long statistical tests (several seconds each)",
-    "gpu: runs on a CUDA or OpenCL platform",
-]
